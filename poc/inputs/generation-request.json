@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Microservice Generation Request",
+  "description": "Generated from prompt.md + domain-api-spec.yaml + system-api-parties.yaml + mapping.json",
+  "generatedAt": "2025-12-01T12:00:00Z",
+  "generatedBy": "skill-interpretation (simulated)",
+
+  "service": {
+    "name": "customer-domain-api",
+    "groupId": "com.bank",
+    "artifactId": "customer-domain-api",
+    "basePackage": "com.bank.customer",
+    "version": "1.0.0",
+    "description": "Domain API for Customer management"
+  },
+
+  "technical": {
+    "javaVersion": "17",
+    "springBootVersion": "3.2.0",
+    "buildTool": "maven"
+  },
+
+  "apiType": "domain_api",
+
+  "domainApi": {
+    "spec": "./inputs/domain-api-spec.yaml",
+    "basePath": "/api/v1"
+  },
+
+  "entities": [
+    {
+      "name": "Customer",
+      "isAggregateRoot": true,
+      "idType": "CustomerId",
+      "idValueType": "String",
+      "fields": [
+        { "name": "id", "type": "CustomerId", "required": true },
+        { "name": "firstName", "type": "String", "required": true, "maxLength": 100 },
+        { "name": "lastName", "type": "String", "required": true, "maxLength": 100 },
+        { "name": "email", "type": "String", "required": false, "format": "email" },
+        { "name": "dateOfBirth", "type": "LocalDate", "required": false },
+        { "name": "status", "type": "CustomerStatus", "required": true, "default": "ACTIVE" },
+        { "name": "createdAt", "type": "Instant", "required": false, "readOnly": true },
+        { "name": "updatedAt", "type": "Instant", "required": false, "readOnly": true }
+      ],
+      "enums": [
+        {
+          "name": "CustomerStatus",
+          "values": ["ACTIVE", "INACTIVE", "BLOCKED", "PENDING_VERIFICATION"]
+        }
+      ]
+    }
+  ],
+
+  "operations": [
+    {
+      "name": "getCustomerById",
+      "type": "query",
+      "httpMethod": "GET",
+      "path": "/customers/{customerId}",
+      "pathParams": [
+        { "name": "customerId", "type": "String", "format": "uuid" }
+      ],
+      "response": {
+        "type": "Customer",
+        "status": 200
+      },
+      "errors": [
+        { "status": 404, "code": "CUSTOMER_NOT_FOUND" },
+        { "status": 503, "code": "SERVICE_UNAVAILABLE" }
+      ]
+    },
+    {
+      "name": "createCustomer",
+      "type": "command",
+      "httpMethod": "POST",
+      "path": "/customers",
+      "requestBody": {
+        "type": "CreateCustomerRequest",
+        "fields": [
+          { "name": "firstName", "type": "String", "required": true },
+          { "name": "lastName", "type": "String", "required": true },
+          { "name": "email", "type": "String", "required": false },
+          { "name": "dateOfBirth", "type": "LocalDate", "required": false }
+        ]
+      },
+      "response": {
+        "type": "Customer",
+        "status": 201,
+        "headers": ["Location"]
+      },
+      "errors": [
+        { "status": 400, "code": "VALIDATION_ERROR" },
+        { "status": 409, "code": "CUSTOMER_EXISTS" },
+        { "status": 503, "code": "SERVICE_UNAVAILABLE" }
+      ]
+    }
+  ],
+
+  "features": {
+    "integration": {
+      "enabled": true,
+      "apis": [
+        {
+          "name": "parties-system-api",
+          "spec": "./inputs/system-api-parties.yaml",
+          "type": "system_api",
+          "client": "restclient",
+          "baseUrlEnv": "PARTIES_SYSTEM_API_URL",
+          "mapping": "./inputs/mapping.json"
+        }
+      ]
+    },
+
+    "persistence": {
+      "enabled": true,
+      "type": "system_api",
+      "delegatesTo": "parties-system-api"
+    },
+
+    "resilience": {
+      "circuitBreaker": {
+        "enabled": true,
+        "name": "parties-api",
+        "failureRateThreshold": 50,
+        "waitDurationInOpenState": "30s",
+        "slidingWindowSize": 10,
+        "minimumNumberOfCalls": 5,
+        "fallback": "throw"
+      },
+      "retry": {
+        "enabled": true,
+        "name": "parties-api",
+        "maxAttempts": 3,
+        "waitDuration": "100ms",
+        "exponentialBackoffMultiplier": 2,
+        "retryExceptions": [
+          "java.io.IOException",
+          "java.util.concurrent.TimeoutException"
+        ],
+        "ignoreExceptions": [
+          "com.bank.customer.domain.exception.CustomerNotFoundException"
+        ]
+      },
+      "timeout": {
+        "enabled": true,
+        "name": "parties-api",
+        "duration": "5s"
+      }
+    },
+
+    "observability": {
+      "correlationId": {
+        "enabled": true,
+        "headerName": "X-Correlation-ID"
+      },
+      "logging": {
+        "enabled": true,
+        "format": "json"
+      },
+      "healthCheck": {
+        "enabled": true
+      }
+    },
+
+    "docker": {
+      "enabled": false
+    }
+  },
+
+  "modules": {
+    "_comment": "Resolved by skill-020 based on features",
+    "required": [
+      "mod-015-hexagonal-base-java-spring",
+      "mod-018-api-integration-rest-java-spring",
+      "mod-017-persistence-systemapi",
+      "mod-001-circuit-breaker-java-resilience4j",
+      "mod-002-retry-java-resilience4j",
+      "mod-003-timeout-java-resilience4j"
+    ]
+  }
+}

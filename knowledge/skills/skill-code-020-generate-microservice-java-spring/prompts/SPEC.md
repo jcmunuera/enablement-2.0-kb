@@ -2,269 +2,301 @@
 
 ## Skill: skill-020-generate-microservice-java-spring
 
+**Version:** 2.0  
+**Updated:** 2025-12-01  
+
 ---
 
-## System Prompt
+## Overview
+
+This specification defines how an LLM should generate a complete Java/Spring Boot microservice using the Enablement 2.0 Knowledge Base.
+
+**Key Principle:** The LLM does NOT generate code from scratch. It **applies templates** from MODULEs, substituting variables from the generation request.
+
+---
+
+## Execution Flow
 
 ```
-You are an expert Java/Spring Boot code generator specializing in Hexagonal Light architecture. Your task is to generate a complete, production-ready microservice from a JSON configuration.
-
-## Architecture Principles
-
-You MUST follow Hexagonal Light architecture (ADR-009):
-
-1. **Domain Layer (Pure POJOs)**
-   - NO Spring annotations (@Service, @Autowired, @Component, etc.)
-   - NO framework dependencies
-   - Contains: entities, value objects, domain services, repository interfaces
-   - Business logic lives HERE
-
-2. **Application Layer**
-   - Spring @Service and @Transactional annotations
-   - Thin orchestration - delegates to domain
-   - Bridges adapters and domain
-
-3. **Adapter Layer**
-   - REST: @RestController, DTOs, mappers
-   - Persistence: @Entity, JpaRepository, repository adapters
-   - All framework code lives HERE
-
-4. **Infrastructure**
-   - @Configuration beans
-   - Exception handlers
-   - Cross-cutting concerns
-
-## Dependency Direction
-
-Adapters → Application → Domain
-
-Domain layer knows NOTHING about Spring or JPA.
-
-## API Type Constraints (ADR-001)
-
-Based on apiType, apply these constraints:
-
-- **domain_api**: Owns data, no cross-domain HTTP clients
-- **composable_api**: Stateless orchestration, calls Domain APIs
-- **system_api**: SoR integration, data transformation
-- **experience_api**: BFF pattern, calls Composable/Domain APIs
-
-## Code Quality Standards
-
-1. Use Java records for DTOs and value objects
-2. Use constructor injection (no @Autowired on fields)
-3. Add JSR-380 validation annotations on request DTOs
-4. Generate meaningful Javadoc comments
-5. Use AssertJ for test assertions
-6. Follow naming conventions exactly
+┌─────────────────────────────────────────────────────────────────────┐
+│ 1. RECEIVE generation-request.json                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│ 2. ANALYZE features to determine required modules                    │
+│    - integration.enabled → mod-018                                   │
+│    - persistence.type = system_api → mod-017                        │
+│    - persistence.type = jpa → mod-016                               │
+│    - resilience.circuitBreaker.enabled → mod-001                    │
+│    - resilience.retry.enabled → mod-002                             │
+│    - resilience.timeout.enabled → mod-003                           │
+│    - resilience.rateLimiter.enabled → mod-004                       │
+│    - Always include → mod-015 (hexagonal base)                      │
+├─────────────────────────────────────────────────────────────────────┤
+│ 3. LOAD templates from each required module                          │
+│    - Read .tpl files from module's templates/ directory             │
+│    - Select variant based on config (e.g., restclient vs feign)     │
+├─────────────────────────────────────────────────────────────────────┤
+│ 4. BUILD variable context from generation-request.json              │
+│    - Extract service.name, basePackage, entities, etc.              │
+│    - Derive computed variables (EntityId, entityPlural, etc.)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ 5. APPLY templates using Mustache/Handlebars syntax                  │
+│    - Replace {{variable}} with values                               │
+│    - Process {{#section}}...{{/section}} blocks                     │
+├─────────────────────────────────────────────────────────────────────┤
+│ 6. GENERATE mapping code from mapping.json (if persistence=system_api)│
+│    - Field transformations (case, format, enum)                     │
+│    - Error code mappings                                            │
+├─────────────────────────────────────────────────────────────────────┤
+│ 7. VALIDATE output against module validation rules                   │
+│    - Hexagonal architecture compliance                              │
+│    - Resilience annotations present                                 │
+│    - Correlation headers propagated                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│ 8. OUTPUT generated files                                            │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## User Prompt Template
+## Module Resolution Rules
+
+### Always Required
+
+| Module | Purpose |
+|--------|---------|
+| mod-015-hexagonal-base-java-spring | Base project structure, domain/application/adapter layers |
+
+### Conditional Modules
+
+| Condition | Module | Templates Used |
+|-----------|--------|----------------|
+| `persistence.type = "jpa"` | mod-016-persistence-jpa-spring | entity/, repository/, mapper/, adapter/ |
+| `persistence.type = "system_api"` | mod-017-persistence-systemapi | dto/, mapper/, adapter/ |
+| `integration.enabled = true` | mod-018-api-integration-rest-java-spring | client/, config/, exception/ |
+| `resilience.circuitBreaker.enabled` | mod-001-circuit-breaker-java-resilience4j | annotation/, config/ |
+| `resilience.retry.enabled` | mod-002-retry-java-resilience4j | annotation/, config/ |
+| `resilience.timeout.enabled` | mod-003-timeout-java-resilience4j | annotation/, config/ |
+| `resilience.rateLimiter.enabled` | mod-004-rate-limiter-java-resilience4j | annotation/, config/ |
+
+### Module Dependencies
 
 ```
-Generate a complete Spring Boot microservice with the following configuration:
+mod-017 (persistence-systemapi) ──depends──▶ mod-018 (integration-rest)
+```
 
-<config>
-{{CONFIG_JSON}}
-</config>
+When mod-017 is selected, mod-018 MUST also be included.
 
-## Requirements
+---
 
-1. Generate ALL files needed for a working microservice
-2. Follow Hexagonal Light architecture strictly
-3. Domain layer must have ZERO Spring annotations
-4. Include unit tests for domain services (no Spring context needed)
-5. Generate OpenAPI spec from entity definitions
-6. Apply all enabled features from config
+## Template Processing
+
+### Variable Context
+
+Extract from `generation-request.json`:
+
+```yaml
+# Service-level
+serviceName: customer-domain-api
+basePackage: com.bank.customer
+basePackagePath: com/bank/customer
+groupId: com.bank
+artifactId: customer-domain-api
+
+# Entity-level (for each entity)
+Entity: Customer
+entity: customer
+entityPlural: customers
+EntityId: CustomerId
+
+# Integration (if enabled)
+ApiName: PartiesApi
+apiName: partiesApi
+resourcePath: /parties
+baseUrlEnv: PARTIES_SYSTEM_API_URL
+
+# Resilience
+circuitBreakerName: parties-api
+retryName: parties-api
+timeoutName: parties-api
+timeoutDuration: 5s
+```
+
+### Mustache/Handlebars Syntax
+
+| Syntax | Purpose | Example |
+|--------|---------|---------|
+| `{{variable}}` | Simple substitution | `{{Entity}}` → `Customer` |
+| `{{#section}}...{{/section}}` | Loop/conditional | `{{#fields}}...{{/fields}}` |
+| `{{^section}}...{{/section}}` | Inverted (if not) | `{{^nullable}}NOT NULL{{/nullable}}` |
+
+### Template Variant Selection
+
+For modules with variants (e.g., mod-018):
+
+| Config Value | Template Selected |
+|--------------|-------------------|
+| `integration.apis[].client = "restclient"` | `client/restclient.java.tpl` |
+| `integration.apis[].client = "feign"` | `client/feign.java.tpl` |
+| `integration.apis[].client = "resttemplate"` | `client/resttemplate.java.tpl` |
+
+Default: `restclient`
+
+---
+
+## Mapping Generation (System API)
+
+When `persistence.type = "system_api"`, read `mapping.json` to generate mapper code.
+
+### Field Mapping
+
+```java
+// Generated from mapping.json fieldMappings
+public Customer toDomain(PartyDto dto) {
+    return Customer.reconstitute(
+        CustomerId.of(insertHyphens(dto.getCUST_ID().toLowerCase())),  // UUID format
+        capitalize(dto.getCUST_FNAME()),                               // Case transform
+        capitalize(dto.getCUST_LNAME()),
+        dto.getCUST_EMAIL_ADDR().toLowerCase(),
+        LocalDate.parse(dto.getCUST_DOB()),
+        mapStatus(dto.getCUST_STATUS()),                               // Enum mapping
+        parseTimestamp(dto.getCUST_CRT_TS()),                          // Timestamp format
+        parseTimestamp(dto.getCUST_UPD_TS())
+    );
+}
+```
+
+### Enum Mapping
+
+From `mapping.json`:
+```json
+"enumMapping": {
+  "ACTIVE": "A",
+  "INACTIVE": "I",
+  "BLOCKED": "B",
+  "PENDING_VERIFICATION": "P"
+}
+```
+
+Generate:
+```java
+private CustomerStatus mapStatus(String code) {
+    return switch (code) {
+        case "A" -> CustomerStatus.ACTIVE;
+        case "I" -> CustomerStatus.INACTIVE;
+        case "B" -> CustomerStatus.BLOCKED;
+        case "P" -> CustomerStatus.PENDING_VERIFICATION;
+        default -> throw new IllegalArgumentException("Unknown status: " + code);
+    };
+}
+```
+
+### Error Mapping
+
+From `mapping.json`:
+```json
+"errorMappings": [
+  { "systemCode": "04", "httpStatus": 404, "domainCode": "CUSTOMER_NOT_FOUND" }
+]
+```
+
+Generate error handling in adapter.
+
+---
+
+## Architecture Validation
+
+### Hexagonal Light Rules (from ADR-009)
+
+| Layer | Allowed Annotations | Forbidden |
+|-------|--------------------| ----------|
+| Domain | None (pure POJOs) | @Service, @Autowired, @Component, @Entity, @Repository |
+| Application | @Service, @Transactional | @RestController, @Entity |
+| Adapter | @RestController, @Entity, @Repository, @Component | - |
+| Infrastructure | @Configuration, @Bean, @ControllerAdvice | - |
+
+### Resilience Validation (from ADR-004)
+
+When resilience features enabled, verify:
+- `@CircuitBreaker` annotation present on adapter methods
+- `@Retry` annotation with correct order (inner to circuit breaker)
+- `@TimeLimiter` annotation with CompletableFuture return type
+- Configuration in application.yml
+
+### Integration Validation (from ADR-012)
+
+When integration enabled, verify:
+- `X-Correlation-ID` header propagated
+- `X-Source-System` header set
+- Base URL externalized to environment variable
+
+---
 
 ## Output Format
 
-For each file, output:
+### File Output Structure
 
 ```
-### FILE: {relative/path/to/file.java}
+### FILE: {relative/path/to/File.java}
 
-\`\`\`java
-// file contents
-\`\`\`
+```java
+// Generated from: {module}/{template.tpl}
+// Variables: Entity={{Entity}}, basePackage={{basePackage}}
+
+package {{basePackage}}.domain.model;
+
+// ... generated code ...
 ```
 
-Generate files in this order:
-1. pom.xml
-2. Application.java
-3. Domain layer (all entities, services, repositories, exceptions)
-4. Application layer (application services)
-5. Adapter layer (REST: controllers, DTOs, mappers; Persistence: entities, repos, adapters)
-6. Infrastructure (config, exception handlers)
-7. Tests
-8. Resources (application.yml, openapi.yaml)
-9. Docker files (if enabled)
+### Generation Order
 
-## Validation Checklist
-
-Before outputting, verify:
-- [ ] Domain layer has no @Service, @Autowired, @Component, @Repository annotations
-- [ ] Repository interface is in domain layer
-- [ ] Repository implementation (adapter) is in adapter layer
-- [ ] All Spring annotations are in application or adapter layers
-- [ ] DTOs use Jakarta validation annotations
-- [ ] Constructor injection used everywhere
-- [ ] Tests can run without Spring context
-```
+1. **Project Setup:** pom.xml, .gitignore, README.md
+2. **Application Entry:** Application.java
+3. **Domain Layer:** entities, value objects, repository interfaces, domain services, exceptions
+4. **Application Layer:** application services
+5. **Adapter Layer - Inbound:** REST controllers, DTOs, mappers
+6. **Adapter Layer - Outbound:** persistence adapters, integration clients
+7. **Infrastructure:** configuration, exception handlers
+8. **Tests:** domain unit tests, adapter integration tests
+9. **Resources:** application.yml, application-{profile}.yml
+10. **Docker:** Dockerfile, .dockerignore (if enabled)
 
 ---
 
-## Expected Response Structure
+## Error Handling
 
-The LLM should output files in this order:
-
-### Phase 1: Project Setup
-```
-### FILE: pom.xml
-### FILE: .gitignore
-### FILE: README.md
-```
-
-### Phase 2: Application Entry
-```
-### FILE: src/main/java/{package}/Application.java
-```
-
-### Phase 3: Domain Layer
-```
-### FILE: src/main/java/{package}/domain/model/{Entity}.java
-### FILE: src/main/java/{package}/domain/model/{Entity}Id.java
-### FILE: src/main/java/{package}/domain/model/{Entity}Registration.java
-### FILE: src/main/java/{package}/domain/service/{Entity}DomainService.java
-### FILE: src/main/java/{package}/domain/repository/{Entity}Repository.java
-### FILE: src/main/java/{package}/domain/exception/{Entity}NotFoundException.java
-```
-
-### Phase 4: Application Layer
-```
-### FILE: src/main/java/{package}/application/service/{Entity}ApplicationService.java
-```
-
-### Phase 5: Adapter Layer - REST
-```
-### FILE: src/main/java/{package}/adapter/rest/controller/{Entity}Controller.java
-### FILE: src/main/java/{package}/adapter/rest/dto/{Entity}DTO.java
-### FILE: src/main/java/{package}/adapter/rest/dto/Create{Entity}Request.java
-### FILE: src/main/java/{package}/adapter/rest/dto/Update{Entity}Request.java
-### FILE: src/main/java/{package}/adapter/rest/mapper/{Entity}DtoMapper.java
-```
-
-### Phase 6: Adapter Layer - Persistence
-```
-### FILE: src/main/java/{package}/adapter/persistence/entity/{Entity}Entity.java
-### FILE: src/main/java/{package}/adapter/persistence/repository/{Entity}JpaRepository.java
-### FILE: src/main/java/{package}/adapter/persistence/adapter/{Entity}RepositoryAdapter.java
-### FILE: src/main/java/{package}/adapter/persistence/mapper/{Entity}EntityMapper.java
-```
-
-### Phase 7: Infrastructure
-```
-### FILE: src/main/java/{package}/infrastructure/config/ApplicationConfig.java
-### FILE: src/main/java/{package}/infrastructure/exception/GlobalExceptionHandler.java
-### FILE: src/main/java/{package}/infrastructure/exception/ErrorResponse.java
-```
-
-### Phase 8: Tests
-```
-### FILE: src/test/java/{package}/domain/service/{Entity}DomainServiceTest.java
-### FILE: src/test/java/{package}/adapter/rest/controller/{Entity}ControllerIntegrationTest.java
-```
-
-### Phase 9: Resources
-```
-### FILE: src/main/resources/application.yml
-### FILE: src/main/resources/application-dev.yml
-### FILE: src/main/resources/application-prod.yml
-### FILE: src/main/resources/openapi.yaml
-```
-
-### Phase 10: Docker (if enabled)
-```
-### FILE: Dockerfile
-### FILE: .dockerignore
-```
-
----
-
-## Validation Prompt
-
-After generation, use this prompt to validate:
+### If template not found
 
 ```
-Review the generated code for compliance:
-
-1. **Hexagonal Light Compliance**
-   - Does domain layer have ANY Spring annotations? (FAIL if yes)
-   - Is repository interface in domain layer? (FAIL if no)
-   - Is repository implementation in adapter layer? (FAIL if no)
-
-2. **Code Quality**
-   - Are all dependencies injected via constructor?
-   - Do request DTOs have validation annotations?
-   - Do tests use AssertJ assertions?
-
-3. **API Type Compliance**
-   - If domain_api: Are there HTTP clients to other domains? (FAIL if yes)
-   - If composable_api: Is persistence enabled? (WARN if yes)
-
-List any violations found.
+ERROR: Template not found
+Module: mod-018-api-integration-rest-java-spring
+Template: client/restclient.java.tpl
+Action: Verify module structure and template existence
 ```
 
----
-
-## Error Recovery Prompts
-
-### If domain layer has Spring annotations:
+### If validation fails
 
 ```
-The generated domain layer contains Spring annotations. This violates Hexagonal Light architecture.
-
-Please regenerate the following files WITHOUT any Spring annotations:
-- {list of files}
-
-The domain layer must be pure POJOs. Move all Spring annotations to:
-- Application layer (@Service, @Transactional)
-- Adapter layer (@RestController, @Entity, @Repository, etc.)
-```
-
-### If tests require Spring context:
-
-```
-The generated domain tests require Spring context. This defeats the purpose of Hexagonal Light.
-
-Please regenerate {Entity}DomainServiceTest.java:
-- Use @ExtendWith(MockitoExtension.class) instead of @SpringBootTest
-- Mock the repository interface
-- No Spring annotations in test class
-- Test should run in milliseconds without starting Spring
+VALIDATION ERROR: Hexagonal architecture violation
+File: CustomerDomainService.java
+Issue: Found @Service annotation in domain layer
+Fix: Remove Spring annotations from domain layer
 ```
 
 ---
 
 ## Multi-LLM Support
 
-This skill can be executed by:
+| LLM | Prompt File | Notes |
+|-----|-------------|-------|
+| Claude | prompts/claude.txt | Full context, best for complex generation |
+| Gemini | prompts/gemini.txt | Explicit instructions, structured output |
+| GPT-4 | prompts/gpt.txt (future) | Additional emphasis on constraints |
 
-| LLM | Notes |
-|-----|-------|
-| Claude 3.5 Sonnet | Recommended - best code quality |
-| Claude 3 Opus | Good for complex configs |
-| GPT-4 | Compatible with minor prompt adjustments |
-| GPT-4 Turbo | Good for large file counts |
+---
 
-### LLM-Specific Adjustments
+## Changelog
 
-**For GPT-4:**
-- Add explicit "Do not use @Autowired" instruction
-- Emphasize file naming conventions
-
-**For Claude:**
-- Can handle full context in single prompt
-- Better at maintaining consistency across files
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2025-01 | Initial version |
+| 2.0 | 2025-12-01 | Added module references, template processing, mapping generation, integration capability |
