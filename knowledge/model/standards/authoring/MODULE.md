@@ -658,6 +658,16 @@ Skill                                            validation/*-check.sh
 3. **Exit codes:** 0 = pass, non-zero = fail
 4. **Severity:** Use ERROR for must-fix, WARNING for should-fix
 
+### Synchronization with SKILLs
+
+1. **Every template MUST be referenced** in at least one SKILL's Template Mapping
+2. **When adding templates:** Update dependent SKILLs' Template Mapping section
+3. **When removing templates:** Check all SKILLs for orphan references
+4. **SKILL's Template Mapping is authoritative** - Claude must use mapped templates, not improvise
+
+> **IMPORTANT:** If a template exists in a module but is not referenced in any SKILL,
+> it will NOT be used during generation. Always keep SKILLs and MODULEs in sync.
+
 ---
 
 ## Related

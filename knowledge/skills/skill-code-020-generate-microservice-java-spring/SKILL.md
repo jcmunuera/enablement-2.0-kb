@@ -797,6 +797,108 @@ If docker.enabled:
 
 ---
 
+## Template Mapping Reference
+
+This section provides the **explicit mapping** between output files and module templates.
+When generating, Claude MUST use these templates - not improvise.
+
+### Base Templates (mod-015-hexagonal-base-java-spring) - ALWAYS
+
+| Output File | Template | Notes |
+|-------------|----------|-------|
+| `{{ServiceName}}Application.java` | `templates/Application.java.tpl` | Main class |
+| `pom.xml` | `templates/config/pom.xml.tpl` | Maven config |
+| `application.yml` | `templates/config/application.yml.tpl` | Spring config |
+
+### Domain Layer (mod-015)
+
+| Output File | Template | Notes |
+|-------------|----------|-------|
+| `domain/model/{{Entity}}.java` | `templates/domain/Entity.java.tpl` | Pure POJO |
+| `domain/model/{{Entity}}Id.java` | `templates/domain/EntityId.java.tpl` | Value object |
+| `domain/repository/{{Entity}}Repository.java` | `templates/domain/Repository.java.tpl` | Port interface |
+| `domain/service/{{Entity}}DomainService.java` | `templates/domain/DomainService.java.tpl` | POJO service |
+| `domain/exception/{{Entity}}NotFoundException.java` | `templates/domain/NotFoundException.java.tpl` | Domain exception |
+
+### Application Layer (mod-015)
+
+| Output File | Template | Notes |
+|-------------|----------|-------|
+| `application/{{Entity}}ApplicationService.java` | `templates/application/ApplicationService.java.tpl` | @Service |
+| `application/dto/Create{{Entity}}Request.java` | `templates/application/dto/CreateRequest.java.tpl` | Input DTO |
+| `application/dto/Update{{Entity}}Request.java` | `templates/application/dto/UpdateRequest.java.tpl` | Input DTO |
+| `application/dto/{{Entity}}Response.java` | `templates/application/dto/Response.java.tpl` | Output DTO |
+
+### Adapter Layer - REST Inbound (mod-015)
+
+| Output File | Template | Notes |
+|-------------|----------|-------|
+| `adapter/rest/{{Entity}}Controller.java` | `templates/adapter/RestController.java.tpl` | @RestController |
+
+### Adapter Layer - Persistence JPA (mod-016-persistence-jpa-spring)
+
+| Output File | Template | When |
+|-------------|----------|------|
+| `adapter/persistence/entity/{{Entity}}JpaEntity.java` | `templates/entity/JpaEntity.java.tpl` | persistence.type = "jpa" |
+| `adapter/persistence/repository/{{Entity}}JpaRepository.java` | `templates/repository/JpaRepository.java.tpl` | persistence.type = "jpa" |
+| `adapter/persistence/{{Entity}}PersistenceAdapter.java` | `templates/adapter/PersistenceAdapter.java.tpl` | persistence.type = "jpa" |
+| `adapter/persistence/mapper/{{Entity}}PersistenceMapper.java` | `templates/mapper/PersistenceMapper.java.tpl` | persistence.type = "jpa" |
+
+### Adapter Layer - System API (mod-017 + mod-018)
+
+| Output File | Template | Module | When |
+|-------------|----------|--------|------|
+| `adapter/systemapi/dto/{{Api}}Dto.java` | `templates/dto/Dto.java.tpl` | mod-017 | persistence.type = "system_api" |
+| `adapter/systemapi/mapper/{{Entity}}Mapper.java` | `templates/mapper/SystemApiMapper.java.tpl` | mod-017 | persistence.type = "system_api" |
+| `adapter/systemapi/{{Entity}}SystemApiAdapter.java` | `templates/adapter/SystemApiAdapter.java.tpl` | mod-017 | persistence.type = "system_api" |
+| `adapter/systemapi/client/{{Api}}Client.java` | `templates/client/restclient.java.tpl` | mod-018 | system_api.client = "restclient" |
+| `adapter/systemapi/client/{{Api}}Client.java` | `templates/client/feign.java.tpl` | mod-018 | system_api.client = "feign" |
+| `adapter/systemapi/client/{{Api}}Client.java` | `templates/client/resttemplate.java.tpl` | mod-018 | system_api.client = "resttemplate" |
+| `infrastructure/config/RestClientConfig.java` | `templates/config/restclient-config.java.tpl` | mod-018 | system_api.client = "restclient" |
+| `infrastructure/config/FeignConfig.java` | `templates/config/feign-config.java.tpl` | mod-018 | system_api.client = "feign" |
+
+### Infrastructure (mod-015)
+
+| Output File | Template | Notes |
+|-------------|----------|-------|
+| `infrastructure/config/ApplicationConfig.java` | `templates/infrastructure/ApplicationConfig.java.tpl` | @Bean for domain |
+| `infrastructure/GlobalExceptionHandler.java` | `templates/infrastructure/GlobalExceptionHandler.java.tpl` | RFC 7807 |
+| `infrastructure/CorrelationIdFilter.java` | `templates/infrastructure/CorrelationIdFilter.java.tpl` | MDC filter |
+
+### Tests (mod-015 + module-specific)
+
+| Output File | Template | Module |
+|-------------|----------|--------|
+| `test/.../{{Entity}}DomainServiceTest.java` | `templates/test/DomainServiceTest.java.tpl` | mod-015 |
+| `test/.../{{Entity}}PersistenceAdapterTest.java` | `templates/test/PersistenceAdapterTest.java.tpl` | mod-016 |
+| `test/.../{{Entity}}SystemApiAdapterTest.java` | `templates/test/SystemApiAdapterTest.java.tpl` | mod-017 |
+
+### Resilience Configuration (mod-001, mod-002, mod-003, mod-004)
+
+These modules provide **configuration snippets** to merge into `application.yml`:
+
+| Feature | Module | Config Template |
+|---------|--------|-----------------|
+| Circuit Breaker | mod-001 | `templates/config/application-circuitbreaker.yml.tpl` |
+| Retry | mod-002 | `templates/config/application-retry.yml.tpl` |
+| Timeout | mod-003 | `templates/config/application-timeout.yml.tpl` |
+| Rate Limiter | mod-004 | `templates/config/application-ratelimiter.yml.tpl` |
+
+### Resilience Annotations
+
+Resilience annotations are applied to **SystemApiAdapter** methods when using System API persistence:
+
+| Pattern | Annotation | Source Module |
+|---------|------------|---------------|
+| Circuit Breaker | `@CircuitBreaker(name=..., fallbackMethod=...)` | mod-001 |
+| Retry | `@Retry(name=...)` | mod-002 |
+| Timeout | Client-level (RestClient factory) | mod-018 |
+
+> **Note:** @TimeLimiter requires async methods (CompletableFuture). For sync methods,
+> use client-level timeout configuration in RestClientConfig.
+
+---
+
 ## Related Skills
 
 ### Complements

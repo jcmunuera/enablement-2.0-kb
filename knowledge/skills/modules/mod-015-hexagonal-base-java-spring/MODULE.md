@@ -1,7 +1,7 @@
 # MOD-015: Hexagonal Base - Java/Spring Boot
 
 **Module ID:** mod-015-hexagonal-base-java-spring  
-**Version:** 1.0  
+**Version:** 1.1  
 **Source ERI:** eri-code-001-hexagonal-light-java-spring  
 **Framework:** Java 17+ / Spring Boot 3.2.x  
 **Used by:** skill-code-020-generate-microservice-java-spring
@@ -11,6 +11,38 @@
 ## Purpose
 
 Provides reusable code templates for generating Hexagonal Light microservices in Java/Spring Boot. Templates use `{{placeholder}}` variables that are replaced dynamically during code generation.
+
+---
+
+## Template Structure
+
+```
+templates/
+├── Application.java.tpl              # Main application class
+├── domain/
+│   ├── Entity.java.tpl               # Domain entity (pure POJO)
+│   ├── EntityId.java.tpl             # Value object for ID
+│   ├── Repository.java.tpl           # Port interface
+│   ├── DomainService.java.tpl        # Domain service (pure POJO)
+│   └── NotFoundException.java.tpl    # Domain exception
+├── application/
+│   ├── ApplicationService.java.tpl   # Application service (@Service)
+│   └── dto/
+│       ├── CreateRequest.java.tpl    # Create request DTO
+│       ├── UpdateRequest.java.tpl    # Update request DTO
+│       └── Response.java.tpl         # Response DTO
+├── adapter/
+│   └── RestController.java.tpl       # Inbound REST adapter
+├── infrastructure/
+│   ├── ApplicationConfig.java.tpl    # @Bean configuration
+│   ├── GlobalExceptionHandler.java.tpl  # RFC 7807 exception handler
+│   └── CorrelationIdFilter.java.tpl  # Request correlation tracking
+├── config/
+│   ├── pom.xml.tpl                   # Maven configuration
+│   └── application.yml.tpl           # Spring configuration
+└── test/
+    └── DomainServiceTest.java.tpl    # Domain layer tests
+```
 
 ---
 

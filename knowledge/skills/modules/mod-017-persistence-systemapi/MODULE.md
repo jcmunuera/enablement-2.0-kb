@@ -30,6 +30,9 @@ Reusable templates for implementing persistence via System API delegation. The D
 
 **Use when:** Service delegates persistence to mainframe via System APIs
 
+> ⚠️ **IMPORTANT:** This module provides the adapter layer only (DTO, Mapper, Adapter).  
+> REST client templates are in **mod-018**. Use both modules together.
+
 ---
 
 ## Structure
@@ -55,9 +58,16 @@ mod-017-persistence-systemapi/
     └── systemapi-check.sh
 ```
 
-> **Note:** REST client templates (feign, restclient, resttemplate) have been moved to 
+> **Note:** REST client templates have been moved to 
 > [mod-018-api-integration-rest-java-spring](../mod-018-api-integration-rest-java-spring/MODULE.md).
 > This module focuses on the persistence adapter that wraps the client with resilience patterns.
+
+---
+
+## Client Examples (Reference Only)
+
+The following examples show how to use clients from mod-018. These are for documentation
+purposes - actual client templates are in mod-018.
 
 ---
 

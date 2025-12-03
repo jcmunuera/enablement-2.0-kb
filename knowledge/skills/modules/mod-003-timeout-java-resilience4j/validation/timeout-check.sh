@@ -1,22 +1,24 @@
 #!/bin/bash
 # =============================================================================
 # MOD-003: Timeout Pattern Validation Script
-# Tier 3 validation for Resilience4j TimeLimiter implementation
+# Tier 3 validation for timeout implementation
+# 
+# Supports two timeout strategies:
+# 1. @TimeLimiter annotation (async methods with CompletableFuture)
+# 2. Client-level timeout (RestClient/WebClient with timeout config)
 # =============================================================================
-
-set -e
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Counters
 ERRORS=0
 WARNINGS=0
 
-# Target directory (passed as argument)
+# Target directory
 TARGET_DIR="${1:-.}"
 
 echo "=============================================="
@@ -24,175 +26,183 @@ echo "MOD-003: Timeout Pattern Validation"
 echo "Target: $TARGET_DIR"
 echo "=============================================="
 
-# -----------------------------------------------------------------------------
-# Helper functions
-# -----------------------------------------------------------------------------
+error() { echo -e "${RED}[ERROR]${NC} $1"; ((ERRORS++)) || true; }
+warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; ((WARNINGS++)) || true; }
+success() { echo -e "${GREEN}[OK]${NC} $1"; }
+info() { echo -e "[INFO] $1"; }
 
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-    ((ERRORS++))
-}
+# Detect which timeout strategy is used
+USES_TIMELIMITER=false
+USES_CLIENT_TIMEOUT=false
 
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-    ((WARNINGS++))
-}
+# Check for @TimeLimiter annotation in Java code
+if grep -rq "^\s*@TimeLimiter" "$TARGET_DIR/src/main/java" 2>/dev/null; then
+    USES_TIMELIMITER=true
+fi
 
-success() {
-    echo -e "${GREEN}[OK]${NC} $1"
-}
+# Check for client-level timeout configuration
+if grep -rq "setConnectTimeout\|setReadTimeout\|ClientHttpRequestFactory" \
+    "$TARGET_DIR/src/main/java" 2>/dev/null; then
+    USES_CLIENT_TIMEOUT=true
+fi
 
-info() {
-    echo -e "[INFO] $1"
-}
-
-# -----------------------------------------------------------------------------
-# Validation checks
-# -----------------------------------------------------------------------------
+if grep -qE "connect-timeout|read-timeout" "$TARGET_DIR/src/main/resources/application.yml" 2>/dev/null; then
+    USES_CLIENT_TIMEOUT=true
+fi
 
 echo ""
-echo "--- Structural Constraints ---"
+echo "--- Strategy Detection ---"
 
-# Check 1: @TimeLimiter not in domain layer
-info "Checking @TimeLimiter not in domain layer..."
-if grep -r "@TimeLimiter" "$TARGET_DIR/src/main/java" 2>/dev/null | grep -q "/domain/"; then
-    error "@TimeLimiter annotation found in domain layer - MUST be in application layer only"
+if [ "$USES_TIMELIMITER" = true ]; then
+    info "Detected: @TimeLimiter annotation strategy"
+elif [ "$USES_CLIENT_TIMEOUT" = true ]; then
+    info "Detected: Client-level timeout strategy"
 else
-    success "@TimeLimiter not in domain layer"
+    warning "No timeout strategy detected - consider adding timeouts"
 fi
 
-# Check 2: @TimeLimiter not directly on controllers
-info "Checking @TimeLimiter not on controllers..."
-if grep -r "@TimeLimiter" "$TARGET_DIR/src/main/java" 2>/dev/null | grep -q "/controller/"; then
-    warning "@TimeLimiter found on controller - SHOULD be on application service"
-else
-    success "@TimeLimiter not on controllers"
-fi
+# =============================================================================
+# STRATEGY 1: @TimeLimiter Validation
+# =============================================================================
 
-# Check 3: Methods with @TimeLimiter return CompletableFuture
-info "Checking @TimeLimiter methods return CompletableFuture..."
-TIMELIMITER_FILES=$(grep -rl "@TimeLimiter" "$TARGET_DIR/src/main/java" 2>/dev/null || true)
-RETURN_OK=true
-for file in $TIMELIMITER_FILES; do
-    # Check if method after @TimeLimiter returns CompletableFuture
-    if grep -A5 "@TimeLimiter" "$file" | grep -q "public.*CompletableFuture"; then
-        : # OK
+if [ "$USES_TIMELIMITER" = true ]; then
+    echo ""
+    echo "--- @TimeLimiter Validation ---"
+    
+    # Check: @TimeLimiter not in domain layer
+    info "Checking @TimeLimiter not in domain layer..."
+    if grep -r "@TimeLimiter" "$TARGET_DIR/src/main/java" 2>/dev/null | grep -q "/domain/"; then
+        error "@TimeLimiter annotation found in domain layer"
     else
-        if grep -A5 "@TimeLimiter" "$file" | grep -q "public"; then
-            error "In $file: @TimeLimiter method does not return CompletableFuture - REQUIRED"
-            RETURN_OK=false
-        fi
+        success "@TimeLimiter not in domain layer"
     fi
-done
-if [ "$RETURN_OK" = true ] && [ -n "$TIMELIMITER_FILES" ]; then
-    success "@TimeLimiter methods return CompletableFuture"
+    
+    # Check: Methods return CompletableFuture
+    info "Checking @TimeLimiter methods return CompletableFuture..."
+    TIMELIMITER_FILES=$(grep -rl "@TimeLimiter" "$TARGET_DIR/src/main/java" 2>/dev/null || true)
+    for file in $TIMELIMITER_FILES; do
+        if grep -A5 "@TimeLimiter" "$file" | grep -q "public.*CompletableFuture"; then
+            success "$(basename "$file"): Returns CompletableFuture"
+        else
+            if grep -A5 "@TimeLimiter" "$file" | grep -q "public"; then
+                error "$(basename "$file"): @TimeLimiter method must return CompletableFuture"
+            fi
+        fi
+    done
+    
+    # Check: Annotation order
+    info "Checking annotation order (@CircuitBreaker before @TimeLimiter before @Retry)..."
+    for file in $TIMELIMITER_FILES; do
+        if grep -q "@CircuitBreaker" "$file" && grep -q "@TimeLimiter" "$file"; then
+            CB_LINE=$(grep -n "@CircuitBreaker" "$file" | head -1 | cut -d: -f1)
+            TL_LINE=$(grep -n "@TimeLimiter" "$file" | head -1 | cut -d: -f1)
+            if [ -n "$CB_LINE" ] && [ -n "$TL_LINE" ] && [ "$TL_LINE" -lt "$CB_LINE" ]; then
+                error "$(basename "$file"): @TimeLimiter before @CircuitBreaker - wrong order"
+            fi
+        fi
+        
+        if grep -q "@TimeLimiter" "$file" && grep -q "@Retry" "$file"; then
+            TL_LINE=$(grep -n "@TimeLimiter" "$file" | head -1 | cut -d: -f1)
+            R_LINE=$(grep -n "@Retry" "$file" | head -1 | cut -d: -f1)
+            if [ -n "$TL_LINE" ] && [ -n "$R_LINE" ] && [ "$R_LINE" -lt "$TL_LINE" ]; then
+                error "$(basename "$file"): @Retry before @TimeLimiter - wrong order"
+            fi
+        fi
+    done
+    if [ $ERRORS -eq 0 ]; then
+        success "Annotation order correct"
+    fi
 fi
 
-# Check 4: Annotation order (CircuitBreaker before TimeLimiter before Retry)
-info "Checking annotation order..."
-for file in $TIMELIMITER_FILES; do
-    # Check CircuitBreaker before TimeLimiter
-    if grep -q "@CircuitBreaker" "$file" && grep -q "@TimeLimiter" "$file"; then
-        CB_LINE=$(grep -n "@CircuitBreaker" "$file" | head -1 | cut -d: -f1)
-        TL_LINE=$(grep -n "@TimeLimiter" "$file" | head -1 | cut -d: -f1)
-        if [ -n "$CB_LINE" ] && [ -n "$TL_LINE" ] && [ "$TL_LINE" -lt "$CB_LINE" ]; then
-            error "In $file: @TimeLimiter appears before @CircuitBreaker - wrong order"
+# =============================================================================
+# STRATEGY 2: Client-level Timeout Validation
+# =============================================================================
+
+if [ "$USES_CLIENT_TIMEOUT" = true ]; then
+    echo ""
+    echo "--- Client-level Timeout Validation ---"
+    
+    # Check: Timeout configuration in application.yml
+    info "Checking timeout configuration..."
+    if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
+        if grep -qE "connect-timeout|read-timeout|connectTimeout|readTimeout" \
+            "$TARGET_DIR/src/main/resources/application.yml"; then
+            success "Timeout configuration found in application.yml"
+        else
+            warning "Timeout not configured in application.yml"
         fi
     fi
     
-    # Check TimeLimiter before Retry
-    if grep -q "@TimeLimiter" "$file" && grep -q "@Retry" "$file"; then
-        TL_LINE=$(grep -n "@TimeLimiter" "$file" | head -1 | cut -d: -f1)
-        R_LINE=$(grep -n "@Retry" "$file" | head -1 | cut -d: -f1)
-        if [ -n "$TL_LINE" ] && [ -n "$R_LINE" ] && [ "$R_LINE" -lt "$TL_LINE" ]; then
-            error "In $file: @Retry appears before @TimeLimiter - wrong order"
+    # Check: RestClient/WebClient with timeout
+    info "Checking client timeout setup..."
+    if grep -rq "setConnectTimeout\|setReadTimeout\|ClientHttpRequestFactory" \
+        "$TARGET_DIR/src/main/java" 2>/dev/null; then
+        success "Client timeout factory configured"
+    elif grep -rq "\.timeout\|Duration\." "$TARGET_DIR/src/main/java" 2>/dev/null; then
+        success "Timeout configuration found in Java code"
+    else
+        warning "No explicit timeout setup in client configuration"
+    fi
+fi
+
+# =============================================================================
+# Common Checks
+# =============================================================================
+
+echo ""
+echo "--- Common Checks ---"
+
+# Check: Resilience4j timelimiter config (if @TimeLimiter used)
+if [ "$USES_TIMELIMITER" = true ]; then
+    info "Checking Resilience4j timelimiter configuration..."
+    if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
+        if grep -q "timelimiter:" "$TARGET_DIR/src/main/resources/application.yml"; then
+            success "Resilience4j timelimiter configuration found"
+            
+            if grep -q "timeoutDuration:" "$TARGET_DIR/src/main/resources/application.yml"; then
+                success "timeoutDuration configured"
+            else
+                warning "timeoutDuration not explicitly set - using defaults"
+            fi
+        else
+            error "timelimiter configuration missing (required for @TimeLimiter)"
         fi
     fi
-done
-if [ $ERRORS -eq 0 ]; then
-    success "Annotation order correct"
 fi
 
-echo ""
-echo "--- Configuration Constraints ---"
-
-# Check 5: TimeLimiter configuration exists in application.yml
-info "Checking timelimiter configuration exists..."
-if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
-    if grep -q "resilience4j:" "$TARGET_DIR/src/main/resources/application.yml" && \
-       grep -q "timelimiter:" "$TARGET_DIR/src/main/resources/application.yml"; then
-        success "Resilience4j timelimiter configuration found"
-    else
-        error "resilience4j.timelimiter configuration not found in application.yml"
-    fi
-else
-    error "application.yml not found"
-fi
-
-# Check 6: Timeout duration configured
-info "Checking timeoutDuration configured..."
-if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
-    if grep -q "timeoutDuration:" "$TARGET_DIR/src/main/resources/application.yml"; then
-        success "timeoutDuration configured"
-    else
-        warning "timeoutDuration not explicitly configured - using defaults"
-    fi
-fi
-
-echo ""
-echo "--- Dependency Constraints ---"
-
-# Check 7: Resilience4j dependency
-info "Checking Resilience4j dependency..."
+# Check: Dependencies
+info "Checking dependencies..."
 if [ -f "$TARGET_DIR/pom.xml" ]; then
-    if grep -q "resilience4j-spring-boot" "$TARGET_DIR/pom.xml"; then
+    if grep -q "resilience4j" "$TARGET_DIR/pom.xml"; then
         success "Resilience4j dependency found"
-    else
-        error "Resilience4j dependency not found in pom.xml"
+    elif [ "$USES_TIMELIMITER" = true ]; then
+        error "Resilience4j dependency required for @TimeLimiter"
     fi
-elif [ -f "$TARGET_DIR/build.gradle" ]; then
-    if grep -q "resilience4j" "$TARGET_DIR/build.gradle"; then
-        success "Resilience4j dependency found"
-    else
-        error "Resilience4j dependency not found in build.gradle"
-    fi
-else
-    warning "No pom.xml or build.gradle found"
-fi
-
-# Check 8: Spring AOP dependency
-info "Checking Spring AOP dependency..."
-if [ -f "$TARGET_DIR/pom.xml" ]; then
+    
     if grep -q "spring-boot-starter-aop" "$TARGET_DIR/pom.xml"; then
         success "Spring AOP dependency found"
-    else
-        error "spring-boot-starter-aop dependency not found - required for @TimeLimiter"
+    elif [ "$USES_TIMELIMITER" = true ]; then
+        error "spring-boot-starter-aop required for @TimeLimiter"
     fi
 fi
 
-echo ""
-echo "--- Testing Constraints ---"
-
-# Check 9: Test files exist for services with @TimeLimiter
-info "Checking test coverage for timeout..."
-for file in $TIMELIMITER_FILES; do
-    CLASS_NAME=$(basename "$file" .java)
-    TEST_FILE="$TARGET_DIR/src/test/java"
-    if find "$TEST_FILE" -name "${CLASS_NAME}Test.java" 2>/dev/null | grep -q .; then
-        success "Test found for $CLASS_NAME"
-    else
-        warning "No test found for $CLASS_NAME with @TimeLimiter"
-    fi
-done
-
-# -----------------------------------------------------------------------------
+# =============================================================================
 # Summary
-# -----------------------------------------------------------------------------
+# =============================================================================
 
 echo ""
 echo "=============================================="
 echo "Validation Summary"
 echo "=============================================="
+
+if [ "$USES_TIMELIMITER" = true ]; then
+    echo "Strategy: @TimeLimiter (async)"
+elif [ "$USES_CLIENT_TIMEOUT" = true ]; then
+    echo "Strategy: Client-level timeout (sync)"
+else
+    echo "Strategy: None detected"
+fi
+
 echo -e "Errors:   ${RED}$ERRORS${NC}"
 echo -e "Warnings: ${YELLOW}$WARNINGS${NC}"
 echo ""

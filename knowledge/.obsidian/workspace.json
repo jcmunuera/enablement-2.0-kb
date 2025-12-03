@@ -177,5 +177,13 @@
     }
   },
   "active": "addf29cccf98c882",
-  "lastOpenFiles": []
+  "lastOpenFiles": [
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/Application.java.tpl",
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/infrastructure/CorrelationIdFilter.java.tpl",
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/infrastructure/GlobalExceptionHandler.java.tpl",
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/application/dto/UpdateRequest.java.tpl",
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/application/dto/Response.java.tpl",
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/application/dto/CreateRequest.java.tpl",
+    "skills/modules/mod-015-hexagonal-base-java-spring/templates/application/dto"
+  ]
 }

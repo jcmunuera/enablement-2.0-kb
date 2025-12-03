@@ -719,6 +719,28 @@ Location: `{output}/.enablement/manifest.json`
 
 ---
 
+## Template Mapping (REQUIRED for generation skills)
+
+This section provides **explicit mapping** from output files to module templates.
+Claude MUST use these templates during generation - not improvise.
+
+### Base Templates (mod-XXX-...)
+
+| Output File | Template | Notes |
+|-------------|----------|-------|
+| `{output-path}` | `templates/{path}.tpl` | {description} |
+
+### Conditional Templates
+
+| Output File | Template | Module | Condition |
+|-------------|----------|--------|-----------|
+| `{output-path}` | `templates/{path}.tpl` | mod-XXX | feature.x.enabled |
+
+> **IMPORTANT:** Every generated file MUST have a corresponding template entry.
+> If you add a new output file, add its template mapping here.
+
+---
+
 ## Execution Steps
 
 1. **Parse Input:** Validate input against schema
@@ -796,6 +818,8 @@ Before marking a Skill as "Active":
 - [ ] Traceability profile is specified
 - [ ] Input schema is defined
 - [ ] Output structure is documented
+- [ ] **Template Mapping section is complete** (for generation skills)
+- [ ] **Every output file has a template entry** (for generation skills)
 
 ---
 
