@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "skills/modules/mod-002-retry-java-resilience4j/MODULE.md",
+                "file": "ERIs/eri-code-013-api-integration-rest-java-spring/ERI.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "MODULE"
+              "title": "ERI"
             }
           }
         ]
@@ -182,11 +182,13 @@
   },
   "active": "addf29cccf98c882",
   "lastOpenFiles": [
-    "skills/skill-code-001-add-circuit-breaker-java-resilience4j/EXECUTION-FLOW.md",
+    "ADRs/adr-012-api-integration-patterns/ADR.md",
     "skills/skill-code-020-generate-microservice-java-spring/EXECUTION-FLOW.md",
-    "orchestration/prompt-template.md",
     "orchestration/execution-framework.md",
     "orchestration/discovery-rules.md",
+    "skills/modules/mod-002-retry-java-resilience4j/MODULE.md",
+    "skills/skill-code-001-add-circuit-breaker-java-resilience4j/EXECUTION-FLOW.md",
+    "orchestration/prompt-template.md",
     "orchestration/audit-schema.json",
     "orchestration/README.md",
     "orchestration",
