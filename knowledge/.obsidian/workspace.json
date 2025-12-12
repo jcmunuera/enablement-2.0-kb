@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "320cc879d9a33da3",
+        "id": "c63ee3aa2a556112",
         "type": "tabs",
         "children": [
           {
-            "id": "addf29cccf98c882",
+            "id": "2ea89e292b311120",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "ERIs/eri-code-013-api-integration-rest-java-spring/ERI.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "ERI"
+              "title": "New tab"
             }
           }
         ]
@@ -182,7 +178,11 @@
   },
   "active": "2a148c5fbd3cbabc",
   "lastOpenFiles": [
+    "Untitled.base",
+    "README.md",
+    "ENABLEMENT-EXECUTIVE-BRIEF.md",
     "model/ENABLEMENT-MODEL-v1.3.md",
+    "ERIs/eri-code-013-api-integration-rest-java-spring/ERI.md",
     "ADRs/adr-012-api-integration-patterns/ADR.md",
     "skills/skill-code-020-generate-microservice-java-spring/EXECUTION-FLOW.md",
     "orchestration/execution-framework.md",
