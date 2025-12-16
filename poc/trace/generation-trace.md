@@ -95,40 +95,40 @@ Resolving required modules based on features...
 modules = []
 
 # Always required for java-spring microservice
-modules.append("mod-015-hexagonal-base-java-spring")
+modules.append("mod-code-015-hexagonal-base-java-spring")
 
 # Integration enabled?
 if features.integration.enabled:
-    modules.append("mod-018-api-integration-rest-java-spring")
+    modules.append("mod-code-018-api-integration-rest-java-spring")
     # Select variant based on client type
     client_variant = features.integration.apis[0].client  # "restclient"
 
 # Persistence type?
 if features.persistence.type == "system_api":
-    modules.append("mod-017-persistence-systemapi")
+    modules.append("mod-code-017-persistence-systemapi")
     # Depends on mod-018 (already added)
 
 # Resilience patterns?
 if features.resilience.circuitBreaker.enabled:
-    modules.append("mod-001-circuit-breaker-java-resilience4j")
+    modules.append("mod-code-001-circuit-breaker-java-resilience4j")
 
 if features.resilience.retry.enabled:
-    modules.append("mod-002-retry-java-resilience4j")
+    modules.append("mod-code-002-retry-java-resilience4j")
 
 if features.resilience.timeout.enabled:
-    modules.append("mod-003-timeout-java-resilience4j")
+    modules.append("mod-code-003-timeout-java-resilience4j")
 ```
 
 ### Resolved Modules
 
 | Order | Module ID | Reason | Variant |
 |-------|-----------|--------|---------|
-| 1 | mod-015-hexagonal-base-java-spring | Base architecture | - |
-| 2 | mod-018-api-integration-rest-java-spring | integration.enabled = true | restclient |
-| 3 | mod-017-persistence-systemapi | persistence.type = system_api | - |
-| 4 | mod-001-circuit-breaker-java-resilience4j | resilience.circuitBreaker.enabled | basic-fallback |
-| 5 | mod-002-retry-java-resilience4j | resilience.retry.enabled | retry-with-circuitbreaker |
-| 6 | mod-003-timeout-java-resilience4j | resilience.timeout.enabled | basic-timeout |
+| 1 | mod-code-015-hexagonal-base-java-spring | Base architecture | - |
+| 2 | mod-code-018-api-integration-rest-java-spring | integration.enabled = true | restclient |
+| 3 | mod-code-017-persistence-systemapi | persistence.type = system_api | - |
+| 4 | mod-code-001-circuit-breaker-java-resilience4j | resilience.circuitBreaker.enabled | basic-fallback |
+| 5 | mod-code-002-retry-java-resilience4j | resilience.retry.enabled | retry-with-circuitbreaker |
+| 6 | mod-code-003-timeout-java-resilience4j | resilience.timeout.enabled | basic-timeout |
 
 ### Dependency Graph
 

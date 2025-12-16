@@ -54,7 +54,7 @@ This ADR establishes the framework. Current implementation supports:
 
 | Type | Status | ERI | MODULE |
 |------|--------|-----|--------|
-| REST Synchronous | ✅ Supported | ERI-013 | mod-018 |
+| REST Synchronous | ✅ Supported | ERI-013 | mod-code-018 |
 | gRPC | 🔮 Planned | - | - |
 | Async Request/Reply | 🔮 Planned | - | - |
 | Event Choreography | 🔮 Planned | - | - |

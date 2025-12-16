@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2025-12-16
+
+### 🏗️ Major Restructuring
+
+Complete repository reorganization for clarity and coherence.
+
+#### Changed
+
+**New Repository Structure**
+```
+enablement-2.0/
+├── knowledge/      # Pure knowledge (ADRs, ERIs only)
+├── model/          # Meta-model (standards, domains, authoring)
+├── skills/         # Executable skills
+├── modules/        # Reusable templates
+└── runtime/        # Discovery, flows, validators
+```
+
+**Key Moves**
+| Before | After |
+|--------|-------|
+| `knowledge/model/` | `model/` |
+| `knowledge/skills/` | `skills/` |
+| `knowledge/skills/modules/` | `modules/` |
+| `knowledge/validators/` | `runtime/validators/` |
+| `knowledge/orchestration/` | `runtime/discovery/` |
+| `knowledge/domains/.../skill-types/` | `runtime/flows/` |
+
+**Model Updates**
+- ENABLEMENT-MODEL upgraded to v1.5
+- Clear separation of concerns documented
+- Execution flow diagram added
+
+#### Removed
+- `knowledge/patterns/` - Not actively used
+- `knowledge/concerns/` - Simplified for now
+- `skills/*/README.md` - Redundant with SKILL.md + OVERVIEW.md
+
+#### Technical Details
+
+| Metric | Value |
+|--------|-------|
+| ERIs | 7 |
+| Modules | 8 |
+| ADRs | 5 |
+| Skills | 2 |
+| Flows | 5 (GENERATE, ADD, REMOVE, REFACTOR, MIGRATE) |
+
+---
+
+## [2.0.0] - 2025-12-12
+
+### 🎯 Domain Model Formalization
+
+#### Added
+- Domain model v2.0 (CODE, DESIGN, QA, GOVERNANCE)
+- Module naming with domain prefix: `mod-code-XXX-...`
+- Skill-types centralized in domains
+- Capabilities moved to domain level
+
+#### Changed
+- All modules renamed: `mod-001` → `mod-code-001`
+- 100+ references updated
+- ENABLEMENT-MODEL v1.3 → v1.4
+
+---
+
 ## [1.0.0] - 2025-12-01
 
 ### 🎉 Initial Release
@@ -20,72 +87,53 @@ First version of the Knowledge Base on GitHub. Corresponds to internal version v
 - ERI-CODE-009: Retry Pattern (Resilience4j)
 - ERI-CODE-010: Timeout Pattern (Resilience4j)
 - ERI-CODE-011: Rate Limiter (Resilience4j)
-- mod-001 through mod-004: Templates for each pattern
+- mod-code-001 through mod-code-004: Templates for each pattern
 - ADR-004: Resilience Patterns decision record
 
 **Persistence Patterns (New)**
 - ERI-CODE-012: Persistence Patterns (JPA + System API unified)
-- mod-016: JPA persistence template
-- mod-017: System API persistence template (Feign/RestTemplate/RestClient variants)
+- mod-code-016: JPA persistence template
+- mod-code-017: System API persistence template
 - ADR-011: Persistence Patterns decision record
-- CAPABILITY: persistence
+
+**API Integration**
+- ERI-CODE-013: REST API Integration
+- mod-code-018: REST integration template
+- ADR-012: API Integration Patterns
 
 **Hexagonal Architecture**
 - ERI-CODE-001: Hexagonal Light (Java/Spring)
-- mod-015: Hexagonal base template
+- mod-code-015: Hexagonal base template
 - ADR-009: Service Architecture Patterns
 
 **Skills**
 - skill-code-001: Add Circuit Breaker to existing service
-- skill-code-020: Generate Microservice (v1.2.0)
-  - Full resilience options
-  - Persistence type selection (JPA vs System API)
-  - System API client selection (Feign/RestTemplate/RestClient)
+- skill-code-020: Generate Microservice
 
 **Model & Standards**
 - ENABLEMENT-MODEL v1.2
 - ASSET-STANDARDS v1.3
-- Authoring guides with ERI/MODULE breakdown criteria
+- Authoring guides
 - 4-tier validation system
-
-**Project Structure**
-- GitHub repository structure
-- Work methodology documented
-- Session documentation system
-
-#### Technical Details
-
-| Metric | Value |
-|--------|-------|
-| Total Files | ~215 |
-| ERIs | 6 |
-| MODULEs | 7 |
-| ADRs | 4 |
-| SKILLs | 2 |
-| CAPABILITIEs | 3 |
 
 ---
 
 ## Version History (Pre-GitHub)
-
-For reference, internal versions before GitHub migration:
 
 | Internal | Description | Date |
 |----------|-------------|------|
 | v7.0 | Resilience complete + Persistence patterns | 2025-12-01 |
 | v6.0 | ERI machine-readable annex mandatory | 2025-11-28 |
 | v5.0 | Validator restructure, domain prefixes | 2025-11-27 |
-| v4.0 | Model reorganization, 4-tier validation | 2025-11-26 |
-| v3.0 | Governance documents, traceability | 2025-11-25 |
 
 ---
 
 ## Upcoming
 
-### [1.1.0] - Planned
+### [2.2.0] - Planned
 - Code Generation PoC results
-- Observability patterns (planned)
+- Complete stub flows (REMOVE, REFACTOR, MIGRATE)
 
-### [2.0.0] - Future
+### [3.0.0] - Future
 - MCP Server integration
 - Multi-agent architecture

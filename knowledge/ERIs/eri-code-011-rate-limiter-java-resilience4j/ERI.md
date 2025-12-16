@@ -590,7 +590,7 @@ public Result callSystemApi() { }
 
 ### Related
 - **Implements:** ADR-004 (Resilience Patterns)
-- **Module:** mod-004-rate-limiter-java-resilience4j
+- **Module:** mod-code-004-rate-limiter-java-resilience4j
 - **Complements:** ERI-008 (Circuit Breaker), ERI-009 (Retry), ERI-010 (Timeout)
 
 ---

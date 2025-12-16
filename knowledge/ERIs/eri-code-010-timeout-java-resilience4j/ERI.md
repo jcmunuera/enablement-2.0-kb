@@ -578,7 +578,7 @@ public CompletableFuture<Result> callSystemApi() { }
 
 ### Related
 - **Implements:** ADR-004 (Resilience Patterns)
-- **Module:** mod-003-timeout-java-resilience4j
+- **Module:** mod-code-003-timeout-java-resilience4j
 - **Complements:** ERI-008 (Circuit Breaker), ERI-009 (Retry)
 
 ---
@@ -809,13 +809,13 @@ public WebClient webClient() {
 
 | Strategy Value | Module | Template |
 |----------------|--------|----------|
-| `timelimiter` | mod-003-timeout-java-resilience4j | @TimeLimiter annotation |
-| `client_level` | mod-018-api-integration-rest-java-spring | RestClient/RestTemplate config |
+| `timelimiter` | mod-code-003-timeout-java-resilience4j | @TimeLimiter annotation |
+| `client_level` | mod-code-018-api-integration-rest-java-spring | RestClient/RestTemplate config |
 
 ### Module Reference
 
-- **@TimeLimiter strategy:** [mod-003-timeout-java-resilience4j](../../skills/modules/mod-003-timeout-java-resilience4j/)
-- **Client-level strategy:** [mod-018-api-integration-rest-java-spring](../../skills/modules/mod-018-api-integration-rest-java-spring/)
+- **@TimeLimiter strategy:** [mod-code-003-timeout-java-resilience4j](../../skills/modules/mod-code-003-timeout-java-resilience4j/)
+- **Client-level strategy:** [mod-code-018-api-integration-rest-java-spring](../../skills/modules/mod-code-018-api-integration-rest-java-spring/)
 
 ---
 

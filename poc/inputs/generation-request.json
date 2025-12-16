@@ -171,12 +171,12 @@
   "modules": {
     "_comment": "Resolved by skill-020 based on features",
     "required": [
-      "mod-015-hexagonal-base-java-spring",
-      "mod-018-api-integration-rest-java-spring",
-      "mod-017-persistence-systemapi",
-      "mod-001-circuit-breaker-java-resilience4j",
-      "mod-002-retry-java-resilience4j",
-      "mod-003-timeout-java-resilience4j"
+      "mod-code-015-hexagonal-base-java-spring",
+      "mod-code-018-api-integration-rest-java-spring",
+      "mod-code-017-persistence-systemapi",
+      "mod-code-001-circuit-breaker-java-resilience4j",
+      "mod-code-002-retry-java-resilience4j",
+      "mod-code-003-timeout-java-resilience4j"
     ]
   }
 }

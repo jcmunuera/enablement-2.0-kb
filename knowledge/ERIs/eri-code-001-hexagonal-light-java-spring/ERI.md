@@ -1005,7 +1005,7 @@ class CustomerDomainServiceTest {
 - **ADR-009:** Service Architecture Patterns
 - **ADR-001:** API Design Standards
 - **skill-020:** Generate Microservice (uses this ERI)
-- **mod-015:** Hexagonal Base Module (templates extracted from this ERI)
+- **mod-code-015:** Hexagonal Base Module (templates extracted from this ERI)
 
 ---
 

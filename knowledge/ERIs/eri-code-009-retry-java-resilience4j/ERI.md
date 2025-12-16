@@ -567,7 +567,7 @@ public Result callSystemApi() { }
 
 ### Related
 - **Implements:** ADR-004 (Resilience Patterns)
-- **Module:** mod-002-retry-java-resilience4j
+- **Module:** mod-code-002-retry-java-resilience4j
 - **Complements:** ERI-008 (Circuit Breaker), ERI-010 (Timeout)
 
 ---

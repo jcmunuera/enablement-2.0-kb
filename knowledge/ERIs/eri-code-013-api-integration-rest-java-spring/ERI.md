@@ -556,7 +556,7 @@ class PartiesApiClientIntegrationTest {
 
 - **ADR-012:** API Integration Patterns (decision)
 - **ADR-004:** Resilience Patterns (Circuit Breaker, Retry, Timeout)
-- **mod-018:** api-integration-rest-java-spring (templates)
+- **mod-code-018:** api-integration-rest-java-spring (templates)
 - **CAP:** integration.api.rest
 
 ---

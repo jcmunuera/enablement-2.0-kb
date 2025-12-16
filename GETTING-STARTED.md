@@ -1,7 +1,7 @@
 # Getting Started with Enablement 2.0
 
-**Version:** 1.0  
-**Last Updated:** 2025-12-12  
+**Version:** 1.1  
+**Last Updated:** 2025-12-16  
 **Purpose:** Onboarding guide for different roles
 
 ---
@@ -40,7 +40,7 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
    - Solution overview
    - Current inventory
 
-2. **[ENABLEMENT-EXECUTIVE-BRIEF.md](knowledge/model/ENABLEMENT-EXECUTIVE-BRIEF.md)** (10 min)
+2. **[ENABLEMENT-EXECUTIVE-BRIEF.md](model/ENABLEMENT-EXECUTIVE-BRIEF.md)** (10 min)
    - ROI and value proposition
    - Risk mitigation
    - Adoption strategy
@@ -63,23 +63,23 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 1. **[README.md](README.md)** (5 min)
    - Repository structure overview
 
-2. **[knowledge/model/ENABLEMENT-MODEL-v1.3.md](knowledge/model/ENABLEMENT-MODEL-v1.3.md)** (30 min)
+2. **[model/ENABLEMENT-MODEL-v1.5.md](model/ENABLEMENT-MODEL-v1.5.md)** (30 min)
    - Complete conceptual model
    - Asset hierarchy: ADR → ERI → Module → Skill
    - Capability hierarchy
    - Validation system (4 tiers)
 
-3. **[knowledge/model/ENABLEMENT-TECHNICAL-GUIDE.md](knowledge/model/ENABLEMENT-TECHNICAL-GUIDE.md)** (20 min)
+3. **[model/ENABLEMENT-TECHNICAL-GUIDE.md](model/ENABLEMENT-TECHNICAL-GUIDE.md)** (20 min)
    - Technical implementation details
    - How Skills execute
    - How validation works
 
-4. **[knowledge/model/standards/ASSET-STANDARDS-v1.3.md](knowledge/model/standards/ASSET-STANDARDS-v1.3.md)** (20 min)
+4. **[model/standards/ASSET-STANDARDS-v1.3.md](model/standards/ASSET-STANDARDS-v1.3.md)** (20 min)
    - Naming conventions
    - Directory structures
    - Required metadata
 
-5. **[knowledge/orchestration/README.md](knowledge/orchestration/README.md)** (15 min)
+5. **[runtime/discovery/README.md](runtime/discovery/README.md)** (15 min)
    - How prompts become skill executions
    - Discovery rules
    - Execution framework
@@ -134,30 +134,30 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 
 ### Reading Order
 
-1. **[knowledge/model/standards/authoring/README.md](knowledge/model/standards/authoring/README.md)** (10 min)
+1. **[model/standards/authoring/README.md](model/standards/authoring/README.md)** (10 min)
    - Overview of authoring process
    - Which guide for which asset type
 
-2. **[knowledge/model/standards/authoring/ADR.md](knowledge/model/standards/authoring/ADR.md)** (20 min)
+2. **[model/standards/authoring/ADR.md](model/standards/authoring/ADR.md)** (20 min)
    - How to document strategic decisions
    - ADR template and structure
 
-3. **[knowledge/model/standards/authoring/ERI.md](knowledge/model/standards/authoring/ERI.md)** (30 min)
+3. **[model/standards/authoring/ERI.md](model/standards/authoring/ERI.md)** (30 min)
    - How to create reference implementations
    - Working code examples with documentation
 
-4. **[knowledge/model/standards/authoring/MODULE.md](knowledge/model/standards/authoring/MODULE.md)** (30 min)
+4. **[model/standards/authoring/MODULE.md](model/standards/authoring/MODULE.md)** (30 min)
    - Abstracting ERI to reusable templates
    - Template Catalog structure
    - Variables and placeholders
 
-5. **[knowledge/model/standards/authoring/SKILL.md](knowledge/model/standards/authoring/SKILL.md)** (45 min)
+5. **[model/standards/authoring/SKILL.md](model/standards/authoring/SKILL.md)** (45 min)
    - Skill specification structure
    - **EXECUTION-FLOW.md** (deterministic execution steps)
    - Module Resolution
    - Validation orchestration
 
-6. **[knowledge/orchestration/execution-framework.md](knowledge/orchestration/execution-framework.md)** (15 min)
+6. **[runtime/discovery/execution-framework.md](runtime/discovery/execution-framework.md)** (15 min)
    - Generic execution flow all skills follow
    - How to customize for your skill
 
@@ -166,8 +166,8 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 After completing the reading:
 
 1. Start by examining existing skills:
-   - `knowledge/skills/skill-code-001-add-circuit-breaker-java-resilience4j/`
-   - `knowledge/skills/skill-code-020-generate-microservice-java-spring/`
+   - `skills/skill-code-001-add-circuit-breaker-java-resilience4j/`
+   - `skills/skill-code-020-generate-microservice-java-spring/`
 
 2. Pay special attention to:
    - `SKILL.md` - Complete specification
@@ -200,19 +200,19 @@ After completing the reading:
 3. **Choose a Skill and read its documentation:**
 
    **To add Circuit Breaker to existing service:**
-   - `knowledge/skills/skill-code-001-add-circuit-breaker-java-resilience4j/README.md`
+   - `skills/skill-code-001-add-circuit-breaker-java-resilience4j/README.md`
 
    **To generate a new microservice:**
-   - `knowledge/skills/skill-code-020-generate-microservice-java-spring/README.md`
+   - `skills/skill-code-020-generate-microservice-java-spring/README.md`
 
 4. **Understand the input format:**
-   - `knowledge/orchestration/prompt-template.md` (5 min)
+   - `runtime/discovery/prompt-template.md` (5 min)
 
 ### Quick Start: Generate a Microservice
 
 ```bash
 # 1. Navigate to the skill
-cd knowledge/skills/skill-code-020-generate-microservice-java-spring
+cd skills/skill-code-020-generate-microservice-java-spring
 
 # 2. Read the README
 cat README.md
@@ -244,30 +244,37 @@ enablement-2.0/
 ├── knowledge/
 │   ├── README.md               ← Knowledge Base structure
 │   │
+│   ├── domains/                ← Domain definitions (NEW)
+│   │   ├── code/
+│   │   │   ├── DOMAIN.md       ← CODE domain specification
+│   │   │   ├── capabilities/   ← resilience, persistence, etc.
+│   │   │   ├── skill-types/    ← GENERATE, ADD, REMOVE flows
+│   │   │   └── module-structure.md
+│   │   ├── design/             ← DESIGN domain (planned)
+│   │   ├── qa/                 ← QA domain (planned)
+│   │   └── governance/         ← GOVERNANCE domain (planned)
+│   │
+│   ├── concerns/               ← Cross-domain concerns (NEW)
+│   │   ├── security.md
+│   │   ├── performance.md
+│   │   └── observability.md
+│   │
 │   ├── model/
 │   │   ├── ENABLEMENT-MODEL-v1.3.md        ← Complete conceptual model
 │   │   ├── ENABLEMENT-TECHNICAL-GUIDE.md   ← Technical details
-│   │   ├── ENABLEMENT-EXECUTIVE-BRIEF.md   ← Executive summary
 │   │   │
 │   │   └── standards/
 │   │       ├── ASSET-STANDARDS-v1.3.md     ← Naming & structure
-│   │       │
 │   │       └── authoring/                   ← How to create assets
-│   │           ├── ADR.md
-│   │           ├── ERI.md
-│   │           ├── MODULE.md
-│   │           └── SKILL.md                 ← Includes EXECUTION-FLOW
 │   │
-│   ├── orchestration/           ← Execution rules (NEW)
-│   │   ├── README.md
+│   ├── orchestration/          ← Execution rules
 │   │   ├── discovery-rules.md
-│   │   ├── execution-framework.md
-│   │   └── prompt-template.md
+│   │   └── execution-framework.md
 │   │
-│   ├── ADRs/                    ← Strategic decisions
-│   ├── ERIs/                    ← Reference implementations
-│   ├── capabilities/            ← Capability definitions
-│   └── skills/                  ← Automated skills
+│   ├── ADRs/                   ← Strategic decisions
+│   ├── ERIs/                   ← Reference implementations
+│   └── skills/                 ← Automated skills
+│       └── modules/            ← mod-{domain}-{NNN}-...
 │       └── modules/             ← Reusable templates
 │
 └── docs/
@@ -301,7 +308,7 @@ It's a mandatory file in every Skill that defines the deterministic, step-by-ste
 
 ### Q: How do I know which validators apply to my skill?
 
-See `knowledge/model/standards/validation/README.md`. The validation tier depends on:
+See `model/standards/validation/README.md`. The validation tier depends on:
 - Tier 1: Always (universal checks)
 - Tier 2: Based on output type (code-projects, deployments, documents)
 - Tier 3: Based on modules used
@@ -313,9 +320,9 @@ See `knowledge/model/standards/validation/README.md`. The validation tier depend
 
 1. Check `knowledge/README.md` for structure
 2. Review existing assets as examples
-3. Use the authoring guides in `knowledge/model/standards/authoring/`
+3. Use the authoring guides in `model/standards/authoring/`
 4. Contact the C4E team
 
 ---
 
-**Last Updated:** 2025-12-12
+**Last Updated:** 2025-12-16

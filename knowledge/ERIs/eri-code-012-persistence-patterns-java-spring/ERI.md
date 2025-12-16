@@ -28,8 +28,8 @@ related:
   - eri-code-009-retry-java-resilience4j
   - eri-code-010-timeout-java-resilience4j
 modules:
-  - mod-016-persistence-jpa-spring
-  - mod-017-persistence-systemapi
+  - mod-code-016-persistence-jpa-spring
+  - mod-code-017-persistence-systemapi
 cross_domain_usage: qa
 ---
 
@@ -71,8 +71,8 @@ This Enterprise Reference Implementation provides the standard patterns for impl
 
 | Option | Use When | Module |
 |--------|----------|--------|
-| **JPA Adapter** | Service owns its data (is System of Record) | mod-016 |
-| **System API Adapter** | Service delegates to mainframe via REST APIs | mod-017 |
+| **JPA Adapter** | Service owns its data (is System of Record) | mod-code-016 |
+| **System API Adapter** | Service delegates to mainframe via REST APIs | mod-code-017 |
 
 ---
 
@@ -1188,7 +1188,7 @@ public Optional<Customer> findById(String id) {
 
 - **Implements:** ADR-011 (Persistence Patterns)
 - **Related:** ADR-009 (Hexagonal Architecture)
-- **Modules:** mod-016-persistence-jpa-spring, mod-017-persistence-systemapi
+- **Modules:** mod-code-016-persistence-jpa-spring, mod-code-017-persistence-systemapi
 - **Resilience:** ERI-CODE-008 (Circuit Breaker), ERI-CODE-009 (Retry)
 
 ---
