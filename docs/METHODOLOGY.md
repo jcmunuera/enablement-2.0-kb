@@ -18,8 +18,7 @@ main                     ← Stable versions (v1.0.0, v1.1.0, v2.0.0)
   │
   └── develop            ← Work in progress
         │
-        ├── feature/*    ← New features
-        └── poc/*        ← Proofs of concept
+        └── feature/*    ← New features
 ```
 
 ### Branches
@@ -29,7 +28,8 @@ main                     ← Stable versions (v1.0.0, v1.1.0, v2.0.0)
 | `main` | Stable versions, tagged | - |
 | `develop` | Work in progress integration | `main` (on releases) |
 | `feature/*` | Specific new functionality | `develop` |
-| `poc/*` | Proofs of concept | `develop` (if successful) |
+
+> **Note:** Proofs of concept are executed outside the repository in a separate workspace.
 
 ---
 
@@ -69,7 +69,6 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 | `model` | Model and standards |
 | `authoring` | Authoring guides |
 | `validation` | Validation system |
-| `poc` | Proofs of concept |
 
 ### Examples
 

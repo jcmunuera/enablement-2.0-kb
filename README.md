@@ -49,9 +49,10 @@ enablement-2.0/
 │   ├── flows/             # Execution flows by domain/type
 │   └── validators/        # Tier-1 and Tier-2 validators
 │
-├── docs/                   # Project documentation
-└── poc/                    # Proofs of concept
+└── docs/                   # Project documentation
 ```
+
+> **Note:** Proofs of concept (PoCs) are maintained in a separate workspace directory outside this repository to keep generated outputs separate from the versioned model.
 
 ---
 
@@ -195,7 +196,7 @@ See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for details on:
 - [x] Clear separation: knowledge / model / skills / runtime
 - [x] Interpretive discovery model (v1.6)
 - [x] Holistic execution for GENERATE skills
-- [ ] Complete Code Generation PoC
+- [x] Code Generation PoC validated
 
 ### Next Phases
 - [ ] Observability patterns
@@ -223,4 +224,4 @@ Internal project - All rights reserved.
 ---
 
 **Version:** 2.2.0  
-**Last Updated:** 2025-12-17
+**Last Updated:** 2025-12-18

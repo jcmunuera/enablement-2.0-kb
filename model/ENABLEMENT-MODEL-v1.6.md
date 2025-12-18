@@ -529,8 +529,7 @@ enablement-2.0/
 │       ├── tier-1-universal/
 │       └── tier-2-technology/
 │
-├── docs/
-└── poc/
+└── docs/
 ```
 
 ---
