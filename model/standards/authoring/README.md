@@ -1,7 +1,7 @@
 # Authoring Standards
 
-**Version:** 2.1  
-**Last Updated:** 2025-12-17
+**Version:** 2.2  
+**Last Updated:** 2025-12-18
 
 ---
 
@@ -17,9 +17,16 @@ This directory contains **authoring guides** for creating assets in the Enableme
 
 ---
 
-## What's New in v2.1
+## What's New in v2.2
 
-> **Key changes reflecting model v1.6 philosophy:**
+> **Key changes:**
+
+| Guide | Change |
+|-------|--------|
+| **FLOW.md** | **NEW** - Authoring guide for execution flows with mandatory SYSTEM-PROMPT.md update checklist |
+| **README.md** | Added FLOW.md to index and quick reference |
+
+### Previous (v2.1)
 
 | Guide | Change |
 |-------|--------|
@@ -39,6 +46,7 @@ This directory contains **authoring guides** for creating assets in the Enableme
 | Module | [MODULE.md](./MODULE.md) | **1.7** | Reusable code templates |
 | Skill | [SKILL.md](./SKILL.md) | **2.3** | Automation skills (**CRITICAL**) |
 | Validator | [VALIDATOR.md](./VALIDATOR.md) | 1.0 | Artifact validation components |
+| **Flow** | [FLOW.md](./FLOW.md) | **1.0** | Execution flows by skill type (**NEW**) |
 
 ### Complementary Asset Types
 
@@ -121,6 +129,7 @@ Assets can be created incrementally across sessions. Each authoring guide specif
 | Build reusable templates | [MODULE.md](./MODULE.md) |
 | Create automated capability | [SKILL.md](./SKILL.md) |
 | Add validation for new technology | [VALIDATOR.md](./VALIDATOR.md) |
+| **Define how a skill type executes** | [FLOW.md](./FLOW.md) |
 
 ---
 
@@ -168,6 +177,16 @@ The **MODULE.md** guide clarifies:
 3. **Tier-3 validation** - Runs AFTER generation to verify compliance
 
 **Understand module role before creating templates.**
+
+### FLOW.md and SYSTEM-PROMPT Updates
+
+The **FLOW.md** guide is critical for maintaining consistency:
+
+1. **Execution flows define HOW skills execute** - Each skill type needs a documented flow
+2. **SYSTEM-PROMPT.md must be updated** - When adding a new flow, the agent context must reflect it
+3. **Post-creation checklist** - FLOW.md includes mandatory steps to update related documents
+
+**⚠️ Creating a flow without updating SYSTEM-PROMPT.md will break the agent's ability to discover and execute the new skill type.**
 
 ---
 
