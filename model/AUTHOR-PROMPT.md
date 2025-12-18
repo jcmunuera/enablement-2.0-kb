@@ -51,7 +51,7 @@ Each authoring guide includes a checklist of related updates. Complete ALL items
 
 - Update cross-references in related assets
 - Update index documents (README.md files)
-- Update SYSTEM-PROMPT.md if adding flows
+- Update CONSUMER-PROMPT.md if adding flows
 - Update DOMAIN.md if adding skill types
 - Update capability files if adding modules
 
@@ -104,7 +104,7 @@ enablement-2.0/
 │   │   ├── validation/
 │   │   └── traceability/
 │   ├── ENABLEMENT-MODEL-v1.6.md # Master model document
-│   ├── SYSTEM-PROMPT.md         # Consumer agent context
+│   ├── CONSUMER-PROMPT.md       # Consumer agent system prompt
 │   └── AUTHOR-PROMPT.md        # This document
 │
 ├── skills/                       # Automation skills
@@ -162,7 +162,7 @@ enablement-2.0/
    │
 2. CREATE runtime/flows/{domain}/ directory
    │
-3. UPDATE SYSTEM-PROMPT.md (add to domain table)
+3. UPDATE CONSUMER-PROMPT.md (add to domain table)
    │
 4. CREATE at least one skill type flow
    │
@@ -267,7 +267,7 @@ Agent response:
 | Missing post-creation updates | Broken references | Rule 2: Complete checklist |
 | Creating without dependencies | Orphan assets | Rule 3: Verify chain |
 | Partial completion | Invalid assets | Rule 4: Validate before done |
-| Forgetting SYSTEM-PROMPT.md | Flows not discoverable | Check FLOW.md checklist |
+| Forgetting CONSUMER-PROMPT.md | Flows not discoverable | Check FLOW.md checklist |
 
 ---
 

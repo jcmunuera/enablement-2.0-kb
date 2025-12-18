@@ -189,5 +189,5 @@ When uncertain:
 ## Related
 
 - [ENABLEMENT-MODEL-v1.6.md](../../model/ENABLEMENT-MODEL-v1.6.md) - Complete model
-- [SYSTEM-PROMPT.md](../../model/SYSTEM-PROMPT.md) - Agent context
+- [CONSUMER-PROMPT.md](../../model/CONSUMER-PROMPT.md) - Consumer agent system prompt
 - [runtime/flows/](../flows/) - Execution flows

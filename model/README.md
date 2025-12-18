@@ -99,7 +99,7 @@ model/
 |--------|-------------|
 | **Interpretive Discovery** | Discovery is now semantic interpretation, not rule-based |
 | **Holistic Execution** | GENERATE skills consult modules as knowledge, generate in one pass |
-| **SYSTEM-PROMPT.md** | New document defining agent context |
+| **CONSUMER-PROMPT.md** | Agent context specification (renamed from SYSTEM-PROMPT.md in v1.6.1) |
 | **Multi-domain Support** | Framework for handling cross-domain requests |
 
 ## Reading Order

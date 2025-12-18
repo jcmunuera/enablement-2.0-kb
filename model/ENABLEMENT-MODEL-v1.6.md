@@ -9,7 +9,7 @@
 > - `standards/ASSET-STANDARDS-v1.3.md` - Technical structure for each asset type
 > - `standards/validation/README.md` - Validation system architecture
 > - `standards/traceability/README.md` - Traceability model and profiles
-> - `SYSTEM-PROMPT.md` - Agent context and behavior specification (NEW)
+> - `CONSUMER-PROMPT.md` - Consumer agent system prompt (NEW)
 
 ---
 
@@ -490,7 +490,8 @@ enablement-2.0/
 │
 ├── model/                        # META-MODEL
 │   ├── ENABLEMENT-MODEL-v1.6.md # This document
-│   ├── SYSTEM-PROMPT.md         # Agent context (NEW)
+│   ├── CONSUMER-PROMPT.md       # Consumer agent system prompt
+│   ├── AUTHOR-PROMPT.md         # Author/C4E system prompt
 │   ├── standards/               # Asset standards
 │   │   ├── authoring/          # Creation guides
 │   │   ├── validation/         # Validation standards
@@ -550,7 +551,7 @@ enablement-2.0/
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.6 | 2025-12-17 | Discovery is now interpretive (not rule-based). GENERATE execution is holistic (modules as knowledge). Added multi-domain operations. Added SYSTEM-PROMPT.md reference. |
+| 1.6 | 2025-12-17 | Discovery is now interpretive (not rule-based). GENERATE execution is holistic (modules as knowledge). Added multi-domain operations. Added CONSUMER-PROMPT.md and AUTHOR-PROMPT.md. |
 | 1.5 | 2025-12-16 | Repository restructuring: 5 root folders (knowledge, model, skills, modules, runtime). Flows moved to runtime/flows/. |
 | 1.4 | 2025-12-12 | Domains as first-class entities. Module naming with domain prefix. |
 | 1.3 | 2025-12-01 | Initial GitHub release |
@@ -578,4 +579,4 @@ enablement-2.0/
 
 **END OF DOCUMENT**
 
-For the complete agent context specification, see `SYSTEM-PROMPT.md`.
+For the complete agent context specification, see `CONSUMER-PROMPT.md`.

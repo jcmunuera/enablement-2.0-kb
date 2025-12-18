@@ -23,7 +23,7 @@ This directory contains **authoring guides** for creating assets in the Enableme
 
 | Guide | Change |
 |-------|--------|
-| **FLOW.md** | **NEW** - Authoring guide for execution flows with mandatory SYSTEM-PROMPT.md update checklist |
+| **FLOW.md** | **NEW** - Authoring guide for execution flows with mandatory CONSUMER-PROMPT.md update checklist |
 | **README.md** | Added FLOW.md to index and quick reference |
 
 ### Previous (v2.1)
@@ -178,7 +178,7 @@ The **MODULE.md** guide clarifies:
 
 **Understand module role before creating templates.**
 
-### FLOW.md and SYSTEM-PROMPT Updates
+### FLOW.md and CONSUMER-PROMPT Updates
 
 The **FLOW.md** guide is critical for maintaining consistency:
 

@@ -149,7 +149,7 @@ Ensure the agent can discover and execute:
 
 1. ✅ DOMAIN.md has discovery guidance for when this skill type applies
 2. ✅ At least one skill exists that uses this flow (or is planned)
-3. ✅ SYSTEM-PROMPT.md references the flow location
+3. ✅ CONSUMER-PROMPT.md references the flow location
 
 ---
 
