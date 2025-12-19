@@ -401,7 +401,7 @@ When adding support for a new technology (e.g., Python):
 ## Related
 
 - `model/standards/validation/README.md` - Validation system overview
-- `model/standards/ASSET-STANDARDS-v1.3.md` - Validator structure
+- `model/standards/ASSET-STANDARDS-v1.4.md` - Validator structure
 - `runtime/validators/` - Existing validators
 - `authoring/SKILL.md` - How skills use validators
 - `authoring/MODULE.md` - Tier 3 validators in modules

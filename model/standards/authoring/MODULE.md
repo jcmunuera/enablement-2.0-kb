@@ -716,7 +716,7 @@ Skill                                            validation/*-check.sh
 
 ## Related
 
-- `model/standards/ASSET-STANDARDS-v1.3.md` - Module structure specification
+- `model/standards/ASSET-STANDARDS-v1.4.md` - Module structure specification
 - `authoring/ERI.md` - How to create source ERIs
 - `authoring/SKILL.md` - How to create Skills that use Modules
 - `modules/` - Existing modules

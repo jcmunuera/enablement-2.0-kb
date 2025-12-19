@@ -75,7 +75,7 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
    - How Skills execute
    - How validation works
 
-4. **[model/standards/ASSET-STANDARDS-v1.3.md](model/standards/ASSET-STANDARDS-v1.3.md)** (20 min)
+4. **[model/standards/ASSET-STANDARDS-v1.4.md](model/standards/ASSET-STANDARDS-v1.4.md)** (20 min)
    - Naming conventions
    - Directory structures
    - Required metadata
@@ -267,7 +267,7 @@ enablement-2.0/
 │   │   └── governance/DOMAIN.md    ← GOVERNANCE domain (planned)
 │   │
 │   └── standards/
-│       ├── ASSET-STANDARDS-v1.3.md ← Naming & structure
+│       ├── ASSET-STANDARDS-v1.4.md ← Naming & structure
 │       ├── authoring/              ← How to CREATE assets
 │       │   ├── ADR.md
 │       │   ├── ERI.md

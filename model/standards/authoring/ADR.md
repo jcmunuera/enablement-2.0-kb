@@ -253,7 +253,7 @@ ERI (per technology stack)
 
 ## Related
 
-- `model/standards/ASSET-STANDARDS-v1.3.md` - ADR structure specification
+- `model/standards/ASSET-STANDARDS-v1.4.md` - ADR structure specification
 - `authoring/ERI.md` - How to create ERIs that implement ADRs
 - `knowledge/ADRs/` - Existing ADRs
 

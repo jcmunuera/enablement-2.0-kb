@@ -93,7 +93,7 @@ The `cross_domain_usage` field in ERI metadata documents secondary uses.
 
 ## Related
 
-- `model/standards/ASSET-STANDARDS-v1.3.md` - ERI structure definition
+- `model/standards/ASSET-STANDARDS-v1.4.md` - ERI structure definition
 - `model/standards/authoring/ERI.md` - How to create ERIs
 - `ADRs/` - Architectural decisions ERIs implement
 - `skills/modules/` - Modules derived from ERIs

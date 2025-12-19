@@ -136,7 +136,7 @@ ls runtime/
 ### Understand the Model
 
 1. Start with: `model/ENABLEMENT-MODEL-v1.6.md`
-2. Then: `model/standards/ASSET-STANDARDS-v1.3.md`
+2. Then: `model/standards/ASSET-STANDARDS-v1.4.md`
 3. To create assets: `model/standards/authoring/`
 
 ---

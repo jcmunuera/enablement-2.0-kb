@@ -254,7 +254,7 @@ This system prompt references the following documents for domain-specific detail
 | DESIGN domain discovery | `model/domains/design/DOMAIN.md` | When to identify DESIGN, skill types, outputs |
 | QA domain discovery | `model/domains/qa/DOMAIN.md` | When to identify QA, skill types, outputs |
 | GOVERNANCE domain discovery | `model/domains/governance/DOMAIN.md` | When to identify GOVERNANCE, skill types, outputs |
-| Asset standards | `model/standards/ASSET-STANDARDS-v1.3.md` | Manifest schema, naming conventions |
+| Asset standards | `model/standards/ASSET-STANDARDS-v1.4.md` | Manifest schema, naming conventions |
 | Discovery guidance | `runtime/discovery/discovery-guidance.md` | Detailed discovery process |
 
 ---

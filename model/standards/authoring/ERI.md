@@ -559,7 +559,7 @@ When creating a MODULE from an ERI:
 
 ## Related
 
-- `model/standards/ASSET-STANDARDS-v1.3.md` - ERI structure specification
+- `model/standards/ASSET-STANDARDS-v1.4.md` - ERI structure specification
 - `authoring/ADR.md` - How to create ADRs that ERIs implement
 - `authoring/MODULE.md` - How to create Modules from ERIs
 - `knowledge/ERIs/` - Existing ERIs

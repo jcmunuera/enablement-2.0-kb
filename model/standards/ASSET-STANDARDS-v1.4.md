@@ -1399,7 +1399,7 @@ ENABLEMENT-MODEL-v1.3.md (Master)
 Defines: Conceptual model, asset hierarchy, capability hierarchy, 
          skill domains, validation system, workflows
     ↓
-    ├── ASSET-STANDARDS-v1.3.md (this doc)
+    ├── ASSET-STANDARDS-v1.4.md (this doc)
     │       ↓
     │   Defines: Detailed structure of ADRs, ERIs, Modules, 
     │            Skills, Validators, Capabilities, Patterns

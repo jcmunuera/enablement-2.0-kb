@@ -270,7 +270,7 @@ Before marking a Capability as "Active":
 
 ## Related
 
-- `model/standards/ASSET-STANDARDS-v1.3.md` - Capability structure
+- `model/standards/ASSET-STANDARDS-v1.4.md` - Capability structure
 - `knowledge/capabilities/README.md` - Capability catalog
 - `authoring/PATTERN.md` - Related patterns documentation
 

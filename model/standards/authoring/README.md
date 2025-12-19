@@ -195,7 +195,7 @@ The **FLOW.md** guide is critical for maintaining consistency:
 - [../../ENABLEMENT-MODEL-v1.6.md](../../ENABLEMENT-MODEL-v1.6.md) - Master model document
 - [../../CONSUMER-PROMPT.md](../../CONSUMER-PROMPT.md) - Consumer agent system prompt
 - [../../AUTHOR-PROMPT.md](../../AUTHOR-PROMPT.md) - Author system prompt
-- [../ASSET-STANDARDS-v1.3.md](../ASSET-STANDARDS-v1.3.md) - Naming conventions and directory structure
+- [../ASSET-STANDARDS-v1.4.md](../ASSET-STANDARDS-v1.4.md) - Naming conventions and directory structure
 - [../validation/](../validation/) - Validation system architecture
 - [../traceability/](../traceability/) - Traceability model and profiles
 

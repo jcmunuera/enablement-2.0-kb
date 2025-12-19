@@ -6,7 +6,7 @@
 **Purpose:** Master document defining the complete Enablement 2.0 model
 
 > **This is the MASTER document.** For detailed operational standards, see:
-> - `standards/ASSET-STANDARDS-v1.3.md` - Technical structure for each asset type
+> - `standards/ASSET-STANDARDS-v1.4.md` - Technical structure for each asset type
 > - `standards/validation/README.md` - Validation system architecture
 > - `standards/traceability/README.md` - Traceability model and profiles
 > - `CONSUMER-PROMPT.md` - Consumer agent system prompt (NEW)

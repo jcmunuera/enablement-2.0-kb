@@ -241,7 +241,7 @@ Agent response:
 
 - [ ] Authoring guide read and understood
 - [ ] Dependencies identified and verified
-- [ ] Naming convention checked (`ASSET-STANDARDS-v1.3.md`)
+- [ ] Naming convention checked (`ASSET-STANDARDS-v1.4.md`)
 
 ### After Creating
 
@@ -276,7 +276,7 @@ Agent response:
 | Document | When to Read |
 |----------|--------------|
 | `model/ENABLEMENT-MODEL-v1.6.md` | Understanding overall architecture |
-| `model/standards/ASSET-STANDARDS-v1.3.md` | Naming conventions, directory structure |
+| `model/standards/ASSET-STANDARDS-v1.4.md` | Naming conventions, directory structure |
 | `model/standards/authoring/README.md` | Index of all authoring guides |
 | `model/CONSUMER-PROMPT.md` | Understanding consumer context |
 | `docs/sessions/*.md` | Previous session context |

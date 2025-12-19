@@ -163,7 +163,7 @@ knowledge/
 ├── model/                              # META-LEVEL (Specifications)
 │   ├── ENABLEMENT-MODEL-v1.3.md       # Master document
 │   └── standards/
-│       ├── ASSET-STANDARDS-v1.3.md    # Asset structure
+│       ├── ASSET-STANDARDS-v1.4.md    # Asset structure
 │       ├── authoring/                  # Creation guides
 │       │   ├── ADR.md
 │       │   ├── ERI.md
@@ -858,7 +858,7 @@ TOTAL: 11/11 checks passed
 | Document | Purpose | Location |
 |----------|---------|----------|
 | ENABLEMENT-MODEL-v1.3.md | Master model | `model/` |
-| ASSET-STANDARDS-v1.3.md | Asset structure | `model/standards/` |
+| ASSET-STANDARDS-v1.4.md | Asset structure | `model/standards/` |
 | authoring/SKILL.md | How to create skills | `model/standards/authoring/` |
 | validators/README.md | Validation system | `knowledge/validators/` |
 | traceability/BASE-MODEL.md | Traceability fields | `model/standards/traceability/` |

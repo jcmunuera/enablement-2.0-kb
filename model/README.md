@@ -41,7 +41,7 @@ model/
 ├── ENABLEMENT-TECHNICAL-GUIDE.md      # Technical architecture
 │
 ├── standards/
-│   ├── ASSET-STANDARDS-v1.3.md        # Structure and naming
+│   ├── ASSET-STANDARDS-v1.4.md        # Structure and naming
 │   ├── authoring/                     # How to CREATE assets
 │   │   ├── README.md                  # Authoring overview
 │   │   ├── ADR.md                     # ADR authoring guide
@@ -81,7 +81,7 @@ model/
 | **AUTHOR-PROMPT.md** | C4E Team | System prompt for authoring sessions |
 | **ENABLEMENT-EXECUTIVE-BRIEF.md** | Leadership | Business value, ROI |
 | **ENABLEMENT-TECHNICAL-GUIDE.md** | Architects | Technical architecture |
-| **standards/ASSET-STANDARDS-v1.3.md** | All | Naming, structure |
+| **standards/ASSET-STANDARDS-v1.4.md** | All | Naming, structure |
 | **standards/authoring/*.md** | Authors | How to create assets |
 
 ## What's New in v1.6.1
@@ -110,12 +110,12 @@ model/
 ### For Architects (1-2 hours)
 1. `ENABLEMENT-MODEL-v1.6.md`
 2. `ENABLEMENT-TECHNICAL-GUIDE.md`
-3. `standards/ASSET-STANDARDS-v1.3.md`
+3. `standards/ASSET-STANDARDS-v1.4.md`
 
 ### For Developers / Consumers (2-4 hours)
 1. `ENABLEMENT-MODEL-v1.6.md` (sections 1-5, 8-10)
 2. `CONSUMER-PROMPT.md` (understand how agents work)
-3. `standards/ASSET-STANDARDS-v1.3.md`
+3. `standards/ASSET-STANDARDS-v1.4.md`
 
 ### For C4E / Authors (2-4 hours)
 1. `ENABLEMENT-MODEL-v1.6.md` (full document)
@@ -136,7 +136,7 @@ model/
 
 Documents include version in filename:
 - `ENABLEMENT-MODEL-v1.6.md` = Version 1.6 (current)
-- `ASSET-STANDARDS-v1.3.md` = Version 1.3
+- `ASSET-STANDARDS-v1.4.md` = Version 1.3
 
 ---
 
