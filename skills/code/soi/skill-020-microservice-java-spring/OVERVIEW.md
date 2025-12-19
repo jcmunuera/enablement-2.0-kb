@@ -1,34 +1,74 @@
-# skill-020-generate-microservice-java-spring
+# skill-020-microservice-java-spring
 
 ## Overview
 
-**Skill ID:** skill-020-generate-microservice-java-spring  
-**Type:** CREATION  
+**Skill ID:** skill-020-microservice-java-spring  
+**Type:** GENERATE  
 **Framework:** Java 17+ / Spring Boot 3.2.x  
-**Architecture:** Hexagonal Light
+**Architecture:** Hexagonal Light  
+**Role:** Base skill for Java/Spring microservices (extensible)
 
 ---
 
 ## Purpose
 
-Generates a complete, production-ready Spring Boot microservice with Hexagonal Light architecture from a JSON configuration. Supports multiple API types (Domain API, Composable API, etc.) and optional features (resilience, persistence, etc.).
+Generates a complete, production-ready Spring Boot microservice with Hexagonal Light architecture. This is the **base skill** for Java/Spring microservices that can be **extended** by specialized skills (REST APIs, gRPC, Async).
+
+**Use this skill for:**
+- Internal microservices implementing DDD bounded contexts
+- Backend services not directly exposed as public APIs
+- Base generation that specialized API skills extend
+
+**For public APIs, use skills that extend this one:**
+- **skill-021** for REST APIs (pagination, HATEOAS, compensation)
+- **skill-022** for gRPC APIs (planned)
+- **skill-023** for Async/Event APIs (planned)
 
 ---
 
 ## When to Use
 
 ✅ **Use this skill when:**
-- Creating a new microservice from scratch
-- Need Hexagonal Light architecture
-- Building Domain, Composable, System, or Experience APIs
-- Want to enforce organizational standards automatically
-- Need consistent project structure across teams
+- Creating an **internal microservice** (not a public API)
+- Implementing a **DDD bounded context** (entities, aggregates, domain services)
+- Building **backend services** consumed only by other internal services
+- Need **Hexagonal Light** architecture without API-specific patterns
+- Want base microservice that you'll customize manually
 
 ❌ **Do NOT use when:**
-- Modifying existing code (use ADD/TRANSFORMATION skills)
-- Need Full Hexagonal architecture for complex domains
-- Building non-REST services (Kafka-only, batch jobs)
-- Simple CRUD with <3 business rules (consider Traditional style)
+- Building APIs that follow the **4-layer model** → use **skill-021**
+- Need **pagination**, **HATEOAS**, or **filtering** → use **skill-021**
+- Building a **Domain API** for SAGA orchestration → use **skill-021**
+- Creating **gRPC** services → use **skill-022** (planned)
+- Building **async/event-driven** services → use **skill-023** (planned)
+- OpenAPI contract is a **primary deliverable** → use **skill-021**
+
+---
+
+## Extensibility
+
+This skill serves as the **base** for specialized API skills:
+
+```
+skill-020-microservice-java-spring (this skill)
+│
+│   Base capabilities:
+│   ├── Hexagonal Light structure (mod-015)
+│   ├── Resilience patterns (mod-001-004)
+│   ├── Persistence patterns (mod-016/017)
+│   └── [future: observability, caching, etc.]
+│
+├── skill-021-api-rest-java-spring (extends)
+│   └── Adds: pagination, HATEOAS, compensation
+│
+├── skill-022-api-grpc-java-spring (extends, planned)
+│   └── Adds: proto, stubs, interceptors
+│
+└── skill-023-api-async-java-spring (extends, planned)
+    └── Adds: Kafka, event schemas, consumers/producers
+```
+
+When you add capabilities to skill-020, all extending skills inherit them automatically.
 
 ---
 
@@ -38,11 +78,11 @@ Generates a complete, production-ready Spring Boot microservice with Hexagonal L
 |------------|-------------|
 | **Project generation** | Complete Maven project with all dependencies |
 | **Hexagonal Light structure** | Domain, Application, Adapter, Infrastructure layers |
-| **Multiple API types** | domain_api, composable_api, system_api, experience_api |
-| **Entity generation** | Domain entities, DTOs, mappers from config |
-| **Test generation** | Unit tests for domain layer, integration tests |
-| **Feature integration** | Circuit breaker, persistence, health checks, logging |
-| **OpenAPI output** | Generates OpenAPI spec from config |
+| **Entity generation** | Domain entities, Value Objects, Repositories |
+| **Resilience patterns** | Circuit breaker, retry, timeout, rate limiter |
+| **Persistence patterns** | JPA or System API client |
+| **Test generation** | Unit tests for domain layer |
+| **Extensible base** | Foundation for API-specific skills |
 
 ---
 
@@ -52,10 +92,18 @@ Generates a complete, production-ready Spring Boot microservice with Hexagonal L
 {
   "serviceName": "customer-service",
   "basePackage": "com.company.customer",
-  "apiType": "domain_api",
-  "entities": [{ "name": "Customer", "fields": [...] }],
+  "entities": [
+    {
+      "name": "Customer",
+      "fields": [
+        { "name": "firstName", "type": "String" },
+        { "name": "lastName", "type": "String" }
+      ]
+    }
+  ],
   "features": {
-    "resilience": { "circuit_breaker": { "enabled": true } }
+    "resilience": { "enabled": true },
+    "persistence": { "type": "jpa" }
   }
 }
 ```
@@ -68,15 +116,15 @@ Generates a complete, production-ready Spring Boot microservice with Hexagonal L
 customer-service/
 ├── pom.xml
 ├── src/main/java/.../
-│   ├── domain/          # Pure POJOs
-│   ├── application/     # @Service orchestration  
-│   ├── adapter/         # REST, persistence
-│   └── infrastructure/  # Config, exceptions
+│   ├── domain/           # Pure POJOs (entities, value objects)
+│   ├── application/      # @Service orchestration
+│   ├── adapter/          # REST controller, persistence
+│   └── infrastructure/   # Config, exception handlers
 ├── src/test/java/.../
 ├── src/main/resources/
-│   ├── application.yml
-│   └── openapi.yaml     # Generated OpenAPI spec
-└── README.md
+│   └── application.yml
+└── .enablement/
+    └── manifest.json     # Traceability
 ```
 
 ---
@@ -85,23 +133,34 @@ customer-service/
 
 ### Knowledge Dependencies
 - **ADR-009:** Service Architecture Patterns (Hexagonal Light)
-- **ADR-001:** API Design Standards (API types, constraints)
 - **ERI-001:** Hexagonal Light Java Spring (reference implementation)
 
 ### Module Dependencies
-- **mod-code-015:** hexagonal-base-java-spring (base templates)
-- **mod-code-001:** circuit-breaker-java-resilience4j (if resilience enabled)
+- **mod-015:** hexagonal-base-java-spring (always)
+- **mod-001-004:** resilience patterns (if enabled)
+- **mod-016:** persistence-jpa-spring (if persistence.type=jpa)
+- **mod-017:** persistence-systemapi (if persistence.type=system_api)
+
+---
+
+## Extended By
+
+| Skill | Purpose | Adds |
+|-------|---------|------|
+| skill-021-api-rest-java-spring | REST APIs (4-layer model) | mod-019, mod-020 |
+| skill-022-api-grpc-java-spring | gRPC APIs | (planned) |
+| skill-023-api-async-java-spring | Async/Event APIs | (planned) |
 
 ---
 
 ## Tags
 
-`creation` `generation` `spring-boot` `java` `hexagonal` `microservice` `domain-api`
+`generation` `microservice` `spring-boot` `java` `hexagonal` `internal` `base-skill` `extensible`
 
 ---
 
 ## Version
 
-**Current:** 1.0.0  
+**Current:** 2.0.0  
 **Status:** Active  
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-12-19

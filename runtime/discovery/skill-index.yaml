@@ -1,12 +1,17 @@
 # Skill Index
 #
-# Version: 1.0
+# Version: 2.0
 # Date: 2025-12-19
 # Purpose: Pre-computed index for O(1) skill discovery
 #
 # This index enables efficient skill discovery by providing multiple
 # taxonomies (layer, domain, capability, technology) that the agent
 # can query to reduce the search space before reading OVERVIEW.md files.
+#
+# NEW in v2.0:
+# - Skill extension support (extends field)
+# - Discovery keywords (positive/negative)
+# - API-specific skills (skill-021+)
 #
 # MAINTENANCE: When adding a new skill, register it in ALL applicable
 # sections of this index. See model/standards/authoring/SKILL.md for details.
@@ -118,10 +123,13 @@ layers:
     skills:
       - code/soi/skill-001-circuit-breaker-java-resilience4j
       - code/soi/skill-020-microservice-java-spring
+      - code/soi/skill-021-api-rest-java-spring
       # Future skills (not yet created):
       # - code/soi/skill-002-retry-java-resilience4j
       # - code/soi/skill-003-timeout-java-resilience4j
       # - code/soi/skill-004-rate-limiter-java-resilience4j
+      # - code/soi/skill-022-api-grpc-java-spring
+      # - code/soi/skill-023-api-async-java-spring
 
   sor:
     name: "System of Record"
@@ -186,6 +194,7 @@ domains:
       soi:
         - code/soi/skill-001-circuit-breaker-java-resilience4j
         - code/soi/skill-020-microservice-java-spring
+        - code/soi/skill-021-api-rest-java-spring
       sor: []
 
   design:
@@ -242,9 +251,10 @@ capabilities:
     # Future: skill for adding security patterns
 
   api-design:
-    description: "API design patterns, OpenAPI, contracts"
-    skills: []
-    # Future: skills for API-first development
+    description: "API design patterns, OpenAPI, contracts, pagination, HATEOAS"
+    skills:
+      - code/soi/skill-021-api-rest-java-spring
+    # Future: skill-022-api-grpc, skill-023-api-async
 
 # =============================================================================
 # TECHNOLOGIES
@@ -258,6 +268,7 @@ technologies:
     skills:
       - code/soi/skill-001-circuit-breaker-java-resilience4j
       - code/soi/skill-020-microservice-java-spring
+      - code/soi/skill-021-api-rest-java-spring
 
   java-quarkus:
     description: "Java with Quarkus framework"
@@ -302,6 +313,7 @@ flows:
       flow_document: "runtime/flows/code/GENERATE.md"
       skills:
         - code/soi/skill-020-microservice-java-spring
+        - code/soi/skill-021-api-rest-java-spring
     ADD:
       description: "Atomic addition - add specific capability to existing code"
       flow_document: "runtime/flows/code/ADD.md"
@@ -387,3 +399,121 @@ flows:
 # 1. Create new entry in technologies section
 # 2. Add to appropriate layer's technologies list
 # 3. Add relevant existing skills
+
+# =============================================================================
+# SKILL METADATA
+# =============================================================================
+# Extended metadata for each skill including:
+# - Extension relationships (extends)
+# - Discovery keywords (positive/negative)
+# - Parameters specific to discovery
+#
+# This section is used by the agent for semantic matching during discovery.
+
+skill_metadata:
+  
+  # ---------------------------------------------------------------------------
+  # skill-020: Base Microservice (Extensible)
+  # ---------------------------------------------------------------------------
+  skill-020-microservice-java-spring:
+    path: code/soi/skill-020-microservice-java-spring
+    extensible: true
+    extended_by:
+      - skill-021-api-rest-java-spring
+      # - skill-022-api-grpc-java-spring (planned)
+      # - skill-023-api-async-java-spring (planned)
+    keywords:
+      positive:
+        - microservice
+        - microservicio
+        - internal service
+        - servicio interno
+        - backend service
+        - DDD
+        - bounded context
+        - hexagonal
+        - domain implementation
+        - implementación de dominio
+      negative:
+        - API
+        - REST API
+        - Domain API
+        - Experience API
+        - Composable API
+        - System API
+        - pagination
+        - paginación
+        - HATEOAS
+        - compensation
+        - compensación
+        - OpenAPI
+        - gRPC
+        - async
+        - eventos
+        - Kafka
+  
+  # ---------------------------------------------------------------------------
+  # skill-021: REST API (Extends skill-020)
+  # ---------------------------------------------------------------------------
+  skill-021-api-rest-java-spring:
+    path: code/soi/skill-021-api-rest-java-spring
+    extends: skill-020-microservice-java-spring
+    keywords:
+      positive:
+        - API
+        - REST API
+        - REST
+        - Domain API
+        - API de dominio
+        - Experience API
+        - BFF
+        - Composable API
+        - System API
+        - 4-layer
+        - 4 capas
+        - pagination
+        - paginación
+        - HATEOAS
+        - hypermedia
+        - compensation
+        - compensación
+        - SAGA
+        - OpenAPI
+        - contrato API
+        - API contract
+        - public API
+        - API pública
+      negative:
+        - internal microservice
+        - microservicio interno
+        - gRPC
+        - async
+        - eventos
+        - Kafka
+        - event-driven
+    parameters:
+      apiLayer:
+        type: enum
+        values: [experience, composable, domain, system]
+        required: true
+        discovery_hints:
+          experience:
+            - BFF
+            - frontend
+            - mobile
+            - web
+            - UI
+          composable:
+            - orchestration
+            - workflow
+            - orquestación
+          domain:
+            - domain API
+            - API de dominio
+            - business capability
+            - SAGA
+          system:
+            - system API
+            - mainframe
+            - legacy
+            - SoR

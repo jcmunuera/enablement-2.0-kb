@@ -1,39 +1,36 @@
 ---
-id: adr-001-api-design-standards
-title: "ADR-001: API Design Standards"
-sidebar_label: API Design Standards
-version: 2.0
+id: adr-001-api-design
+title: "ADR-001: API Design - Model, Types & Standards"
+sidebar_label: API Design
+version: 3.0
 date: 2025-05-27
-updated: 2025-11-24
+updated: 2025-12-19
 status: Accepted
 author: Architecture Team
-framework: agnostic
-api_layers:
-  - experience-api
-  - composable-api
-  - domain-api
-  - system-api
+decision_type: pattern
+scope: organization
 tags:
   - api
   - architecture
   - microservices
   - api-led-connectivity
-  - transaction
-  - saga
-  - orchestration
+  - rest
+  - grpc
+  - async-api
 related:
   - adr-009-service-architecture-patterns
+  - adr-004-resilience-patterns
+  - adr-013-distributed-transactions
+implemented_by:
   - eri-code-001-hexagonal-light-java-spring
-  - eri-002-domain-api-java-spring
-  - eri-003-composable-api-java-spring
-  - eri-004-experience-api-java-spring
+  - eri-code-014-api-public-exposure-java-spring
 ---
 
-# ADR-001: API Design Standards
+# ADR-001: API Design - Model, Types & Standards
 
 **Status:** Accepted  
 **Date:** 2025-05-27  
-**Updated:** 2025-11-24 (v2.0 - Framework-agnostic)  
+**Updated:** 2025-12-19 (v3.0 - Added API Types and REST Standards)  
 **Deciders:** Architecture Team
 
 ---
@@ -46,6 +43,7 @@ In our microservices-based application architecture, we need a consistent approa
 - Clear separation of concerns between orchestration, business logic, and integrations
 - Reusability and consistency across a multinational, distributed organization
 - Flexible, resilient, and maintainable transaction management
+- Support for multiple API technologies (REST, gRPC, async events)
 
 **Problems we face:**
 - Inconsistent API structures across teams
@@ -53,33 +51,39 @@ In our microservices-based application architecture, we need a consistent approa
 - Difficulty coordinating multi-domain transactions
 - Tight coupling between UI requirements and business logic
 - Complex integration management with Systems of Record (SoR)
+- No clear standards for pagination, filtering, or hypermedia
 
 **Business impact:**
 - Slower time-to-market for new features
 - Higher maintenance costs
 - Difficulty scaling across locations
 - Increased risk of cascade failures
+- Poor developer experience consuming APIs
 
 ---
 
 ## Decision
 
-We adopt a **4-layer API architecture** (API-led Connectivity) with clear responsibilities per layer.
+We adopt a **4-layer API architecture** with support for **multiple API types** and **standardized patterns per type**.
 
-### API Layer Model
+---
+
+## Part 1: API Layer Model
+
+### Layer Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     EXPERIENCE / BFF LAYER                       │
 │  Purpose: Channel-specific data transformation and optimization  │
 │  Consumers: UI applications (Web, Mobile, etc.)                  │
-│  Calls: Composable APIs                                          │
+│  Calls: Composable APIs, Domain APIs (simple reads)              │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                       COMPOSABLE API LAYER                       │
 │  Purpose: Orchestration of multi-domain workflows                │
-│  Responsibility: Transaction management (SAGA pattern)           │
+│  Responsibility: Transaction coordination (see ADR-013)          │
 │  Calls: Multiple Domain APIs                                     │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -97,8 +101,6 @@ We adopt a **4-layer API architecture** (API-led Connectivity) with clear respon
 │  Calls: External systems, databases, third-party APIs            │
 └─────────────────────────────────────────────────────────────────┘
 ```
-
----
 
 ### Layer 1: Experience API (BFF)
 
@@ -118,11 +120,6 @@ We adopt a **4-layer API architecture** (API-led Connectivity) with clear respon
 - ❌ CANNOT implement business logic
 - ❌ CANNOT own data
 
-**Example use cases:**
-- Mobile dashboard aggregating customer + orders + loyalty
-- Web checkout flow calling order orchestration
-- Admin portal with role-based data filtering
-
 ---
 
 ### Layer 2: Composable API
@@ -131,27 +128,21 @@ We adopt a **4-layer API architecture** (API-led Connectivity) with clear respon
 
 **Characteristics:**
 - Coordinates calls to multiple Domain APIs
-- Implements transaction management (SAGA pattern)
+- Implements transaction coordination (see ADR-013)
 - Manages compensation logic for failures
 - Stateless orchestration (state in Domain APIs)
 
 **Constraints:**
 - ✅ CAN call multiple Domain APIs
-- ✅ CAN implement SAGA orchestration
+- ✅ CAN implement orchestration patterns
 - ✅ CAN manage cross-domain transactions
 - ❌ CANNOT call System APIs directly
 - ❌ CANNOT own data (delegates to Domain APIs)
 - ❌ CANNOT bypass Domain APIs
 
-**Transaction Management:**
-- Use SAGA pattern (orchestration preferred over choreography)
-- Each Domain API provides compensation endpoints
-- Composable API coordinates rollback on failure
-
 **Example use cases:**
 - Order creation: validate customer → reserve inventory → process payment → create order
 - Account opening: KYC check → create account → setup products → send notifications
-- Loan application: credit check → risk assessment → approval → disbursement
 
 ---
 
@@ -159,9 +150,7 @@ We adopt a **4-layer API architecture** (API-led Connectivity) with clear respon
 
 **Purpose:** Atomic business capabilities for a specific business domain (bounded context).
 
-#### Terminology: Domain API vs Domain Microservices
-
-A **bounded context** (domain) may be implemented by multiple microservices:
+#### Domain API vs Domain Microservices
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -185,75 +174,25 @@ A **bounded context** (domain) may be implemented by multiple microservices:
 │   │   │ customer-events │    │ customer-search │             │  │
 │   │   │   (async jobs)  │    │  (read model)   │             │  │
 │   │   └─────────────────┘    └─────────────────┘             │  │
-│   │                                                           │  │
-│   │   - Support the Domain API                                │  │
-│   │   - Internal to bounded context                           │  │
-│   │   - Not exposed externally                                │  │
 │   └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Domain API:**
-- The **primary microservice** that exposes the domain's capabilities externally
-- Typically implements the **aggregate root** operations
-- Has a formal **OpenAPI contract**
-- Is called by **Composable APIs** or **Experience APIs**
-
-**Domain Microservices (internal):**
-- Supporting microservices within the same bounded context
-- Handle specific concerns (async processing, read models, etc.)
-- Called **only** by the Domain API or other internal microservices
-- **Not exposed** outside the bounded context
-
-#### Characteristics
-
-- Domain API owns its data (single source of truth for the domain)
+**Characteristics:**
+- Domain API owns its data (single source of truth)
 - Implements domain business logic
 - Provides CRUD + business operations
-- Exposes compensation endpoints for SAGA
+- Exposes compensation endpoints when participates in distributed transactions
 
-#### Constraints
-
-**Domain API:**
+**Constraints:**
 - ✅ CAN call System APIs (within same domain)
 - ✅ CAN call domain microservices (within same bounded context)
 - ✅ CAN implement business rules
 - ✅ CAN own and manage domain data
-- ❌ CANNOT call Domain APIs from **other** domains (use Composable layer)
+- ❌ CANNOT call Domain APIs from other domains (use Composable layer)
 - ❌ CANNOT call Composable APIs
 - ❌ CANNOT call Experience APIs
-
-**Domain Microservices (internal):**
-- ✅ CAN call other microservices in same bounded context
-- ✅ CAN call System APIs (within same domain)
-- ❌ CANNOT be called from outside the bounded context
-- ❌ CANNOT call services in other domains
-
-#### Communication Patterns (Future)
-
-| Communication | Mechanism | Notes |
-|---------------|-----------|-------|
-| Cross-domain calls | API Gateway | Domain API → Gateway → Other Domain API |
-| Intra-domain calls | Service Mesh / Direct | Domain API → Domain Microservices |
-| Async communication | Message Broker | Events between domains or microservices |
-
-*Note: Gateway vs Service Mesh implementation details to be defined in future ADR.*
-
-#### Compensation Endpoints
-
-- Standard convention: `POST /api/v1/{entity}/compensate`
-- Idempotent operations
-- Clear compensation semantics
-
-#### Example Domains
-
-| Domain | Domain API | Internal Microservices |
-|--------|------------|------------------------|
-| **Customer** | customer-management-api | customer-events, customer-search |
-| **Order** | order-management-api | order-fulfillment, order-notifications |
-| **Inventory** | inventory-management-api | inventory-sync, stock-alerts |
-| **Payment** | payment-processing-api | payment-reconciliation |
 
 ---
 
@@ -274,33 +213,193 @@ A **bounded context** (domain) may be implemented by multiple microservices:
 - ❌ CANNOT implement business logic
 - ❌ CANNOT be called by Experience or Composable APIs directly
 
-**Benefits:**
-- Decouples business logic from integration details
-- Standardizes contracts across locations (multinational)
-- Simplifies SoR replacement or upgrade
-- Centralizes error handling and security
+---
 
-**Example integrations:**
-- Core banking system connector
-- Payment gateway adapter
-- CRM system interface
-- Legacy mainframe wrapper
+## Part 2: API Types
+
+### Supported API Types
+
+| Type | Protocol | Communication | Primary Use |
+|------|----------|---------------|-------------|
+| **REST** | HTTP/HTTPS | Synchronous | External APIs, CRUD operations |
+| **gRPC** | HTTP/2 | Synchronous | Internal APIs, high-performance |
+| **AsyncAPI** | AMQP/Kafka | Asynchronous | Events, eventual consistency |
+
+### Layer × Type Matrix
+
+| Layer | REST | gRPC | AsyncAPI |
+|-------|------|------|----------|
+| **Experience (BFF)** | ✅ Primary | ⚠️ Rare | ❌ Not applicable |
+| **Composable** | ✅ Common | ✅ Performance | ⚠️ Choreography |
+| **Domain** | ✅ External contract | ✅ Internal | ✅ Domain events |
+| **System** | ✅ Legacy wrap | ⚠️ Rare | ✅ CDC/Events |
+
+**Legend:**
+- ✅ Recommended/Common
+- ⚠️ Valid but less common
+- ❌ Not applicable
+
+### Type Selection Criteria
+
+| Criterion | REST | gRPC | AsyncAPI |
+|-----------|------|------|----------|
+| Browser clients | ✅ Native | ❌ Requires proxy | ❌ WebSocket |
+| Low latency | ⚠️ Acceptable | ✅ Optimal | ⚠️ Variable |
+| Strong contracts | ✅ OpenAPI | ✅ Proto | ✅ AsyncAPI spec |
+| Streaming | ⚠️ SSE/WebSocket | ✅ Native | ✅ Native |
+| Tooling maturity | ✅ Excellent | ✅ Good | ⚠️ Evolving |
 
 ---
 
-## Technical Standards
+## Part 3: REST API Standards
 
-### API Contract Standards
+> These standards apply to all REST APIs. Other types (gRPC, AsyncAPI) will have their own standards sections.
+
+### 3.1 Contract Standards
 
 | Aspect | Standard |
 |--------|----------|
 | **Specification** | OpenAPI 3.0+ |
 | **Versioning** | URL path versioning (`/api/v1/`, `/api/v2/`) |
-| **Naming** | RESTful conventions, kebab-case for paths |
+| **Naming** | kebab-case for paths, camelCase for JSON properties |
 | **Methods** | Standard HTTP verbs (GET, POST, PUT, PATCH, DELETE) |
-| **Status Codes** | Standard HTTP status codes (see Error Handling) |
+| **Content-Type** | `application/json` (default), support for `application/problem+json` |
 
-### Error Handling
+### 3.2 Resource Design
+
+#### URL Structure
+
+```
+/{api-version}/{resource-collection}/{resource-id}/{sub-resource}
+```
+
+**Examples:**
+- `GET /api/v1/customers` - List customers
+- `GET /api/v1/customers/123` - Get customer by ID
+- `GET /api/v1/customers/123/orders` - Get customer's orders
+- `POST /api/v1/customers` - Create customer
+- `PUT /api/v1/customers/123` - Replace customer
+- `PATCH /api/v1/customers/123` - Partial update
+- `DELETE /api/v1/customers/123` - Delete customer
+
+#### Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Path segments | kebab-case, plural nouns | `/api/v1/order-items` |
+| Query parameters | camelCase | `?pageSize=20&sortBy=createdAt` |
+| JSON properties | camelCase | `{ "firstName": "John" }` |
+| Headers | Kebab-Case | `X-Correlation-ID` |
+
+### 3.3 Pagination
+
+All collection endpoints MUST support pagination.
+
+#### Request Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | integer | 0 | Zero-based page number |
+| `size` | integer | 20 | Items per page (max 100) |
+| `sort` | string | - | Sort field and direction: `field,asc` or `field,desc` |
+
+**Example:**
+```
+GET /api/v1/customers?page=0&size=20&sort=lastName,asc
+```
+
+#### Response Structure
+
+```json
+{
+  "content": [
+    { "id": "123", "firstName": "John", "lastName": "Doe" },
+    { "id": "456", "firstName": "Jane", "lastName": "Smith" }
+  ],
+  "page": {
+    "number": 0,
+    "size": 20,
+    "totalElements": 142,
+    "totalPages": 8
+  },
+  "_links": {
+    "self": { "href": "/api/v1/customers?page=0&size=20" },
+    "next": { "href": "/api/v1/customers?page=1&size=20" },
+    "last": { "href": "/api/v1/customers?page=7&size=20" }
+  }
+}
+```
+
+### 3.4 HATEOAS (Hypermedia)
+
+APIs exposed for external consumption SHOULD include hypermedia links.
+
+#### When to Use HATEOAS
+
+| API Type | HATEOAS | Rationale |
+|----------|---------|-----------|
+| Public APIs | ✅ Required | Discoverability, client decoupling |
+| Partner APIs | ✅ Recommended | Reduces integration documentation |
+| Internal APIs | ⚠️ Optional | May add overhead without benefit |
+
+#### Link Structure
+
+```json
+{
+  "id": "123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "status": "ACTIVE",
+  "_links": {
+    "self": { "href": "/api/v1/customers/123" },
+    "orders": { "href": "/api/v1/customers/123/orders" },
+    "update": { "href": "/api/v1/customers/123", "method": "PUT" },
+    "deactivate": { "href": "/api/v1/customers/123/deactivate", "method": "POST" }
+  }
+}
+```
+
+#### Link Relations
+
+| Relation | Description |
+|----------|-------------|
+| `self` | Link to current resource |
+| `collection` | Link to parent collection |
+| `next`, `prev` | Pagination navigation |
+| `first`, `last` | Pagination boundaries |
+| `{action}` | Available actions (domain-specific) |
+
+### 3.5 Filtering and Sorting
+
+#### Filtering
+
+Support filtering via query parameters:
+
+```
+GET /api/v1/customers?status=ACTIVE&country=ES
+GET /api/v1/orders?createdAfter=2025-01-01&status=PENDING
+```
+
+**Operators (optional advanced filtering):**
+
+| Operator | Example | Description |
+|----------|---------|-------------|
+| equals | `status=ACTIVE` | Exact match (default) |
+| like | `name=like:John*` | Pattern matching |
+| gt, gte | `amount=gt:100` | Greater than |
+| lt, lte | `createdAt=lt:2025-01-01` | Less than |
+| in | `status=in:ACTIVE,PENDING` | Multiple values |
+
+#### Sorting
+
+```
+GET /api/v1/customers?sort=lastName,asc
+GET /api/v1/customers?sort=createdAt,desc&sort=lastName,asc
+```
+
+### 3.6 Error Handling
+
+#### HTTP Status Codes
 
 | Status Code | Usage |
 |-------------|-------|
@@ -316,55 +415,150 @@ A **bounded context** (domain) may be implemented by multiple microservices:
 | **500** | Internal Server Error |
 | **503** | Service Unavailable |
 
-### Error Response Format
+#### Error Response Format (RFC 7807)
 
 ```json
 {
-  "timestamp": "2025-11-24T10:15:30.123Z",
+  "type": "https://api.company.com/errors/validation-error",
+  "title": "Validation Error",
   "status": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "path": "/api/v1/customers",
+  "detail": "Request validation failed",
+  "instance": "/api/v1/customers",
   "correlationId": "abc-123-def-456",
-  "details": [
+  "timestamp": "2025-12-19T10:15:30.123Z",
+  "errors": [
     {
       "field": "email",
+      "code": "INVALID_FORMAT",
       "message": "must be a valid email address"
     }
   ]
 }
 ```
 
-### Cross-Cutting Concerns
+### 3.7 Idempotency
+
+For non-idempotent operations (POST), clients MAY provide an idempotency key:
+
+```
+POST /api/v1/orders
+X-Idempotency-Key: client-generated-uuid-12345
+```
+
+The server:
+- MUST return the same response for duplicate requests with the same key
+- SHOULD retain idempotency keys for at least 24 hours
+- MUST return `409 Conflict` if key reused with different payload
+
+---
+
+## Part 4: API Exposure Levels
+
+### 4.1 Public APIs (Internet)
+
+APIs exposed to external consumers over the internet.
+
+**Requirements:**
+- ✅ MUST use HTTPS
+- ✅ MUST implement rate limiting
+- ✅ MUST include HATEOAS
+- ✅ MUST have comprehensive OpenAPI documentation
+- ✅ MUST implement OAuth2/OIDC authentication
+- ✅ MUST use API Gateway
+- ✅ MUST version URLs
+
+### 4.2 Partner APIs (B2B)
+
+APIs exposed to trusted business partners.
+
+**Requirements:**
+- ✅ MUST use HTTPS
+- ✅ MUST implement rate limiting
+- ✅ SHOULD include HATEOAS
+- ✅ MUST have OpenAPI documentation
+- ✅ MUST implement mutual TLS or API keys
+- ✅ SHOULD use API Gateway
+
+### 4.3 Internal APIs (Intranet)
+
+APIs for internal service-to-service communication.
+
+**Requirements:**
+- ✅ SHOULD use HTTPS (MUST in production)
+- ⚠️ Rate limiting optional
+- ⚠️ HATEOAS optional
+- ✅ MUST have OpenAPI documentation
+- ✅ MUST propagate correlation IDs
+- ⚠️ May use Service Mesh instead of Gateway
+
+---
+
+## Part 5: gRPC Standards (Placeholder)
+
+> To be defined when gRPC adoption begins.
+
+**Planned sections:**
+- Proto file conventions
+- Service definition patterns
+- Error handling (status codes)
+- Streaming patterns
+- Interceptors
+
+---
+
+## Part 6: AsyncAPI Standards (Placeholder)
+
+> To be defined when async messaging patterns are standardized.
+
+**Planned sections:**
+- Event naming conventions
+- Schema evolution strategy
+- Idempotency patterns
+- Dead letter handling
+- Event sourcing considerations
+
+---
+
+## Part 7: Cross-Cutting Concerns
 
 | Concern | Implementation |
 |---------|----------------|
 | **Correlation ID** | Propagate `X-Correlation-ID` header across all calls |
-| **Authentication** | OAuth2 / JWT tokens |
+| **Authentication** | OAuth2 / JWT tokens (public), mTLS (internal) |
 | **Authorization** | Role-based access control (RBAC) |
-| **Rate Limiting** | Per-client limits on public APIs |
-| **Timeouts** | All external calls must have timeouts |
+| **Rate Limiting** | Per-client limits on public/partner APIs |
+| **Timeouts** | All external calls MUST have timeouts |
 | **Resilience** | Circuit breaker on external dependencies (see ADR-004) |
+| **Observability** | Structured logging, distributed tracing |
 
 ---
 
 ## Rationale
 
-This decision was made based on the following considerations:
+### Why 4-Layer Model
 
-1. **Industry Standards Alignment**: REST with OpenAPI is the most widely adopted standard for API design, ensuring broad tooling support and developer familiarity.
+1. **Clear Separation of Concerns**: Each layer has distinct responsibilities
+2. **Reusability**: Domain APIs can be reused across multiple Composable flows
+3. **Scalability**: Layers can scale independently
+4. **Testability**: Each layer can be tested in isolation
 
-2. **Layered Architecture Benefits**: Separating API contracts from domain logic allows independent evolution of external interfaces without impacting core business rules.
+### Why REST as Primary
 
-3. **Operational Excellence**: Standardized error responses, versioning strategy, and security patterns reduce cognitive load for API consumers and simplify debugging.
+1. **Industry Standard**: Widest adoption, best tooling support
+2. **Browser Compatibility**: Works natively in all clients
+3. **Developer Familiarity**: Lower learning curve
+4. **Infrastructure Support**: Load balancers, caches, gateways all support HTTP
 
-4. **Maintainability**: Consistent patterns across all APIs reduce onboarding time for new developers and minimize decision fatigue during implementation.
+### Why gRPC for Internal
 
-5. **Interoperability**: RESTful APIs with standard HTTP semantics integrate easily with existing infrastructure (load balancers, API gateways, monitoring tools).
+1. **Performance**: Binary protocol, HTTP/2 multiplexing
+2. **Strong Contracts**: Proto files provide strict typing
+3. **Streaming**: Native support for bidirectional streaming
 
-**Alternatives Considered:**
-- **GraphQL**: Rejected for external APIs due to complexity in caching, rate limiting, and lack of standardization in error handling. May be considered for internal BFF layers.
-- **gRPC**: Rejected for external APIs due to limited browser support. Suitable for internal service-to-service communication.
+### Alternatives Considered
+
+- **GraphQL**: Rejected for external APIs due to caching complexity and lack of standardized error handling. May be considered for BFF layer.
+- **SOAP**: Legacy, not considered for new development
 
 ---
 
@@ -373,49 +567,48 @@ This decision was made based on the following considerations:
 ### Positive
 
 - ✅ Clear separation of concerns across layers
-- ✅ Reusable Domain APIs across multiple Composable flows
-- ✅ Consistent transaction management via SAGA
-- ✅ Decoupled UI from business logic
-- ✅ Standardized integration contracts
-- ✅ Easier scaling and maintenance
-- ✅ Better testability per layer
+- ✅ Reusable Domain APIs across multiple workflows
+- ✅ Standardized patterns reduce decision fatigue
+- ✅ Better developer experience with consistent APIs
+- ✅ Support for multiple API technologies
 
 ### Negative
 
 - ⚠️ More layers = more network hops (latency)
 - ⚠️ Increased complexity for simple use cases
 - ⚠️ Requires discipline to maintain layer boundaries
-- ⚠️ SAGA complexity for multi-domain transactions
+- ⚠️ Multiple standards to learn (REST, gRPC, AsyncAPI)
 
 ### Mitigations
 
 - Use caching at Experience layer to reduce latency
 - Allow Experience to call Domain directly for simple reads
-- Provide templates and automation for layer creation
+- Provide templates and automation for API creation
 - Clear guidelines and code review enforcement
-- Automated compliance validation
 
 ---
 
 ## Implementation
 
-### Enterprise Reference Implementations (ERIs)
+### Reference Implementations
 
-| Layer | ERI | Framework |
-|-------|-----|-----------|
-| Experience/BFF | eri-004-experience-api-java-spring | Java/Spring |
-| Composable | eri-003-composable-api-java-spring | Java/Spring |
-| Domain | eri-002-domain-api-java-spring | Java/Spring |
-| System | eri-005-system-api-java-spring | Java/Spring |
-| Base Structure | eri-code-001-hexagonal-light-java-spring | Java/Spring |
+| Aspect | ERI | Status |
+|--------|-----|--------|
+| Base Architecture | eri-code-001-hexagonal-light-java-spring | ✅ Active |
+| API Public Exposure | eri-code-014-api-public-exposure-java-spring | ⏳ Planned |
 
-### Automated Skills
+### Modules
 
-| Skill | Purpose |
-|-------|---------|
-| skill-code-020-generate-microservice-java-spring | Generate base microservice with Hexagonal Light |
-| skill-code-021-generate-domain-api-java-spring | Generate Domain API with constraints |
-| skill-code-022-generate-composable-api-java-spring | Generate Composable API with SAGA support |
+| Module | Purpose | Status |
+|--------|---------|--------|
+| mod-code-015-hexagonal-base-java-spring | Base structure | ✅ Active |
+| mod-code-019-api-public-exposure-java-spring | Pagination, HATEOAS | ⏳ Planned |
+
+### Skills
+
+| Skill | Purpose | Status |
+|-------|---------|--------|
+| skill-020-microservice-java-spring | Generate base microservice | ✅ Active |
 
 ---
 
@@ -424,47 +617,48 @@ This decision was made based on the following considerations:
 ### Success Criteria
 
 - [ ] All new APIs follow 4-layer model
-- [ ] 100% of Domain APIs have compensation endpoints
+- [ ] All REST APIs implement pagination for collections
+- [ ] Public APIs include HATEOAS links
 - [ ] Zero direct calls from Experience to System APIs
-- [ ] All cross-domain coordination via Composable APIs
 - [ ] OpenAPI specs for all APIs
 
 ### Compliance Checks
 
 - Automated layer boundary validation
-- API contract compliance checks
-- SAGA pattern implementation verification
+- API contract compliance checks (OpenAPI linting)
+- Pagination structure validation
+- HATEOAS link validation (public APIs)
 
 ---
 
 ## References
 
 ### Related ADRs
+
 - **ADR-004:** Resilience Patterns
-- **ADR-006:** Error Handling Standards
 - **ADR-009:** Service Architecture Patterns (Hexagonal Light)
+- **ADR-013:** Distributed Transactions (planned)
 
 ### External Resources
-- [SAGA Pattern](https://microservices.io/patterns/data/saga.html)
-- [API-led Connectivity (MuleSoft)](https://www.mulesoft.com/resources/api/api-led-connectivity)
-- [BFF Pattern (Sam Newman)](https://samnewman.io/patterns/architectural/bff/)
+
+- [RFC 7807 - Problem Details for HTTP APIs](https://tools.ietf.org/html/rfc7807)
+- [JSON:API Specification](https://jsonapi.org/)
+- [HATEOAS - Richardson Maturity Model](https://martinfowler.com/articles/richardsonMaturityModel.html)
+- [OpenAPI Specification](https://swagger.io/specification/)
+- [gRPC Documentation](https://grpc.io/docs/)
+- [AsyncAPI Specification](https://www.asyncapi.com/)
 
 ---
 
 ## Changelog
 
-### v2.0 (2025-11-24)
-- Made framework-agnostic (moved Java specifics to ERIs)
-- Clarified layer constraints and responsibilities
-- Added API contract standards
-- Added error response format
-- Referenced new ERIs and Skills
-
-### v1.0 (2025-05-27)
-- Initial version with 4-layer model
-- SAGA pattern for Composable layer
+| Date | Version | Change | Author |
+|------|---------|--------|--------|
+| 2025-05-27 | 1.0 | Initial version with 4-layer model | Architecture Team |
+| 2025-11-24 | 2.0 | Made framework-agnostic, added error response format | Architecture Team |
+| 2025-12-19 | 3.0 | Added API Types (REST/gRPC/AsyncAPI), REST Standards (Pagination, HATEOAS, Filtering), API Exposure Levels, cleaned orphan references | C4E Team |
 
 ---
 
 **Decision Status:** ✅ Accepted and Active  
-**Review Date:** Q2 2025
+**Next Review:** Q1 2026

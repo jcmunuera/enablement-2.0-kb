@@ -1,13 +1,21 @@
 # Authoring Guide: SKILL
 
-**Version:** 2.4  
+**Version:** 2.5  
 **Last Updated:** 2025-12-19  
 **Asset Type:** Skill  
 **Priority:** CRITICAL
 
 ---
 
-## What's New in v2.4
+## What's New in v2.5
+
+| Change | Description |
+|--------|-------------|
+| **Skill Extension Pattern** | Skills can now extend other skills using `extends:` declaration |
+| **Discovery Keywords** | Skills can declare positive/negative keywords for discovery |
+| **Inheritance Model** | Child skills inherit modules, parameters, validation from parent |
+
+### Previous (v2.4)
 
 | Change | Description |
 |--------|-------------|
@@ -1050,6 +1058,224 @@ Before marking a Skill as "Active":
   - [ ] `capabilities.{capability}.skills` (if applicable)
   - [ ] `technologies.{tech}.skills` (if applicable)
   - [ ] `flows.{domain}.{FLOW}.skills`
+
+---
+
+## Skill Extension Pattern
+
+### Overview
+
+Skills can extend other skills using the `extends` declaration. This enables:
+
+- **Inheritance**: Child skill inherits all capabilities from parent
+- **Delta definition**: Child only declares what it adds/changes
+- **Automatic propagation**: New parent capabilities flow to children
+- **DRY principle**: No duplication of common definitions
+
+### When to Use Extension
+
+✅ **Use extension when:**
+- Building a specialized version of an existing skill
+- Adding capabilities to a base skill for specific use cases
+- Creating variations (REST, gRPC, Async) of a common base
+- Want child skills to automatically inherit parent improvements
+
+❌ **Do NOT use extension when:**
+- Skills have fundamentally different architectures
+- No meaningful shared base exists
+- Child would override >50% of parent (create new skill instead)
+
+### Extension Declaration
+
+In the child skill's SKILL.md frontmatter:
+
+```yaml
+---
+id: skill-021-api-rest-java-spring
+extends: skill-020-microservice-java-spring  # Parent skill ID
+type: GENERATE
+version: 2.0.0
+status: Active
+---
+```
+
+### What Gets Inherited vs Added
+
+| Aspect | Inherited from Parent | Declared in Child (Delta) |
+|--------|----------------------|---------------------------|
+| **Modules** | All parent modules | `modules_added:` new modules |
+| **Parameters** | All parent parameters | `parameters_added:` new params |
+| **Validation Tier 1** | ✅ Fully inherited | Cannot modify |
+| **Validation Tier 2** | ✅ Fully inherited | Cannot modify |
+| **Validation Tier 3** | Parent module validators | `validation_added:` child module validators |
+| **Prompts** | Can inherit or override | Child prompts if present, else parent |
+| **Knowledge Deps** | Inherited implicitly | `knowledge_added:` additional ADRs/ERIs |
+
+### SKILL.md Structure for Child Skills
+
+Child skills use `_added` suffix for delta sections:
+
+```markdown
+# Skill: REST API Generator
+
+**Skill ID:** skill-021-api-rest-java-spring  
+**Extends:** skill-020-microservice-java-spring  
+**Version:** 2.0.0
+
+---
+
+## Overview
+
+Extends `skill-020-microservice-java-spring` to generate REST APIs...
+
+[Describe ONLY what this skill ADDS, not inherited capabilities]
+
+---
+
+## Knowledge Dependencies (Delta Only)
+
+> Inherited dependencies from parent are not repeated here.
+
+| Type | Asset | Purpose |
+|------|-------|---------|
+| ADR | adr-001-api-design | API standards (NEW) |
+| Module | mod-019-api-public-exposure | Pagination (NEW) |
+
+---
+
+## Parameters (Delta Only)
+
+> Inherited parameters from parent are not repeated.
+
+### Additional Required Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `apiLayer` | enum | API layer type (NEW) |
+```
+
+### Agent Resolution Algorithm
+
+When the agent encounters a skill with `extends`:
+
+```python
+def resolve_skill(skill_id: str) -> ResolvedSkill:
+    """Recursively resolve skill with inheritance."""
+    
+    skill = load_skill_definition(skill_id)
+    
+    # Base case: no extension
+    if not skill.extends:
+        return skill
+    
+    # Recursive case: resolve parent first
+    parent = resolve_skill(skill.extends)
+    
+    # Merge parent + child
+    return merge_skills(parent, skill)
+
+
+def merge_skills(parent: Skill, child: Skill) -> ResolvedSkill:
+    """Merge parent skill with child delta."""
+    
+    return ResolvedSkill(
+        id=child.id,
+        extends=child.extends,
+        
+        # Modules: parent + child additions
+        modules=parent.modules + child.modules_added,
+        
+        # Parameters: parent + child additions
+        parameters={**parent.parameters, **child.parameters_added},
+        
+        # Validation: inherit Tier 1/2, merge Tier 3
+        validation=ValidationConfig(
+            tier1=parent.validation.tier1,
+            tier2=parent.validation.tier2,
+            tier3=parent.validation.tier3 + child.validation_added.tier3
+        ),
+        
+        # Prompts: child overrides if present
+        prompts=child.prompts if child.prompts else parent.prompts,
+        
+        # Track lineage for traceability
+        lineage=[parent.id] + parent.lineage
+    )
+```
+
+### Validation for Extended Skills
+
+Child skill's `validate.sh` should invoke parent validation:
+
+```bash
+#!/bin/bash
+# validate.sh for child skill
+
+SERVICE_DIR="$1"
+
+# 1. Run INHERITED validation from parent
+source "$PARENT_SKILL_DIR/validation/validate.sh" "$SERVICE_DIR"
+PARENT_ERRORS=$?
+
+# 2. Run ADDITIONAL validation (child-specific)
+source mod-019/validation/pagination-check.sh "$SERVICE_DIR"
+CHILD_ERRORS=$?
+
+# 3. Combine results
+exit $((PARENT_ERRORS + CHILD_ERRORS))
+```
+
+### Traceability for Extended Skills
+
+Generated manifest.json must include lineage:
+
+```json
+{
+  "generated_by": {
+    "skill": "skill-021-api-rest-java-spring",
+    "version": "2.0.0",
+    "extends": "skill-020-microservice-java-spring",
+    "lineage": ["skill-020-microservice-java-spring"]
+  },
+  "modules_used": [
+    "mod-015-hexagonal-base",
+    "mod-019-api-public-exposure"
+  ]
+}
+```
+
+### Discovery with Extended Skills
+
+When `extends` is present, differentiate parent from child during discovery:
+
+1. **Parent skill**: Generic/base use case
+2. **Child skills**: Specialized use cases
+
+OVERVIEW.md must clearly state when to use parent vs child.
+
+Use `keywords.positive` and `keywords.negative` in skill-index.yaml:
+
+```yaml
+- id: skill-020-microservice-java-spring
+  keywords:
+    positive: ["microservice", "internal", "DDD"]
+    negative: ["API", "pagination", "HATEOAS"]
+
+- id: skill-021-api-rest-java-spring
+  extends: skill-020-microservice-java-spring
+  keywords:
+    positive: ["API", "REST", "pagination", "HATEOAS"]
+    negative: ["internal", "gRPC", "async"]
+```
+
+### Best Practices
+
+1. **Keep parent generic**: Parent should contain only truly shared capabilities
+2. **Delta only in child**: Never repeat parent definitions in child
+3. **Clear differentiation**: OVERVIEW.md must clearly distinguish parent vs child use cases
+4. **Test inheritance**: Verify parent changes propagate correctly to children
+5. **Document lineage**: Always include `extends` and `lineage` in traceability
+6. **Max 2 levels**: Avoid deep hierarchies (parent → child only)
 
 ---
 
