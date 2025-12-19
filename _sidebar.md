@@ -21,7 +21,7 @@
   * [GOVERNANCE Domain](model/domains/governance/DOMAIN.md)
 
 * **Standards**
-  * [Asset Standards](model/standards/ASSET-STANDARDS-v1.3.md)
+  * [Asset Standards v1.4](model/standards/ASSET-STANDARDS-v1.4.md)
   * **Authoring Guides**
     * [Overview](model/standards/authoring/README.md)
     * [ADR Guide](model/standards/authoring/ADR.md)
@@ -38,15 +38,19 @@
 
 * **Skills**
   * [Skills Overview](skills/README.md)
+  * [CODE Skills](skills/code/README.md)
 
 * **Modules**
   * [Modules Overview](modules/README.md)
 
 * **Runtime**
   * [Runtime Overview](runtime/README.md)
-  * [Discovery Guidance](runtime/discovery/discovery-guidance.md)
-  * [GENERATE Flow](runtime/flows/code/GENERATE.md)
-  * [ADD Flow](runtime/flows/code/ADD.md)
+  * **Discovery**
+    * [Discovery Guidance](runtime/discovery/discovery-guidance.md)
+    * [Skill Index](runtime/discovery/skill-index.yaml)
+  * **Flows**
+    * [GENERATE Flow](runtime/flows/code/GENERATE.md)
+    * [ADD Flow](runtime/flows/code/ADD.md)
 
 * **Resources**
   * [Methodology](docs/METHODOLOGY.md)

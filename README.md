@@ -40,13 +40,19 @@ enablement-2.0/
 │   └── domains/                   # Domain definitions (CODE, DESIGN, QA, GOV)
 │
 ├── skills/                 # SKILLS (executable units for agents)
-│   └── skill-{domain}-{NNN}-...
+│   ├── code/              # CODE domain skills
+│   │   ├── soe/          # System of Engagement (frontend)
+│   │   ├── soi/          # System of Integration (microservices)
+│   │   └── sor/          # System of Record (mainframe)
+│   ├── design/            # DESIGN domain skills
+│   ├── qa/                # QA domain skills
+│   └── governance/        # GOVERNANCE domain skills
 │
 ├── modules/                # MODULES (reusable templates, CODE domain)
 │   └── mod-code-{NNN}-...
 │
 ├── runtime/                # RUNTIME (orchestration and execution)
-│   ├── discovery/         # Interpretive discovery guidance
+│   ├── discovery/         # Interpretive discovery + skill-index.yaml
 │   ├── flows/             # Execution flows by domain/type
 │   └── validators/        # Tier-1 and Tier-2 validators
 │
