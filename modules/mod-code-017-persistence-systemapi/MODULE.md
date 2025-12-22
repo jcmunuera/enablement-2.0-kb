@@ -742,6 +742,59 @@ class {Entity}SystemApiAdapterTest {
 
 ---
 
+## Determinism (v1.1)
+
+This section defines mandatory patterns for consistent code generation.
+
+### Mandatory Patterns
+
+| Element | Required Pattern | Rationale |
+|---------|-----------------|-----------|
+| Response DTO | `record` | Immutability |
+| Request DTO | `record` | Immutability |
+| Mapper | `@Component` class | Single responsibility |
+| Code mapping | In Mapper, NOT in Enum | Separation of concerns |
+
+### Code Mapping Rule
+
+**CRITICAL:** External code mapping (e.g., mainframe status codes) MUST be in the Mapper class:
+
+```java
+// ✅ CORRECT - In Mapper
+private CustomerStatus toStatus(String code) {
+    return switch (code) {
+        case "A" -> CustomerStatus.ACTIVE;
+        case "I" -> CustomerStatus.INACTIVE;
+        default -> throw new IllegalArgumentException("Unknown: " + code);
+    };
+}
+
+// ❌ WRONG - In Enum
+public enum CustomerStatus {
+    ACTIVE("A"),  // NO! Don't put codes here
+    ...
+}
+```
+
+### Required Annotations
+
+```java
+/**
+ * @generated {skill-id} v{version}
+ * @module mod-code-017-persistence-systemapi
+ */
+```
+
+### Forbidden Patterns
+
+| Pattern | Reason | Alternative |
+|---------|--------|-------------|
+| Lombok `@Data` on DTOs | Records cleaner | Java `record` |
+| Lombok `@Builder` | Records have constructor | Record constructor |
+| Code in Enum | Couples domain | Mapper class |
+
+---
+
 ## Validation
 
 See [validation/README.md](validation/README.md) for validation script details.
@@ -753,3 +806,8 @@ See [validation/README.md](validation/README.md) for validation script details.
 - **Source ERI:** [ERI-CODE-012](../../../ERIs/eri-code-012-persistence-patterns-java-spring/ERI.md)
 - **Alternative:** mod-code-016-persistence-jpa-spring (for local database)
 - **Resilience:** mod-001 (Circuit Breaker), mod-002 (Retry)
+
+---
+
+**Module Version:** 1.1  
+**Last Updated:** 2025-12-22

@@ -1,7 +1,7 @@
 # CONSUMER-PROMPT.md
 
-**Version:** 1.3  
-**Date:** 2025-12-19  
+**Version:** 1.4  
+**Date:** 2025-12-22  
 **Purpose:** System prompt for consumer agents executing skills
 
 ---
@@ -129,6 +129,57 @@ Examples:
 3. **Consult domain knowledge**: Modules, ERIs, ADRs as specified by skill
 4. **Generate output** following the flow's guidance
 5. **Validate output** using the validation tiers
+
+### Variant Selection Behavior (v1.3)
+
+When a module offers implementation variants:
+
+1. **Check Input First:** If the user's request explicitly specifies a variant, use it
+   ```json
+   { "features": { "integration": { "client": "feign" } } }
+   ```
+
+2. **Default Behavior:** If no variant specified, use the module's default variant without asking
+
+3. **Auto-Suggest Trigger:** If module has `selection_mode: "auto-suggest"` AND 
+   `recommend_when` conditions match the context:
+   - ASK the user before using an alternative
+   - Question format:
+     ```
+     "Para {moduleName}, la implementación por defecto es {default}. 
+     Sin embargo, {alternative} podría ser más apropiada porque {reason}.
+     ¿Deseas usar {alternative} en su lugar?"
+     ```
+
+4. **Respect User Choice:** 
+   - If user confirms → Use alternative variant
+   - If user declines or doesn't respond → Use default variant
+   - Do NOT ask again for the same module in the same session
+
+5. **Trace Decision:** Record variant selection in manifest:
+   ```json
+   {
+     "modules": {
+       "mod-code-018": {
+         "variant": "restclient",
+         "selection": "default",
+         "reason": "No alternative specified"
+       }
+     }
+   }
+   ```
+
+### Determinism Rules
+
+When generating code, ALWAYS follow:
+- `model/standards/DETERMINISM-RULES.md` - Global patterns
+- Each module's `## Determinism` section - Module-specific patterns
+
+Key rules:
+- Entity IDs → `record` with `UUID`
+- Request/Response DTOs → `record` (unless HATEOAS)
+- Domain Enums → Simple (no attributes, mapping in Mapper)
+- All generated files → Include `@generated` and `@module` annotations
 
 ### Domain-Specific Execution
 

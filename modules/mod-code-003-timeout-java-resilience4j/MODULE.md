@@ -1,8 +1,8 @@
 ---
 id: mod-code-003-timeout-java-resilience4j
 title: "MOD-003: Timeout Pattern - Java/Resilience4j"
-version: 1.0
-date: 2025-11-28
+version: 1.1
+date: 2025-12-22
 status: Active
 derived_from: eri-code-010-timeout-java-resilience4j
 domain: code
@@ -15,6 +15,34 @@ tags:
 used_by:
   - skill-code-003-add-timeout-java-resilience4j
   - skill-code-020-generate-microservice-java-spring
+
+# Variant Configuration (v1.1)
+variants:
+  enabled: true
+  selection_mode: auto-suggest
+  
+  default:
+    id: client-timeout
+    name: "Client-level Timeout (Recommended)"
+    description: "Configure timeout in HTTP client (RestClient/WebClient). Simpler, synchronous."
+    templates:
+      - client/timeout-config.java.tpl
+      - config/application-client-timeout.yml.tpl
+    
+  alternatives:
+    - id: annotation-async
+      name: "Annotation-based Timeout (@TimeLimiter)"
+      description: "Use @TimeLimiter with CompletableFuture. Async required."
+      templates:
+        - annotation/basic-timeout.java.tpl
+        - annotation/timeout-with-fallback.java.tpl
+        - config/application-timeout.yml.tpl
+      recommend_when:
+        - condition: "service.async = true"
+          reason: "Service already uses async patterns with CompletableFuture"
+        - condition: "resilience.timelimiter.fallback.enabled = true"
+          reason: "Specific fallback behavior needed on timeout"
+      note: "Requires all timed methods to return CompletableFuture<T>"
 ---
 
 # MOD-003: Timeout Pattern - Java/Resilience4j

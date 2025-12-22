@@ -1,3 +1,21 @@
+---
+id: mod-code-019-api-public-exposure-java-spring
+title: "MOD-019: API Public Exposure - Java/Spring Boot"
+version: 1.0
+date: 2025-12-01
+status: Active
+derived_from: eri-code-014-api-public-exposure-java-spring
+domain: code
+tags:
+  - java
+  - spring-boot
+  - rest-api
+  - hateoas
+  - pagination
+used_by:
+  - skill-code-020-generate-microservice-java-spring
+---
+
 # MOD-019: API Public Exposure - Java/Spring Boot
 
 **Module ID:** mod-code-019-api-public-exposure-java-spring  

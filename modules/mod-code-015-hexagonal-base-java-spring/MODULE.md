@@ -1,7 +1,26 @@
+---
+id: mod-code-015-hexagonal-base-java-spring
+title: "MOD-015: Hexagonal Base - Java/Spring Boot"
+version: 1.2
+date: 2025-12-01
+updated: 2025-12-22
+status: Active
+derived_from: eri-code-001-hexagonal-light-java-spring
+domain: code
+tags:
+  - java
+  - spring-boot
+  - hexagonal
+  - architecture
+  - ddd
+used_by:
+  - skill-code-020-generate-microservice-java-spring
+---
+
 # MOD-015: Hexagonal Base - Java/Spring Boot
 
 **Module ID:** mod-code-015-hexagonal-base-java-spring  
-**Version:** 1.1  
+**Version:** 1.2  
 **Source ERI:** eri-code-001-hexagonal-light-java-spring  
 **Framework:** Java 17+ / Spring Boot 3.2.x  
 **Used by:** skill-code-020-generate-microservice-java-spring
@@ -941,5 +960,47 @@ For complete persistence implementation patterns, see:
 
 ---
 
-**Module Version:** 1.1  
-**Last Updated:** 2025-12-01
+## Determinism (v1.2)
+
+This section defines mandatory patterns for consistent code generation.
+
+### Mandatory Patterns
+
+| Element | Required Pattern | Rationale |
+|---------|-----------------|-----------|
+| Entity ID | `record` with `UUID` | Immutability, type safety |
+| Request DTO | `record` | Immutability |
+| Response DTO (no HATEOAS) | `record` | Immutability |
+| Response DTO (HATEOAS) | `class extends RepresentationModel` | Framework requirement |
+| Domain Entity | `class` | Mutable lifecycle |
+| Domain Enum | Simple (no attributes) | Mapping in Mapper |
+
+### Configurable Elements (Variants)
+
+| Element | Options | Default | Selection Criteria |
+|---------|---------|---------|-------------------|
+| Response DTO | `record`, `hateoas` | `record` | HATEOAS enabled → `hateoas` |
+
+### Required Annotations
+
+All generated files MUST include:
+
+```java
+/**
+ * @generated {skill-id} v{version}
+ * @module mod-code-015-hexagonal-base-java-spring
+ */
+```
+
+### Forbidden Patterns
+
+| Pattern | Reason | Alternative |
+|---------|--------|-------------|
+| Lombok `@Data` | Records cleaner | Java `record` |
+| `String` for IDs | Type safety | `UUID` in record |
+| Enum with code attribute | Coupling | Mapper class |
+
+---
+
+**Module Version:** 1.2  
+**Last Updated:** 2025-12-22

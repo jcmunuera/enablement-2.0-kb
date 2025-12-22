@@ -1,7 +1,7 @@
 # Authoring Guide: MODULE
 
-**Version:** 1.7  
-**Last Updated:** 2025-12-17  
+**Version:** 1.8  
+**Last Updated:** 2025-12-22  
 **Asset Type:** Module
 
 ---
@@ -154,6 +154,288 @@ persistence:
 | Messaging | Kafka, RabbitMQ | Disparate | 2 |
 | Database | PostgreSQL, MySQL | Equivalent | 1 with variants |
 | Caching | Redis, Caffeine | Disparate | 2 |
+
+---
+
+## Variant Implementation (v1.8)
+
+> **NEW in v1.8:** Formal structure for variants with explicit defaults.
+
+When a module has functionally equivalent implementation options, it MUST define them as **variants** with one **explicit default**.
+
+### Source of Truth: ERI
+
+> **CRITICAL:** Module variants MUST derive from ERI implementation options. A module CANNOT offer variants that are not defined as valid options in its source ERI.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ERI → MODULE DERIVATION RULE                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ERI defines:                              MODULE inherits:                  │
+│  ─────────────                             ────────────────                  │
+│  implementation_options.options[].id   →   variants.default.id              │
+│                                            variants.alternatives[].id       │
+│  implementation_options.default        →   variants.default                 │
+│  options[].recommended_when            →   alternatives[].recommend_when    │
+│  options[].status = deprecated         →   alternatives[].deprecated: true  │
+│  Reference code per option             →   Template content per variant     │
+│                                                                              │
+│  ❌ Module CANNOT add variants not in ERI                                   │
+│  ❌ Module CANNOT change which option is default (without ERI update)       │
+│  ✅ Module CAN refine recommend_when conditions for runtime context         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### When to Evaluate Variants (Authoring Process)
+
+During module creation, the author MUST check the source ERI for options:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    VARIANT EVALUATION PROCESS                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. READ source ERI's Implementation Options section                         │
+│     └─ Does the ERI define multiple valid options?                           │
+│     └─ If NO options section → Module has no variants                        │
+│                                                                              │
+│  2. EVALUATE functional equivalence (if not already done in ERI)             │
+│     └─ Do all options produce the same architectural result?                 │
+│     └─ Are they interchangeable without code restructure?                    │
+│                                                                              │
+│  3. DECIDE:                                                                  │
+│     ├─ If functionally EQUIVALENT → Single module with VARIANTS              │
+│     └─ If functionally DISPARATE → Separate modules                          │
+│                                                                              │
+│  4. If VARIANTS (derive from ERI):                                           │
+│     a. INHERIT default from ERI's implementation_options.default             │
+│     b. INHERIT alternatives from ERI's options with status != default        │
+│     c. OPERATIONALIZE recommend_when from ERI for runtime conditions         │
+│     d. CREATE template files for each ERI option                             │
+│     e. SET selection_mode (explicit vs auto-suggest)                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Variant Evaluation Checklist
+
+Before finalizing a module, answer these questions:
+
+| Question | Action |
+|----------|--------|
+| Does the source ERI have an `implementation_options` section? | If YES → Module will have variants |
+| Does each module variant correspond to an ERI option? | MUST be YES → Validate mapping |
+| Is the module's default the same as ERI's default? | MUST be YES → Inherit from ERI |
+| Are recommend_when conditions derived from ERI's recommended_when? | SHOULD be YES → Refine for runtime |
+| Are deprecated variants marked as such per ERI? | MUST be YES → Inherit status |
+
+### Variant Validation Rule
+
+> **Before publishing a module with variants, verify:**
+> 1. Source ERI has `implementation_options` section
+> 2. Every module variant.id matches an ERI option.id
+> 3. Module default matches ERI default
+> 4. No variants exist that aren't in ERI
+
+### Why Variants Matter
+
+Without explicit variant definition:
+- AI agents interpret templates freely
+- Multiple executions produce different code
+- Code quality becomes unpredictable
+
+With explicit variants (derived from ERI):
+- Options are architecturally validated (in ERI)
+- Default variant is used automatically
+- Alternative variants require explicit selection
+- Code generation is deterministic
+
+### Variant Structure in MODULE.md
+
+Add a `variants` section to the MODULE.md frontmatter:
+
+```yaml
+---
+id: mod-code-018-api-integration-rest-java-spring
+# ... other frontmatter ...
+
+variants:
+  enabled: true
+  selection_mode: explicit | auto-suggest
+  
+  default:
+    id: restclient
+    name: "RestClient (Spring 6.1+)"
+    description: "Modern REST client, recommended for Spring Boot 3.2+"
+    templates:
+      - client/restclient.java.tpl
+      - config/restclient-config.java.tpl
+    
+  alternatives:
+    - id: feign
+      name: "OpenFeign"
+      description: "Declarative REST client"
+      templates:
+        - client/feign.java.tpl
+        - config/feign-config.java.tpl
+      recommend_when:
+        - condition: "Existing codebase uses Feign"
+          reason: "Consistency with existing patterns"
+        - condition: "Team prefers declarative style"
+          reason: "Simpler interface definition"
+      
+    - id: resttemplate
+      name: "RestTemplate (Legacy)"
+      description: "Traditional REST client"
+      templates:
+        - client/resttemplate.java.tpl
+        - config/resttemplate-config.java.tpl
+      deprecated: true
+      deprecation_reason: "RestClient is preferred for new projects"
+---
+```
+
+### Selection Mode
+
+| Mode | Behavior | Use When |
+|------|----------|----------|
+| `explicit` | Use default unless input specifies variant | Most modules - stable default |
+| `auto-suggest` | Ask user if alternative conditions match | When context matters for choice |
+
+### Template Organization for Variants
+
+```
+templates/
+├── client/                    # Concern: REST client
+│   ├── restclient.java.tpl    # Default variant
+│   ├── feign.java.tpl         # Alternative
+│   └── resttemplate.java.tpl  # Alternative (deprecated)
+├── config/                    # Concern: Configuration
+│   ├── restclient-config.java.tpl
+│   ├── feign-config.java.tpl
+│   └── resttemplate-config.java.tpl
+└── common/                    # Shared across variants
+    └── IntegrationException.java.tpl
+```
+
+### Variant Selection by Skills
+
+Skills select variants via input parameters:
+
+```json
+{
+  "features": {
+    "integration": {
+      "client": "feign"  // Explicit selection, overrides default
+    }
+  }
+}
+```
+
+If not specified, the default variant is used automatically.
+
+### Variant Documentation Requirements
+
+Each variant MUST document:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | ✅ | Unique identifier for the variant |
+| `name` | ✅ | Human-readable name |
+| `description` | ✅ | What it is and when to use |
+| `templates` | ✅ | List of template files |
+| `recommend_when` | ❌ | Conditions that suggest this variant |
+| `deprecated` | ❌ | Whether this variant is deprecated |
+| `deprecation_reason` | ❌ | Why deprecated and what to use instead |
+
+### Variants in Non-CODE Domains
+
+> **IMPORTANT:** If a skill in ANY domain (DESIGN, QA, GOVERNANCE) has implementation alternatives, it MUST have a module that defines them.
+
+This rule simplifies the model:
+
+| Domain | Example Skill | Variants Example | Requires Module? |
+|--------|--------------|------------------|------------------|
+| CODE | Generate microservice | RestClient vs Feign | ✅ Yes (mod-018) |
+| DESIGN | Generate diagram | C4 vs Mermaid vs PlantUML | ✅ Yes (if variants exist) |
+| QA | Generate test report | JUnit XML vs HTML vs JSON | ✅ Yes (if variants exist) |
+| GOVERNANCE | Generate checklist | Markdown vs DOCX | ✅ Yes (if variants exist) |
+
+**Rule:** "If a skill has implementation alternatives, it MUST have a module that defines variants with a default."
+
+This ensures:
+- Consistent variant handling across all domains
+- Single mechanism for variant selection (in modules)
+- Flows can use the same variant resolution logic
+
+---
+
+## Determinism Rules (v1.8)
+
+> **NEW in v1.8:** Mandatory patterns for consistent code generation.
+
+### Purpose
+
+Ensure that multiple executions with the same input produce **identical** code output.
+
+### Global Mandatory Patterns
+
+These patterns MUST be followed by ALL code modules:
+
+| Element | Required Pattern | Rationale |
+|---------|-----------------|-----------|
+| Value Objects (IDs) | `record` with `UUID` | Immutability, type safety |
+| Request DTOs | `record` | Immutability |
+| Response DTOs (no HATEOAS) | `record` | Immutability |
+| Response DTOs (HATEOAS) | `class extends RepresentationModel` | Framework requirement |
+| Domain Entities | `class` | Mutable by design |
+| Domain Enums | Simple (no attributes) | Code mapping in mapper |
+| Mappers | Dedicated `@Component` class | Single responsibility |
+
+### Forbidden Patterns
+
+| Pattern | Reason | Alternative |
+|---------|--------|-------------|
+| Lombok `@Data` on DTOs | Records are cleaner | Java `record` |
+| Code mapping in Enum | Couples domain to external | Mapper class |
+| `String` for entity IDs | Loses type safety | `UUID` or typed wrapper |
+| Inline validation in Entity constructor | Inconsistent | Dedicated validation methods |
+
+### Required Annotations
+
+All generated code MUST include these annotations:
+
+```java
+/**
+ * [Class description]
+ * 
+ * @generated {skill-id} v{version}
+ * @module {module-id}
+ * @variant {variant-id}  // Only if non-default variant used
+ */
+```
+
+### Module-Specific Determinism Section
+
+Each MODULE.md MUST include a `## Determinism` section specifying:
+
+```markdown
+## Determinism
+
+### Mandatory Patterns
+
+| Element | Pattern | Enforced By |
+|---------|---------|-------------|
+| [element] | [required pattern] | [validation script] |
+
+### Configurable Elements
+
+| Element | Options | Default | Selection |
+|---------|---------|---------|-----------|
+| [element] | [options] | [default] | [how to select] |
+```
 
 ---
 
@@ -382,8 +664,8 @@ version: X.Y.Z
 date: YYYY-MM-DD
 updated: YYYY-MM-DD
 status: Draft|Active|Deprecated
-source_eri: eri-{domain}-XXX-...
-implements_adr: adr-XXX-...
+derived_from: eri-{domain}-XXX-...   # REQUIRED - Source ERI
+implements_adr: adr-XXX-...           # Optional - Direct ADR reference
 tier: 3
 tags:
   - {tag1}
@@ -647,14 +929,15 @@ render_template "mod-{domain}-{NNN}-{pattern}/templates/Config.java.hbs" \
 Before marking a Module as "Active":
 
 - [ ] `MODULE.md` is complete with all sections
+- [ ] **`derived_from` references the source ERI** ← REQUIRED
 - [ ] `OVERVIEW.md` provides quick reference
 - [ ] All templates are in `templates/` directory
 - [ ] Templates use consistent variable naming
 - [ ] `validation/` contains at least one check script
 - [ ] Validation scripts map to ERI constraints
-- [ ] Source ERI is referenced
 - [ ] At least one Skill uses this module
 - [ ] Templates generate compilable code
+- [ ] **If module has variants, each corresponds to an ERI option** ← If applicable
 
 ---
 
@@ -680,8 +963,10 @@ Skill                                            validation/*-check.sh
 
 | Relationship | Requirement |
 |--------------|-------------|
-| `source_eri` | MUST reference exactly one ERI |
+| `derived_from` | MUST reference exactly one ERI |
 | `validation/` | MUST have at least one validation script |
+
+> **CRITICAL:** Every module MUST have a `derived_from` field in its frontmatter pointing to the source ERI. Modules without an ERI reference are invalid.
 
 ---
 

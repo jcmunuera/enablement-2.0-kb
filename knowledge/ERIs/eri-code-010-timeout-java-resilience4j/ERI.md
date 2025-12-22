@@ -2,9 +2,9 @@
 id: eri-code-010-timeout-java-resilience4j
 title: "ERI-CODE-010: Timeout Pattern - Java/Spring Boot with Resilience4j"
 sidebar_label: "Timeout (Java)"
-version: 1.0
+version: 1.1
 date: 2025-11-28
-updated: 2025-11-28
+updated: 2025-12-22
 status: Active
 author: "Architecture Team"
 domain: code
@@ -52,6 +52,112 @@ This Enterprise Reference Implementation provides the standard way to implement 
 - Local computations (use async processing instead)
 - Operations that cannot be safely interrupted
 - Fire-and-forget operations
+
+---
+
+## Implementation Options
+
+> **NEW in v1.1:** This ERI defines two valid implementation approaches. Modules derived from this ERI MUST only implement these options.
+
+### Recommended Default: Client-level Timeout
+
+**Why Default:** Simpler, works with synchronous code, no CompletableFuture requirement.
+
+### Options Summary
+
+| Option | Status | Recommended When | Module |
+|--------|--------|------------------|--------|
+| Client-level Timeout | ⭐ DEFAULT | New projects, synchronous code | mod-code-003 (client-timeout variant) |
+| @TimeLimiter Annotation | Alternative | Async code, specific fallback needs | mod-code-003 (annotation-async variant) |
+
+### Option A: Client-level Timeout ⭐ DEFAULT
+
+**Description:** Configure timeout at the HTTP client level (RestClient, WebClient, RestTemplate).
+
+**Recommended When:**
+- Synchronous code patterns
+- New Spring Boot 3.2+ projects
+- Simple timeout requirements without specific fallback logic
+
+**Trade-offs:**
+- ✅ Simpler - no CompletableFuture required
+- ✅ Works with standard synchronous code
+- ✅ Centralized configuration
+- ⚠️ Less granular control per method
+
+**Reference Implementation:**
+
+```java
+@Configuration
+public class RestClientConfig {
+    
+    @Value("${integration.timeout.connect:5s}")
+    private Duration connectTimeout;
+    
+    @Value("${integration.timeout.read:10s}")
+    private Duration readTimeout;
+    
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder()
+            .requestFactory(clientHttpRequestFactory());
+    }
+    
+    @Bean
+    public HttpComponentsClientHttpRequestFactory clientHttpRequestFactory() {
+        RequestConfig requestConfig = RequestConfig.custom()
+            .setConnectTimeout(Timeout.of(connectTimeout))
+            .setResponseTimeout(Timeout.of(readTimeout))
+            .build();
+        
+        CloseableHttpClient httpClient = HttpClients.custom()
+            .setDefaultRequestConfig(requestConfig)
+            .build();
+        
+        return new HttpComponentsClientHttpRequestFactory(httpClient);
+    }
+}
+```
+
+### Option B: @TimeLimiter Annotation
+
+**Description:** Use Resilience4j @TimeLimiter annotation with CompletableFuture.
+
+**Recommended When:**
+- Service already uses async patterns with CompletableFuture
+- Specific fallback behavior needed on timeout
+- Fine-grained per-method timeout configuration required
+
+**Trade-offs:**
+- ✅ Per-method configuration
+- ✅ Built-in fallback support
+- ✅ Metrics and monitoring integration
+- ⚠️ Requires CompletableFuture<T> return type
+- ⚠️ More complex code structure
+
+**Reference Implementation:**
+
+```java
+@Service
+@RequiredArgsConstructor
+public class PaymentApplicationService {
+    
+    private final PaymentClient paymentClient;
+    
+    @TimeLimiter(name = "paymentService", fallbackMethod = "processPaymentFallback")
+    public CompletableFuture<PaymentResult> processPayment(PaymentRequest request) {
+        return CompletableFuture.supplyAsync(() -> 
+            paymentClient.process(request)
+        );
+    }
+    
+    private CompletableFuture<PaymentResult> processPaymentFallback(
+            PaymentRequest request, TimeoutException ex) {
+        log.warn("Payment timeout: {}", ex.getMessage());
+        return CompletableFuture.completedFuture(PaymentResult.pending());
+    }
+}
+```
 
 ---
 
@@ -816,6 +922,64 @@ public WebClient webClient() {
 
 - **@TimeLimiter strategy:** [mod-code-003-timeout-java-resilience4j](../../skills/modules/mod-code-003-timeout-java-resilience4j/)
 - **Client-level strategy:** [mod-code-018-api-integration-rest-java-spring](../../skills/modules/mod-code-018-api-integration-rest-java-spring/)
+
+---
+
+## Annex: Implementation Constraints
+
+> This annex defines rules that MUST be respected when creating Modules or Skills based on this ERI.
+
+```yaml
+eri_constraints:
+  id: eri-code-010-timeout-constraints
+  version: "1.1"
+  eri_reference: eri-code-010-timeout-java-resilience4j
+  adr_reference: adr-004-resilience-patterns
+  
+  implementation_options:
+    default: client-timeout
+    options:
+      - id: client-timeout
+        name: "Client-level Timeout"
+        status: default
+        recommended_when:
+          - "Synchronous code patterns"
+          - "New Spring Boot 3.2+ projects"
+          - "Simple timeout without specific fallback"
+          
+      - id: annotation-async
+        name: "@TimeLimiter Annotation"
+        status: alternative
+        recommended_when:
+          - "Service uses async patterns with CompletableFuture"
+          - "Specific fallback behavior needed on timeout"
+          - "Per-method timeout configuration required"
+  
+  structural_constraints:
+    - id: timelimiter-completable-future
+      rule: "Methods with @TimeLimiter MUST return CompletableFuture<T>"
+      validation: "Methods annotated with @TimeLimiter have CompletableFuture return type"
+      severity: ERROR
+      applies_to: [annotation-async]
+      
+    - id: timelimiter-in-application-layer
+      rule: "@TimeLimiter annotation MUST be in application layer"
+      validation: "@TimeLimiter found only in application/service/ classes"
+      severity: ERROR
+      applies_to: [annotation-async]
+      
+    - id: client-timeout-in-config
+      rule: "Client timeout MUST be configured in infrastructure layer"
+      validation: "Timeout configuration in infrastructure/config/ classes"
+      severity: ERROR
+      applies_to: [client-timeout]
+      
+  configuration_constraints:
+    - id: timeout-externalized
+      rule: "Timeout values MUST be externalized in application.yml"
+      validation: "Timeout values configurable via properties"
+      severity: ERROR
+```
 
 ---
 

@@ -1,7 +1,7 @@
 # Authoring Guide: Execution Flows
 
-**Version:** 1.0  
-**Date:** 2025-12-18
+**Version:** 1.1  
+**Date:** 2025-12-22
 
 ---
 
@@ -73,6 +73,43 @@ Every execution flow document MUST include:
 ## Execution Flow
 
 [Detailed step-by-step flow, preferably with ASCII diagram]
+
+---
+
+## Required Steps (v1.1)
+
+Every execution flow that uses modules MUST include these steps:
+
+### Variant Resolution Step
+
+If the flow uses modules, it MUST include a **Variant Resolution** step after module loading:
+
+```
+STEP N: RESOLVE VARIANTS
+───────────────────────────────────────────────────────────────────────────
+Action: Select implementation variant for each module that has variants
+Input:  List of modules + Request features
+Output: Selected variant per module (default or alternative)
+
+For each module with variants.enabled = true:
+
+1. CHECK INPUT for explicit variant selection
+2. EVALUATE recommendation conditions (if selection_mode = auto-suggest)
+3. IF alternative recommended → ASK USER for confirmation
+4. OTHERWISE → Use default variant
+5. RECORD selection in manifest
+───────────────────────────────────────────────────────────────────────────
+```
+
+### Determinism Rules Reference
+
+For CODE domain flows, add reference to determinism rules:
+
+```
+During code generation, the agent MUST follow:
+- model/standards/DETERMINISM-RULES.md (global patterns)
+- Each module's ## Determinism section (module-specific patterns)
+```
 
 ---
 
@@ -160,6 +197,8 @@ Before considering the flow complete:
 - [ ] Document follows required structure
 - [ ] Execution philosophy is clearly stated
 - [ ] Step-by-step flow is documented
+- [ ] **Variant Resolution step included** (if flow uses modules) ← NEW
+- [ ] **Determinism rules referenced** (for CODE domain) ← NEW
 - [ ] Error handling is defined
 - [ ] **CONSUMER-PROMPT.md updated** ← Don't forget!
 - [ ] **DOMAIN.md updated** ← Don't forget!

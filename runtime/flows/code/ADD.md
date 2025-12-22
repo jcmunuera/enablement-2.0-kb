@@ -1,7 +1,7 @@
 # Skill Type: CODE/ADD
 
-**Version:** 1.0  
-**Last Updated:** 2025-12-12  
+**Version:** 1.1  
+**Last Updated:** 2025-12-22  
 **Domain:** CODE
 
 ---
@@ -92,6 +92,32 @@ targets:
 │  - retry → mod-code-002-retry-java-resilience4j                             │
 │  - timeout → mod-code-003-timeout-java-resilience4j                         │
 │  - rate_limiter → mod-code-004-rate-limiter-java-resilience4j               │
+│                                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                    │                                         │
+│                                    ▼                                         │
+│  STEP 3.5: RESOLVE VARIANT (v1.1)                                            │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  Action: Select implementation variant if module has variants                │
+│  Input:  Module + Request config                                             │
+│  Output: Selected variant (default or alternative)                           │
+│                                                                              │
+│  If module has variants.enabled = true:                                      │
+│                                                                              │
+│  1. CHECK if request specifies variant explicitly:                           │
+│     feature.config.variant = "{variantId}"                                   │
+│       → Use specified variant                                                │
+│                                                                              │
+│  2. EVALUATE recommend_when conditions:                                      │
+│     If conditions match AND selection_mode = auto-suggest:                   │
+│       → ASK USER if alternative variant should be used                       │
+│                                                                              │
+│  3. DEFAULT:                                                                 │
+│     → Use module's default variant                                           │
+│                                                                              │
+│  4. RECORD in manifest:                                                      │
+│     module.variant = "{selectedVariantId}"                                   │
+│     module.selection = "explicit|suggested|default"                          │
 │                                                                              │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │                                    │                                         │

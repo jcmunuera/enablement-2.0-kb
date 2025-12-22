@@ -2,9 +2,9 @@
 id: eri-code-012-persistence-patterns-java-spring
 title: "ERI-CODE-012: Persistence Patterns - Java/Spring Boot"
 sidebar_label: "Persistence Patterns (Java)"
-version: 1.0
+version: 1.1
 date: 2025-12-01
-updated: 2025-12-01
+updated: 2025-12-22
 status: Active
 author: "Architecture Team"
 domain: code
@@ -1198,9 +1198,32 @@ public Optional<Customer> findById(String id) {
 ```yaml
 eri_constraints:
   id: eri-code-012-persistence-constraints
-  version: "1.0"
+  version: "1.1"
   eri_reference: eri-code-012-persistence-patterns-java-spring
   adr_reference: adr-011-persistence-patterns
+
+  # Implementation options - DISPARATE (result in separate modules, not variants)
+  implementation_options:
+    type: disparate  # Options are NOT interchangeable - separate modules
+    note: "JPA and System API are architecturally different - use separate modules"
+    options:
+      - id: jpa
+        name: "JPA Persistence"
+        description: "Local database with Spring Data JPA"
+        module: mod-code-016-persistence-jpa-spring
+        use_when:
+          - "Service owns its data"
+          - "Local PostgreSQL/MySQL database"
+          - "CRUD operations without external delegation"
+          
+      - id: systemapi
+        name: "System API Persistence"
+        description: "Delegation to mainframe via REST API"
+        module: mod-code-017-persistence-systemapi
+        use_when:
+          - "Data owned by mainframe"
+          - "Service is consumer of external system"
+          - "Integration with legacy systems"
 
   common_constraints:
     - id: repository-interface-in-domain

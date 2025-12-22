@@ -1,3 +1,21 @@
+---
+id: mod-code-020-compensation-java-spring
+title: "MOD-020: Compensation - Java/Spring Boot"
+version: 1.0
+date: 2025-12-01
+status: Active
+derived_from: eri-code-015-distributed-transactions-java-spring
+domain: code
+tags:
+  - java
+  - spring-boot
+  - saga
+  - compensation
+  - distributed-transactions
+used_by:
+  - skill-code-020-generate-microservice-java-spring
+---
+
 # MOD-020: Compensation - Java/Spring Boot
 
 **Module ID:** mod-code-020-compensation-java-spring  

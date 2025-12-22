@@ -1,3 +1,22 @@
+---
+id: mod-code-001-circuit-breaker-java-resilience4j
+title: "MOD-001: Circuit Breaker - Java/Resilience4j"
+version: 2.1
+date: 2025-11-21
+updated: 2025-11-24
+status: Active
+derived_from: eri-code-008-circuit-breaker-java-resilience4j
+domain: code
+tags:
+  - java
+  - resilience4j
+  - circuit-breaker
+  - fault-tolerance
+used_by:
+  - skill-code-001-add-circuit-breaker-java-resilience4j
+  - skill-code-020-generate-microservice-java-spring
+---
+
 # MOD-001: Circuit Breaker - Java/Resilience4j
 
 **Module ID:** mod-code-001-circuit-breaker-java-resilience4j  

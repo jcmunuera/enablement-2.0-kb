@@ -1,8 +1,8 @@
 ---
 id: mod-code-018-api-integration-rest-java-spring
 title: "MOD-018: API Integration REST - Java/Spring"
-version: 1.0
-date: 2025-12-01
+version: 1.1
+date: 2025-12-22
 status: Active
 derived_from: eri-code-013-api-integration-rest-java-spring
 domain: code
@@ -16,6 +16,41 @@ tags:
 used_by:
   - skill-code-020-generate-microservice-java-spring
   - mod-code-017-persistence-systemapi
+
+# Variant Configuration (v1.1)
+variants:
+  enabled: true
+  selection_mode: explicit  # Don't auto-suggest, let user choose
+  
+  default:
+    id: restclient
+    name: "RestClient (Spring 6.1+)"
+    description: "Modern REST client, recommended for Spring Boot 3.2+"
+    templates:
+      - client/restclient.java.tpl
+      - config/restclient-config.java.tpl
+    
+  alternatives:
+    - id: feign
+      name: "OpenFeign (Declarative)"
+      description: "Declarative REST client with interface-based definition"
+      templates:
+        - client/feign.java.tpl
+        - config/feign-config.java.tpl
+      recommend_when:
+        - condition: "Existing codebase uses Feign extensively"
+          reason: "Maintain consistency with existing patterns"
+        - condition: "Team prefers declarative interface style"
+          reason: "Simpler API definition"
+          
+    - id: resttemplate
+      name: "RestTemplate (Legacy)"
+      description: "Traditional REST client for legacy compatibility"
+      templates:
+        - client/resttemplate.java.tpl
+        - config/resttemplate-config.java.tpl
+      deprecated: true
+      deprecation_reason: "RestClient is the modern replacement. Use only for legacy compatibility."
 ---
 
 # MOD-018: API Integration REST - Java/Spring

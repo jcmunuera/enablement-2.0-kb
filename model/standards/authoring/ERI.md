@@ -1,8 +1,17 @@
 # Authoring Guide: ERI (Enterprise Reference Implementation)
 
-**Version:** 1.1  
-**Last Updated:** 2025-12-01  
+**Version:** 1.2  
+**Last Updated:** 2025-12-22  
 **Asset Type:** ERI
+
+---
+
+## What's New in v1.2
+
+| Change | Description |
+|--------|-------------|
+| **Implementation Options** | Formal structure for defining valid options with default and selection criteria |
+| **Variant Derivation** | Clear rules for how modules derive variants from ERI options |
 
 ---
 
@@ -39,51 +48,141 @@ When an ADR defines a pattern that has **multiple implementation options** (e.g.
 - Side-by-side comparison
 - Single source of truth for the pattern
 
-### Structure for Multi-Option ERIs
+### Implementation Options Structure (v1.2)
+
+> **NEW in v1.2:** ERIs with multiple options MUST use this formal structure.
+
+ERIs define the **space of valid implementation options**. Modules derived from the ERI can ONLY offer variants that correspond to options defined here.
 
 ```markdown
-## Overview
-[Common context for all options]
+## Implementation Options
 
-## Decision Criteria
-[When to use each option - table or decision tree]
+> This section defines all valid implementation approaches for this pattern.
+> Modules derived from this ERI MUST only implement options defined here.
 
-## Option A: {First Option}
-### When to Use
-### Implementation
-### Configuration
+### Recommended Default: {Option Name}
 
-## Option B: {Second Option}
-### When to Use
-### Implementation
-### Configuration
+**Why Default:** [Rationale for why this is the recommended choice for most cases]
 
-## Common Elements
-[Shared code, tests, best practices]
+### Option A: {Option Name} ⭐ DEFAULT
 
-## Annex: Implementation Constraints
-[Constraints organized by option]
+**Description:** [What this option is]
+
+**Recommended When:**
+- [Condition 1]
+- [Condition 2]
+
+**Trade-offs:**
+- ✅ [Advantage 1]
+- ✅ [Advantage 2]
+- ⚠️ [Consideration or limitation]
+
+**Reference Implementation:**
+```{language}
+[Complete, production-ready code]
 ```
+
+### Option B: {Option Name}
+
+**Description:** [What this option is]
+
+**Recommended When:**
+- [Condition 1 - these become recommend_when in module]
+- [Condition 2]
+
+**Trade-offs:**
+- ✅ [Advantage 1]
+- ⚠️ [Consideration]
+
+**Reference Implementation:**
+```{language}
+[Complete, production-ready code]
+```
+
+### Option C: {Option Name} ⚠️ DEPRECATED (if applicable)
+
+**Description:** [What this option is]
+
+**Status:** Deprecated - Use [Option A] for new implementations
+
+**Recommended When:**
+- Legacy compatibility required
+- [Other specific condition]
+
+**Deprecation Reason:** [Why this is deprecated and what to use instead]
+
+**Reference Implementation:**
+```{language}
+[Code for legacy support]
+```
+```
+
+### Option Metadata Table
+
+Every multi-option ERI SHOULD include a summary table:
+
+```markdown
+### Options Summary
+
+| Option | Status | Recommended When | Deprecated? |
+|--------|--------|------------------|-------------|
+| RestClient | ⭐ DEFAULT | New projects, Spring Boot 3.2+ | No |
+| OpenFeign | Alternative | Existing Feign patterns, declarative preference | No |
+| RestTemplate | Alternative | Legacy compatibility only | Yes (v1.2) |
+```
+
+### Derivation to Modules
+
+The relationship between ERI options and Module variants:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ERI → MODULE DERIVATION                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ERI defines:                         MODULE inherits:                       │
+│  ─────────────                        ────────────────                       │
+│  • Valid options                  →   • Variants (ONLY from ERI options)     │
+│  • Default recommendation         →   • default.id                           │
+│  • "Recommended When" conditions  →   • recommend_when conditions            │
+│  • Deprecated status              →   • deprecated: true                     │
+│  • Reference code                 →   • Template content                     │
+│                                                                              │
+│  RULE: A module CANNOT offer a variant that is not an option in the ERI     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Validation Rule
+
+> **CRITICAL:** When reviewing a Module, verify that every variant corresponds to an option defined in the source ERI. Modules CANNOT invent new variants.
 
 ### Examples
 
-| Pattern | Options | Approach |
-|---------|---------|----------|
-| Persistence | JPA vs System API | 1 ERI with Option A (JPA) + Option B (System API) |
-| REST Client | Feign vs RestTemplate vs RestClient | 1 ERI with 3 options (functionally equivalent) |
-| Messaging | Kafka vs RabbitMQ | 1 ERI with 2 options |
+| Pattern | ERI Options | Module Variants |
+|---------|-------------|-----------------|
+| REST Client | RestClient (default), Feign, RestTemplate | restclient (default), feign, resttemplate |
+| Timeout | Client-level (default), Annotation-based | client-timeout (default), annotation-async |
+| Persistence | JPA, System API | N/A - Functionally disparate → 2 separate modules |
 
 ### Naming for Multi-Option ERIs
 
 Use a **generic pattern name** that encompasses all options:
 
 - ✅ `eri-code-012-persistence-patterns-java-spring` (covers JPA + System API)
-- ✅ `eri-code-015-messaging-patterns-java-spring` (covers Kafka + RabbitMQ)
+- ✅ `eri-code-013-api-integration-rest-java-spring` (covers all REST clients)
 - ❌ `eri-code-012-jpa-persistence-java-spring` (too specific if System API is also covered)
 
 ### Relationship to MODULEs
 
-The decision of how many MODULEs to derive from a multi-option ERI depends on **functional equivalence**. See `authoring/MODULE.md` for the MODULE desglose criteria.
+The decision of how many MODULEs to derive from a multi-option ERI depends on **functional equivalence**:
+
+| Equivalence | ERI Structure | Module Structure |
+|-------------|---------------|------------------|
+| **Functionally Equivalent** | One ERI with multiple options | One Module with variants |
+| **Functionally Disparate** | One ERI with multiple options | Multiple separate Modules |
+
+See `authoring/MODULE.md` for the MODULE desglose criteria.
 
 ---
 
@@ -447,6 +546,18 @@ eri_constraints:
   eri_reference: eri-{domain}-XXX-...
   adr_reference: adr-XXX-...
   
+  # Implementation options (v1.2) - REQUIRED if ERI has multiple options
+  implementation_options:
+    default: option-id           # Which option is the default
+    options:
+      - id: option-id            # Unique identifier (becomes variant id in module)
+        name: "Human Name"
+        status: default|alternative|deprecated
+        recommended_when:        # Conditions that suggest this option
+          - "Condition 1"
+          - "Condition 2"
+        deprecated_reason: "..."  # Only if status: deprecated
+        
   # Structural rules (code organization, annotations, layers)
   structural_constraints:
     - id: unique-identifier
@@ -454,6 +565,7 @@ eri_constraints:
       validation: "How to verify (grep command, AST check, etc.)"
       severity: ERROR|WARNING
       layer: domain|application|adapter|infrastructure  # Optional
+      applies_to: [option-id]    # Optional: limit to specific options
       
   # Configuration rules (application.yml, properties)
   configuration_constraints:
@@ -461,6 +573,7 @@ eri_constraints:
       rule: "Human-readable description"
       validation: "How to verify"
       severity: ERROR|WARNING
+      applies_to: [option-id]    # Optional: limit to specific options
       
   # Required and optional dependencies
   dependency_constraints:
@@ -469,6 +582,7 @@ eri_constraints:
         artifactId: example-lib
         minVersion: "1.0.0"
         reason: "Why this dependency is needed"
+        applies_to: [option-id]  # Optional: limit to specific options
     optional:
       - groupId: org.example
         artifactId: optional-lib
@@ -489,7 +603,7 @@ eri_constraints:
 | **ERROR** | MUST be satisfied | Validation fails if violated |
 | **WARNING** | SHOULD be satisfied | Validation warns but passes |
 
-### Example Annex
+### Example Annex (Single Option ERI)
 
 ```yaml
 eri_constraints:
@@ -532,6 +646,63 @@ eri_constraints:
       rule: "Domain layer unit tests MUST run without Spring context"
       validation: "Domain test classes do not use @SpringBootTest"
       severity: ERROR
+```
+
+### Example Annex (Multi-Option ERI)
+
+```yaml
+eri_constraints:
+  id: eri-code-013-api-integration-constraints
+  version: "1.0"
+  eri_reference: eri-code-013-api-integration-rest-java-spring
+  adr_reference: adr-012-integration-patterns
+  
+  # Implementation options - defines valid variants for derived modules
+  implementation_options:
+    default: restclient
+    options:
+      - id: restclient
+        name: "RestClient (Spring 6.1+)"
+        status: default
+        recommended_when:
+          - "New projects on Spring Boot 3.2+"
+          - "Team prefers fluent API style"
+          
+      - id: feign
+        name: "OpenFeign"
+        status: alternative
+        recommended_when:
+          - "Existing codebase uses Feign extensively"
+          - "Team prefers declarative interface style"
+          
+      - id: resttemplate
+        name: "RestTemplate"
+        status: deprecated
+        recommended_when:
+          - "Legacy compatibility required"
+        deprecated_reason: "RestClient is the modern replacement. Use only for legacy."
+  
+  structural_constraints:
+    - id: client-in-adapter-layer
+      rule: "REST clients MUST be in adapter/out layer"
+      validation: "Client classes are in adapter/out/integration/"
+      severity: ERROR
+      
+    - id: feign-interface-naming
+      rule: "Feign clients MUST end with 'Client' suffix"
+      validation: "grep -r '@FeignClient' | grep 'interface.*Client'"
+      severity: ERROR
+      applies_to: [feign]  # Only applies to Feign option
+      
+  dependency_constraints:
+    required:
+      - groupId: org.springframework.boot
+        artifactId: spring-boot-starter-web
+        reason: "REST support"
+      - groupId: org.springframework.cloud
+        artifactId: spring-cloud-starter-openfeign
+        reason: "Feign client support"
+        applies_to: [feign]  # Only required for Feign option
 ```
 
 ### Relationship to MODULE Validators

@@ -1,13 +1,20 @@
 # Authoring Guide: SKILL
 
-**Version:** 2.5  
-**Last Updated:** 2025-12-19  
+**Version:** 2.6  
+**Last Updated:** 2025-12-22  
 **Asset Type:** Skill  
 **Priority:** CRITICAL
 
 ---
 
-## What's New in v2.5
+## What's New in v2.6
+
+| Change | Description |
+|--------|-------------|
+| **Variant Handling** | Skills must handle module variants during execution |
+| **Determinism Reference** | CODE skills must reference DETERMINISM-RULES.md |
+
+### Previous (v2.5)
 
 | Change | Description |
 |--------|-------------|
@@ -927,6 +934,38 @@ Each module contains its own **Template Catalog** - Skills do NOT duplicate temp
 | feature.x.enabled | mod-{domain}-{NNN}-feature-... | Feature-specific templates |
 | persistence.type = "jpa" | mod-code-016-persistence-jpa-spring | JPA persistence |
 | persistence.type = "system_api" | mod-code-017-persistence-systemapi | System API persistence |
+
+### Variant Handling (v2.6)
+
+> **NEW:** When modules have implementation variants, the skill must handle variant selection.
+
+After resolving which modules to use, check for variant selection:
+
+```
+For each resolved module:
+  1. Check if module has variants.enabled = true
+  2. If input specifies variant explicitly → Use specified variant
+  3. Else if module.selection_mode = "auto-suggest" AND recommend_when matches:
+     → Ask user if alternative should be used
+  4. Else → Use default variant
+  5. Record variant selection in manifest
+```
+
+Example input with variant selection:
+```json
+{
+  "features": {
+    "integration": {
+      "client": "feign"  // Explicit: use Feign instead of default RestClient
+    },
+    "timeout": {
+      "implementation": "annotation"  // Explicit: use @TimeLimiter instead of default client timeout
+    }
+  }
+}
+```
+
+See `authoring/MODULE.md` section "Variant Implementation" for module-side configuration.
 
 ### Generation Workflow
 

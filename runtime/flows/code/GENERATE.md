@@ -1,7 +1,7 @@
 # Skill Type: CODE/GENERATE
 
-**Version:** 2.0  
-**Date:** 2025-12-17  
+**Version:** 2.1  
+**Date:** 2025-12-22  
 **Domain:** CODE
 
 ---
@@ -98,6 +98,51 @@ GENERATE skills create new code projects from scratch based on requirements. The
 │  - Read MODULE.md (understand purpose, constraints)                          │
 │  - Read templates/*.tpl (understand code patterns)                           │
 │  - Note validation requirements for later                                    │
+│                                                                              │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  STEP 3.5: RESOLVE VARIANTS (v2.1)                                           │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  Action: Select implementation variant for each module that has variants     │
+│  Input:  List of modules + Request features                                  │
+│  Output: Selected variant per module (default or alternative)                │
+│                                                                              │
+│  For each module with variants.enabled = true:                               │
+│                                                                              │
+│  1. CHECK INPUT for explicit variant selection:                              │
+│     If input specifies variant for this module:                              │
+│       → Use specified variant                                                │
+│       → Log: "Using explicitly requested variant: {variantId}"               │
+│                                                                              │
+│  2. EVALUATE recommendation conditions (if selection_mode = auto-suggest):   │
+│     For each alternative variant:                                            │
+│       If recommend_when conditions match input context:                      │
+│         → Add to suggested_alternatives list                                 │
+│                                                                              │
+│  3. IF suggested_alternatives is not empty:                                  │
+│     → ASK USER:                                                              │
+│       "Para {moduleName}, la implementación por defecto es {default}.        │
+│        Sin embargo, {alternative} podría ser más apropiada porque {reason}.  │
+│        ¿Deseas usar {alternative}? [Y/n]"                                    │
+│     → If user confirms: Use alternative variant                              │
+│     → If user declines: Use default variant                                  │
+│                                                                              │
+│  4. OTHERWISE:                                                               │
+│     → Use default variant                                                    │
+│     → Log: "Using default variant: {defaultVariantId}"                       │
+│                                                                              │
+│  5. RECORD selection in manifest:                                            │
+│     ```json                                                                  │
+│     {                                                                        │
+│       "modules": {                                                           │
+│         "{moduleId}": {                                                      │
+│           "variant": "{selectedVariantId}",                                  │
+│           "selection": "explicit|suggested|default",                         │
+│           "reason": "{why this variant}"                                     │
+│         }                                                                    │
+│       }                                                                      │
+│     }                                                                        │
+│     ```                                                                      │
 │                                                                              │
 │  ───────────────────────────────────────────────────────────────────────────│
 │                                                                              │
@@ -341,10 +386,46 @@ The manifest.json MUST include:
 
 ---
 
+## Determinism Rules (v2.1)
+
+During STEP 5 (GENERATE COMPLETE OUTPUT), the agent MUST follow determinism rules:
+
+### Mandatory Reference
+
+Before generating code, the agent MUST consult:
+- `model/standards/DETERMINISM-RULES.md` - Global patterns
+- Each module's `## Determinism` section - Module-specific patterns
+
+### Key Rules Summary
+
+| Element | Required Pattern |
+|---------|-----------------|
+| Entity IDs | `record` with `UUID` |
+| Request DTOs | `record` |
+| Response DTOs | `record` (no HATEOAS) / `class` (HATEOAS) |
+| Domain Entities | `class` |
+| Domain Enums | Simple (no attributes) |
+| Code mapping | In Mapper class, NOT in Enum |
+| External DTOs | `record` with `@JsonProperty` |
+
+### Required Annotations
+
+All generated classes MUST include:
+
+```java
+/**
+ * @generated {skill-id} v{version}
+ * @module {module-id}
+ * @variant {variant-id}  // If non-default
+ */
+```
+
+---
+
 ## Example Skills
 
 - `skill-code-020-generate-microservice-java-spring`
-- `skill-code-021-generate-rest-api-java-spring` (future)
+- `skill-code-021-generate-rest-api-java-spring`
 - `skill-code-022-generate-event-consumer-java-kafka` (future)
 
 ---

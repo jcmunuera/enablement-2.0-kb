@@ -1,8 +1,33 @@
+---
+id: eri-code-013-api-integration-rest-java-spring
+title: "ERI-CODE-013: API Integration REST - Java/Spring"
+version: 1.1
+date: 2025-12-01
+updated: 2025-12-22
+status: Active
+author: "Architecture Team"
+domain: code
+pattern: api-integration-rest
+framework: java
+library: spring-web
+implements:
+  - adr-012-api-integration-patterns
+tags:
+  - java
+  - spring-boot
+  - rest-client
+  - feign
+  - integration
+automated_by:
+  - skill-code-020-generate-microservice-java-spring
+---
+
 # ERI-CODE-013: API Integration REST - Java/Spring
 
 **ERI ID:** eri-code-013-api-integration-rest-java-spring  
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** 2025-12-01  
+**Updated:** 2025-12-22  
 **Status:** Active  
 **Implements:** ADR-012 (API Integration Patterns)  
 **Technology:** Java 17+ / Spring Boot 3.2.x  
@@ -23,11 +48,70 @@ Reference implementation for REST API integration in Java/Spring Boot. Provides 
 
 ---
 
-## Client Options
+## Implementation Options
+
+> **NEW in v1.1:** Formal structure for implementation options.
 
 This ERI documents three functionally equivalent REST client implementations. All produce the same architectural result (HTTP client calling REST API) but with different API styles.
 
-### Option Comparison
+### Recommended Default: RestClient
+
+**Why Default:** Native to Spring Boot 3.2+, fluent API, no extra dependencies.
+
+### Options Summary
+
+| Option | Status | Recommended When | Module Variant |
+|--------|--------|------------------|----------------|
+| RestClient | ⭐ DEFAULT | Spring Boot 3.2+, external/legacy APIs | mod-018 (restclient) |
+| OpenFeign | Alternative | Stable internal APIs, declarative preference | mod-018 (feign) |
+| RestTemplate | Deprecated | Legacy compatibility only | mod-018 (resttemplate) |
+
+### Option A: RestClient ⭐ DEFAULT
+
+**Description:** Modern fluent REST client native to Spring Boot 3.2+.
+
+**Recommended When:**
+- New projects on Spring Boot 3.2+
+- External or legacy APIs with non-standard contracts
+- Need for inline request customization
+
+**Trade-offs:**
+- ✅ Native to Spring Boot 3.2+ (no extra dependencies)
+- ✅ Fluent, readable API
+- ✅ Full control over request/response
+- ✅ Easy inline header manipulation
+- ⚠️ Requires Spring Boot 3.2+
+
+### Option B: OpenFeign
+
+**Description:** Declarative REST client using interface definitions.
+
+**Recommended When:**
+- Existing codebase uses Feign extensively
+- Team prefers declarative interface style
+- Well-defined, stable API contracts
+
+**Trade-offs:**
+- ✅ Minimal boilerplate (interface only)
+- ✅ Clean separation of contract and usage
+- ⚠️ Requires extra dependency (spring-cloud-starter-openfeign)
+- ⚠️ Less flexible for dynamic request customization
+
+### Option C: RestTemplate ⚠️ DEPRECATED
+
+**Description:** Traditional imperative REST client.
+
+**Status:** Deprecated - Use RestClient for new implementations.
+
+**Recommended When:**
+- Legacy compatibility required
+- Existing codebase uses RestTemplate extensively
+
+**Deprecation Reason:** RestClient is the modern replacement with better API design.
+
+---
+
+## Option Comparison
 
 | Aspect | Feign | RestClient | RestTemplate |
 |--------|-------|------------|--------------|
@@ -37,16 +121,7 @@ This ERI documents three functionally equivalent REST client implementations. Al
 | **Flexibility** | Limited | High | High |
 | **Dynamic headers** | Interceptors | Inline | Inline |
 | **Testing** | Mock interface | Mock RestClient | Mock RestTemplate |
-| **Recommended for** | Stable internal APIs | External/Legacy | Legacy code |
-
-### Default Recommendation
-
-**RestClient** is the recommended default because:
-- Native to Spring Boot 3.2+ (no extra dependencies)
-- Fluent API is readable and maintainable
-- Full control over request/response handling
-- Easy inline header manipulation
-- Best for non-standardized APIs (legacy, external)
+| **Status** | Active | ⭐ Recommended | Deprecated |
 
 ---
 
@@ -565,4 +640,79 @@ class PartiesApiClientIntegrationTest {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2025-12-22 | Formalized implementation_options with default and criteria |
 | 1.0 | 2025-12-01 | Initial version with Feign, RestClient, RestTemplate |
+
+---
+
+## Annex: Implementation Constraints
+
+> This annex defines rules that MUST be respected when creating Modules or Skills based on this ERI.
+
+```yaml
+eri_constraints:
+  id: eri-code-013-api-integration-constraints
+  version: "1.1"
+  eri_reference: eri-code-013-api-integration-rest-java-spring
+  adr_reference: adr-012-api-integration-patterns
+  
+  implementation_options:
+    default: restclient
+    options:
+      - id: restclient
+        name: "RestClient (Spring 6.1+)"
+        status: default
+        recommended_when:
+          - "New projects on Spring Boot 3.2+"
+          - "External or legacy APIs"
+          - "Need for inline request customization"
+          
+      - id: feign
+        name: "OpenFeign"
+        status: alternative
+        recommended_when:
+          - "Existing codebase uses Feign extensively"
+          - "Team prefers declarative interface style"
+          - "Well-defined, stable API contracts"
+          
+      - id: resttemplate
+        name: "RestTemplate"
+        status: deprecated
+        recommended_when:
+          - "Legacy compatibility required"
+        deprecated_reason: "RestClient is the modern replacement"
+  
+  structural_constraints:
+    - id: client-in-adapter-layer
+      rule: "REST clients MUST be in adapter/out/integration or adapter/out/persistence layer"
+      validation: "Client classes in adapter/out/ package"
+      severity: ERROR
+      
+    - id: feign-interface-naming
+      rule: "Feign clients MUST be interfaces ending with 'Client'"
+      validation: "@FeignClient on interfaces named *Client"
+      severity: ERROR
+      applies_to: [feign]
+      
+    - id: restclient-builder-injection
+      rule: "RestClient MUST be built from injected RestClient.Builder"
+      validation: "RestClient created via @Bean with RestClient.Builder"
+      severity: WARNING
+      applies_to: [restclient]
+      
+  configuration_constraints:
+    - id: base-url-externalized
+      rule: "Base URLs MUST be externalized in application.yml"
+      validation: "Base URL from ${integration.*.base-url} property"
+      severity: ERROR
+      
+  dependency_constraints:
+    required:
+      - groupId: org.springframework.boot
+        artifactId: spring-boot-starter-web
+        reason: "REST support"
+      - groupId: org.springframework.cloud
+        artifactId: spring-cloud-starter-openfeign
+        reason: "Feign client support"
+        applies_to: [feign]
+```
