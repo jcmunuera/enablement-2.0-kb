@@ -1,6 +1,6 @@
 # Authoring Guide: Execution Flows
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Date:** 2025-12-23
 
 ---
@@ -123,14 +123,17 @@ During code generation, the agent MUST follow:
 
 Flows MUST define two output structures:
 
-### 1. Artifact Output Structure
+### 1. Artifact Structure
 
-The structure of the generated artifact itself (e.g., project structure for CODE/GENERATE):
+The structure of the generated artifact itself (e.g., project structure for CODE/GENERATE).
+This goes **inside the `output/` directory**.
 
 ```markdown
-## Artifact Output Structure
+## Artifact Structure
 
-{serviceName}/
+The generated artifact (project) follows this structure inside the `output/` directory:
+
+output/{serviceName}/
 ├── src/
 │   ├── main/
 │   └── test/
@@ -138,19 +141,25 @@ The structure of the generated artifact itself (e.g., project structure for CODE
 └── README.md
 ```
 
-### 2. Flow Execution Output Structure (v1.2)
+### 2. Execution Output Structure (v1.3)
 
-The standardized structure for the complete flow execution output, enabling reproducibility and traceability:
+**MANDATORY**: The standardized structure for the complete flow execution output.
+This structure enables reproducibility, traceability, and validation.
+
+> **IMPORTANT**: This section should appear EARLY in the flow document (after Characteristics),
+> so the agent sees it BEFORE starting execution.
 
 ```markdown
-## Flow Execution Output Structure
+## Execution Output Structure
+
+**MANDATORY**: Every {FLOW} execution MUST produce this standardized structure:
 
 {execution-id}/
 ├── input/                          # Inputs received by the flow
 │   ├── prompt.md                   # Original request
 │   └── ...                         # Other inputs (generated during execution)
 │
-├── output/                         # Generated artifact
+├── output/                         # Generated artifact goes HERE
 │   └── {artifact}/                 # The artifact with its own structure
 │
 ├── trace/                          # Decision traceability
@@ -168,7 +177,7 @@ The standardized structure for the complete flow execution output, enabling repr
 | Directory | Purpose |
 |-----------|---------|
 | `input/` | Store all inputs for reproducibility |
-| `output/` | Contains the generated artifact |
+| `output/` | **Contains the generated artifact** |
 | `trace/` | Records all decisions made during execution |
 | `validation/` | Scripts to re-execute validations |
 
@@ -255,8 +264,8 @@ Before considering the flow complete:
 - [ ] Step-by-step flow is documented
 - [ ] **Variant Resolution step included** (if flow uses modules)
 - [ ] **Determinism rules referenced** (for CODE domain)
-- [ ] **Artifact Output Structure defined** ← NEW in v1.2
-- [ ] **Flow Execution Output Structure defined** ← NEW in v1.2
+- [ ] **Artifact Structure defined** (structure of generated artifact)
+- [ ] **Execution Output Structure defined EARLY** (before execution phases)
 - [ ] Error handling is defined
 - [ ] **CONSUMER-PROMPT.md updated** ← Don't forget!
 - [ ] **DOMAIN.md updated** ← Don't forget!
