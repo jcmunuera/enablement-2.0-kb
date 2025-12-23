@@ -1,6 +1,6 @@
 # Skill Type: CODE/GENERATE
 
-**Version:** 2.3  
+**Version:** 2.4  
 **Date:** 2025-12-23  
 **Domain:** CODE
 
@@ -62,16 +62,120 @@ GENERATE skills create new code projects from scratch based on requirements. The
 
 ## Execution Output Structure
 
-**MANDATORY**: Every GENERATE flow execution MUST produce this standardized structure:
+> ⚠️ **CRITICAL**: This section defines REQUIRED ACTIONS, not just documentation.
+> The agent MUST create this structure BEFORE generating any code.
+
+### Step 0: Create Directory Structure (BEFORE any generation)
+
+**ACTION REQUIRED**: Create these directories at the start of execution:
+
+```bash
+mkdir -p input/
+mkdir -p output/
+mkdir -p trace/
+mkdir -p validation/
+```
+
+### Step 1: Populate input/ (Capture all inputs)
+
+**ACTION REQUIRED**: Copy or generate these files in `input/`:
+
+| File | Source | Description |
+|------|--------|-------------|
+| `prompt.md` | Copy from user | The original structured prompt |
+| `generation-request.json` | Generate | Structured request derived from prompt |
+| `*.yaml`, `*.json` | Copy from user | Any API specs, mappings, or other input files referenced in prompt |
+
+```bash
+# Example: Copy all input files
+cp {original-prompt} input/prompt.md
+cp {api-specs}/*.yaml input/
+cp {mapping-files}/*.json input/
+# Generate the structured request
+echo '{...}' > input/generation-request.json
+```
+
+### Step 2: Generate artifact in output/ (NOT in root)
+
+**ACTION REQUIRED**: All generated code MUST go inside `output/`:
+
+```
+output/
+└── {serviceName}/              # The complete project structure
+    ├── .enablement/
+    │   └── manifest.json       # Traceability manifest
+    ├── src/
+    ├── pom.xml
+    └── ...
+```
+
+> ❌ **WRONG**: Generating `{serviceName}/` directly in the root
+> ✅ **CORRECT**: Generating `output/{serviceName}/`
+
+### Step 3: Generate trace/ (Decision traceability)
+
+**ACTION REQUIRED**: Create `trace/generation-trace.md` documenting:
+
+```markdown
+# Generation Trace
+
+## Execution Summary
+- **Timestamp**: {ISO-8601}
+- **Skill**: {skill-id} v{version}
+- **Flow**: CODE/GENERATE
+
+## Discovery Decisions
+- Domain identified: CODE (reason: ...)
+- Layer identified: SoI (reason: ...)
+- Skill selected: {skill-id} (reason: ...)
+
+## Module Resolution
+| Module | Version | Reason |
+|--------|---------|--------|
+| mod-xxx | x.x | ... |
+
+## Variant Selections
+| Module | Variant | Selection Type | Reason |
+|--------|---------|----------------|--------|
+| mod-018 | restclient | default | ... |
+
+## ADRs Applied
+- ADR-001: ...
+- ADR-004: ...
+
+## Determinism Rules Applied
+- Entity IDs: record with UUID
+- ...
+```
+
+### Step 4: Generate validation/ (Validation scripts)
+
+**ACTION REQUIRED**: Generate executable scripts:
+
+| Script | Content |
+|--------|---------|
+| `tier-1-universal.sh` | Commands to re-run tier-1 validations |
+| `tier-2-technology.sh` | Commands to re-run tier-2 validations |
+| `tier-3-skill.sh` | Commands to re-run tier-3 validations |
+| `compile.sh` | `cd output/{serviceName} && mvn compile` |
+| `test.sh` | `cd output/{serviceName} && mvn test` |
+| `package.sh` | `cd output/{serviceName} && mvn package` |
+
+### Final Structure
+
+After execution, the complete structure MUST be:
 
 ```
 {execution-id}/
-├── input/                          # Inputs received by the flow
-│   ├── prompt.md                   # Structured prompt (from specialized agent)
-│   └── generation-request.json     # Generated request (created during execution)
+├── input/                          # All inputs captured
+│   ├── prompt.md                   # Original prompt
+│   ├── generation-request.json     # Derived structured request
+│   ├── domain-api-spec.yaml        # API specs (if provided)
+│   ├── system-api-parties.yaml     # Backend specs (if provided)
+│   └── mapping.json                # Mappings (if provided)
 │
-├── output/                         # Generated artifact goes HERE
-│   └── {serviceName}/              # The complete project structure
+├── output/                         # Generated artifact
+│   └── {serviceName}/
 │       ├── .enablement/
 │       │   └── manifest.json
 │       ├── src/
@@ -79,41 +183,16 @@ GENERATE skills create new code projects from scratch based on requirements. The
 │       └── ...
 │
 ├── trace/                          # Decision traceability
-│   └── generation-trace.md         # Skills activated, modules consulted, decisions made
+│   └── generation-trace.md
 │
-└── validation/                     # Validation scripts for reproducibility
-    ├── tier-1-universal.sh         # Re-run tier-1 validations
-    ├── tier-2-technology.sh        # Re-run tier-2 validations (tech-specific)
-    ├── tier-3-skill.sh             # Re-run tier-3 validations (skill-specific)
-    ├── compile.sh                  # Compile artifact (mvn compile, npm build, etc.)
-    ├── test.sh                     # Run tests (mvn test, npm test, etc.)
-    └── package.sh                  # Package artifact (mvn package, npm pack, etc.)
+└── validation/                     # Validation scripts
+    ├── tier-1-universal.sh
+    ├── tier-2-technology.sh
+    ├── tier-3-skill.sh
+    ├── compile.sh
+    ├── test.sh
+    └── package.sh
 ```
-
-### Directory Purposes
-
-| Directory | Purpose |
-|-----------|---------|
-| `input/` | Store all inputs for reproducibility. `generation-request.json` is generated during execution from `prompt.md`. |
-| `output/` | **Contains the generated artifact (project)**. Structure depends on the skill/technology. |
-| `trace/` | Records all decisions made during execution: skill selection, module resolution, variant choices. |
-| `validation/` | Scripts to re-execute validations and verify artifact integrity. |
-
-### Validation Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `tier-1-universal.sh` | Re-execute universal validations (traceability, naming, structure) |
-| `tier-2-technology.sh` | Re-execute technology-specific validations (Java/Spring, Node, etc.) |
-| `tier-3-skill.sh` | Re-execute skill/module-specific validations |
-| `compile.sh` | Compile the generated artifact |
-| `test.sh` | Execute unit tests |
-| `package.sh` | Package the artifact for deployment |
-
-These scripts enable:
-1. **Reproducibility**: Anyone can re-validate the generated code
-2. **CI/CD Integration**: Scripts can be executed in pipelines
-3. **Comparison**: Results can be compared across different generation runs
 
 ---
 
