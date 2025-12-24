@@ -1,7 +1,7 @@
 # CONSUMER-PROMPT.md
 
-**Version:** 1.4  
-**Date:** 2025-12-22  
+**Version:** 1.5  
+**Date:** 2025-12-24  
 **Purpose:** System prompt for consumer agents executing skills
 
 ---
@@ -37,6 +37,7 @@ Each domain has its own:
 - Module structure (how knowledge is organized)
 - Execution flows (how skills are executed)
 - Validators (how output is validated)
+- **Tag taxonomy** (how to match skills using tags)
 
 | Domain | Purpose | Detail |
 |--------|---------|--------|
@@ -49,17 +50,20 @@ For each domain, read its DOMAIN.md to understand:
 - When a request belongs to that domain (discovery signals)
 - What skill types are available
 - What output types it produces
+- **Tag taxonomy for discovery** (see TAG-TAXONOMY.md)
 
-## DISCOVERY PROCESS
+## DISCOVERY PROCESS (3-PHASE)
 
-When you receive a request, follow this process:
+When you receive a request, follow this 3-phase discovery process:
 
-### Step 1: Scope Validation
+### PHASE 1: Index Filtering
+
+#### Step 1: Scope Validation
 Determine if the request is within SDLC scope.
 - If clearly out of scope → Inform user politely
 - If unclear → Ask for clarification
 
-### Step 2: Domain Interpretation
+#### Step 2: Domain Interpretation
 Interpret which domain the request belongs to based on:
 - The TYPE OF OUTPUT expected (code, diagram, report, policy)
 - The ACTION implied (create, analyze, verify)
@@ -72,7 +76,7 @@ IMPORTANT: Do not match keywords mechanically. "Generate" does not always mean C
 
 Consult the Discovery Guidance section in each `model/domains/{domain}/DOMAIN.md` for specific signals.
 
-### Step 3: Layer Identification (CODE Domain Only)
+#### Step 3: Layer Identification (CODE Domain Only)
 For CODE domain, identify the architectural layer:
 
 | Layer | Name | Signals |
@@ -84,20 +88,62 @@ For CODE domain, identify the architectural layer:
 Use signals from `runtime/discovery/skill-index.yaml` to identify the layer.
 If unclear, ask: "¿Es para frontend (SoE), microservicios/APIs (SoI), o mainframe (SoR)?"
 
-### Step 4: Skill Selection (Using Index)
-Use `runtime/discovery/skill-index.yaml` to filter candidates:
+#### Step 4: Get Candidate Skills
+Query `runtime/discovery/skill-index.yaml`:
+- Path: `domains.{domain}.skills_by_layer.{layer}`
+- Output: List of candidate skill paths
 
-1. Query the index: `domains.{domain}.skills_by_layer.{layer}`
-2. Get filtered candidate list (not all skills, just layer-specific)
-3. Read OVERVIEW.md ONLY for filtered candidates
-4. Match user intent with skill purpose
-5. Select the best match
+### PHASE 2: Tag Matching
 
-This reduces search space significantly (e.g., from 200+ skills to ~10-20).
+#### Step 5: Extract Tags from Prompt
+Use domain-specific `TAG-TAXONOMY.md` to extract tags:
+- Read `model/domains/{domain}/TAG-TAXONOMY.md`
+- Apply extraction rules to identify tag values
+- Use defaults for unspecified tags
 
-If uncertain between multiple skills, ask the user.
+Example (CODE domain):
+```
+Prompt: "Genera una Fusion Domain API para Customer"
+Extracted:
+  artifact-type: api (keyword "API")
+  api-model: fusion (keyword "Fusion")
+  protocol: rest (default)
+  stack: java-spring (default)
+```
 
-### Step 5: Multi-Domain Detection
+#### Step 6: Parse Skill Tags
+Read ONLY the YAML frontmatter from each candidate's OVERVIEW.md:
+```yaml
+---
+id: skill-021-api-rest-java-spring
+tags:
+  artifact-type: api
+  protocol: rest
+  api-model: fusion
+  ...
+---
+```
+
+#### Step 7: Score and Rank
+Match extracted tags vs skill tags:
+- Apply dimension weights (see TAG-TAXONOMY.md)
+- Calculate score for each candidate
+- Rank by score descending
+
+### PHASE 3: Full Evaluation
+
+#### Step 8: Read Full OVERVIEW.md
+Read complete OVERVIEW.md of top candidate(s):
+- Only top 1-3 candidates (those with highest scores)
+- Review "When to Use" section
+- Check Activation Rules
+
+#### Step 9: Select Skill
+- If clear winner → Select it
+- If ambiguous → Ask user with specific options
+- If no match → Inform user, suggest alternatives
+
+### Multi-Domain Detection
 Some requests span multiple domains:
 - "Analyze and fix" → QA + CODE
 - "Design and implement" → DESIGN + CODE

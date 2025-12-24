@@ -1,7 +1,7 @@
 # Skill Index
 #
-# Version: 2.2
-# Date: 2025-12-23
+# Version: 2.3
+# Date: 2025-12-24
 # Purpose: Pre-computed index for O(1) skill discovery
 #
 # This index enables efficient skill discovery by providing multiple
@@ -22,6 +22,12 @@
 # - Activation rules moved to OVERVIEW.md (single source of truth)
 # - Simplified skill_metadata (keywords only, no duplicated rules)
 # - Updated discovery algorithm to reference OVERVIEW.md for activation rules
+#
+# NEW in v2.3:
+# - DEPRECATED: Discovery keywords in skill_metadata
+# - Tags now defined in OVERVIEW.md frontmatter (see TAGS.md)
+# - Discovery process updated to 3 phases: Index → Tags → Full OVERVIEW
+# - skill_metadata simplified to only structural relationships
 #
 # MAINTENANCE: When adding a new skill, register it in ALL applicable
 # sections of this index. See model/standards/authoring/SKILL.md for details.
@@ -438,10 +444,12 @@ flows:
 # =============================================================================
 # Extended metadata for each skill including:
 # - Extension relationships (extends)
-# - Discovery keywords (positive/negative)
-# - Parameters specific to discovery
+# - Path to skill directory
 #
-# This section is used by the agent for semantic matching during discovery.
+# DEPRECATED in v2.3: Discovery keywords (positive/negative) have been moved to
+# YAML frontmatter tags in each skill's OVERVIEW.md. See TAGS.md for details.
+#
+# This section now only contains structural relationships for inheritance resolution.
 
 skill_metadata:
   
@@ -455,102 +463,15 @@ skill_metadata:
       - skill-021-api-rest-java-spring
       # - skill-022-api-grpc-java-spring (planned)
       # - skill-023-api-async-java-spring (planned)
-    keywords:
-      positive:
-        - microservice
-        - microservicio
-        - internal service
-        - servicio interno
-        - backend service
-        - DDD
-        - bounded context
-        - hexagonal
-        - domain implementation
-        - implementación de dominio
-      negative:
-        - API
-        - REST API
-        - Domain API
-        - Experience API
-        - Composable API
-        - System API
-        - pagination
-        - paginación
-        - HATEOAS
-        - compensation
-        - compensación
-        - OpenAPI
-        - gRPC
-        - async
-        - eventos
-        - Kafka
+    # Tags for discovery are in OVERVIEW.md frontmatter
   
   # ---------------------------------------------------------------------------
   # skill-021: Fusion REST API (Extends skill-020)
   # ---------------------------------------------------------------------------
-  # IMPORTANT: This skill applies ONLY to Fusion APIs (see ADR-001).
-  # Activation rules are defined in OVERVIEW.md.
-  # Use skill-020 for internal microservices without API exposure.
   skill-021-api-rest-java-spring:
     path: code/soi/skill-021-api-rest-java-spring
     extends: skill-020-microservice-java-spring
-    
-    # Activation rules are in OVERVIEW.md (When to Use > Activation Rules)
-    # The agent reads OVERVIEW.md during discovery to determine if this skill applies
-    
-    keywords:
-      positive:
-        # Fusion-specific (HIGH weight)
-        - Fusion API
-        - Fusion Domain
-        - Fusion System
-        - Fusion BFF
-        - Fusion Experience
-        - Fusion Composable
-        - API Fusion
-        # Generic API terms
-        - REST API
-        - Domain API
-        - Experience API
-        - BFF
-        - Composable API
-        - System API
-        - pagination
-        - HATEOAS
-        - compensation
-        - OpenAPI
-      negative:
-        - internal microservice
-        - microservicio interno
-        - servicio interno
-        - internal service
-        - gRPC
-        - async
-        - Kafka
-        - event-driven
-    parameters:
-      apiLayer:
-        type: enum
-        values: [experience, composable, domain, system]
-        required: true
-            keywords: [system, sistema, mainframe, legacy, SoR, integración]
-        layer_features:
-          experience:
-            hateoas: true
-            pagination: true
-            compensation: false
-          composable:
-            hateoas: false
-            pagination: true
-            compensation: false
-          domain:
-            hateoas: true
-            pagination: true
-            compensation: opt-in  # Only if features.compensation.enabled = true
-          system:
-            hateoas: false
-            pagination: true
-            compensation: false
+    # Tags for discovery are in OVERVIEW.md frontmatter
 
 # =============================================================================
 # INPUT VALIDATION RULES
@@ -609,74 +530,135 @@ input_validation:
           error: "Compensation is only available for Domain APIs"
 
   # ---------------------------------------------------------------------------
-  # Discovery Process Formalization
+  # Discovery Process Formalization (v2.3 - Tag-based)
   # ---------------------------------------------------------------------------
+  # UPDATED in v2.3: Discovery now uses YAML frontmatter tags from OVERVIEW.md
+  # instead of keywords in skill_metadata. This enables:
+  # - Structured, typed tag matching
+  # - Tag inheritance for extended skills
+  # - Scalable discovery as skills grow
+  #
+  # See model/standards/authoring/TAGS.md for complete taxonomy.
+  
   discovery_process:
     description: "Formal steps for skill discovery - agent MUST follow these"
+    version: "2.3"
     
-    steps:
-      - step: 1
-        name: "Extract Keywords"
-        action: "Parse user request and extract substantive keywords"
-        output: "keyword_list"
+    phases:
+      # =========================================================================
+      # PHASE 1: Index-based Filtering (skill-index.yaml)
+      # =========================================================================
+      phase_1_index_filtering:
+        description: "Fast filtering using skill-index.yaml"
+        steps:
+          - step: 1
+            name: "Extract Keywords"
+            action: "Parse user request and extract substantive keywords"
+            output: "keyword_list[]"
+          
+          - step: 2
+            name: "Identify Domain"
+            action: "Match keywords against domains.*.signals"
+            output: "domain (code, design, qa, governance)"
+          
+          - step: 3
+            name: "Identify Layer"
+            condition: "Only for CODE domain"
+            action: "Match keywords against layers.*.signals"
+            output: "layer (soe, soi, sor)"
+          
+          - step: 4
+            name: "Get Candidate Skills"
+            action: "Filter skills from domains.{domain}.skills_by_layer.{layer}"
+            output: "candidate_skill_paths[]"
       
-      - step: 2
-        name: "Identify Domain"
-        action: "Match keywords against domains.*.signals"
-        output: "domain (code, design, qa, governance)"
+      # =========================================================================
+      # PHASE 2: Tag-based Scoring (OVERVIEW.md frontmatter)
+      # =========================================================================
+      phase_2_tag_scoring:
+        description: "Score candidates using YAML frontmatter tags"
+        steps:
+          - step: 5
+            name: "Parse Frontmatter Tags"
+            action: |
+              For each candidate skill path:
+                Read ONLY the YAML frontmatter from OVERVIEW.md
+                Parse tags section
+                If skill has 'extends', resolve inherited tags
+            output: "skills_with_resolved_tags[]"
+          
+          - step: 6
+            name: "Score Tags"
+            action: |
+              For each skill with resolved tags:
+                score = 0
+                For each tag dimension in resolved_tags:
+                  if tag.value appears in keyword_list:
+                    score += weight(dimension)
+                  if tag.value appears as exact phrase in user_request:
+                    score += weight(dimension) * 2  # Bonus
+            weights:
+              artifact-type: 3   # Primary discriminator
+              api-model: 3       # Critical for API skills
+              protocol: 2        # Important for API type
+              stack: 1           # Usually explicit in request
+              runtime-model: 1   # Often implicit
+            output: "scored_skills[]"
+          
+          - step: 7
+            name: "Rank Candidates"
+            action: "Sort skills by score descending"
+            output: "ranked_skills[]"
       
-      - step: 3
-        name: "Identify Layer"
-        condition: "Only for CODE domain"
-        action: "Match keywords against layers.*.signals"
-        output: "layer (soe, soi, sor)"
-      
-      - step: 4
-        name: "Get Candidate Skills"
-        action: "Filter skills from domains.{domain}.skills_by_layer.{layer}"
-        output: "candidate_skills[]"
-      
-      - step: 5
-        name: "Score Keywords"
-        action: |
-          For each candidate skill:
-            score = 0
-            For each keyword in user request:
-              if keyword in skill_metadata[skill].keywords.positive: score += 1
-              if keyword in skill_metadata[skill].keywords.negative: score -= 1
-        output: "scored_skills[]"
-      
-      - step: 6
-        name: "Select Best Match"
-        action: "Select skill with highest score"
-        output: "selected_skill"
-      
-      - step: 7
-        name: "Resolve Inheritance"
-        condition: "If selected skill has 'extends'"
-        action: "Load parent skill first, then overlay child"
-        output: "resolved_skill_chain[]"
-      
-      - step: 8
-        name: "Validate Input"
-        action: "Check input against skill_inputs[selected_skill]"
-        output: "validation_result"
-      
-      - step: 9
-        name: "Execute Skill"
-        condition: "Only if validation passes"
-        action: "Follow skill's execution flow"
-        output: "generated_artifacts"
+      # =========================================================================
+      # PHASE 3: Full OVERVIEW.md Evaluation
+      # =========================================================================
+      phase_3_full_evaluation:
+        description: "Read full OVERVIEW.md for final selection"
+        steps:
+          - step: 8
+            name: "Read Full OVERVIEW.md"
+            action: |
+              Read complete OVERVIEW.md of top candidate (or top 2-3 if scores are close)
+              Evaluate "When to Use" section and Activation Rules
+            output: "evaluated_skills[]"
+          
+          - step: 9
+            name: "Select Skill"
+            action: |
+              If single clear winner: select it
+              If ambiguous: ask user for clarification using specific questions from Activation Rules
+            output: "selected_skill"
+          
+          - step: 10
+            name: "Resolve Inheritance"
+            condition: "If selected skill has 'extends'"
+            action: "Load parent skill first, then overlay child"
+            output: "resolved_skill_chain[]"
+          
+          - step: 11
+            name: "Validate Input"
+            action: "Check input against skill_inputs[selected_skill]"
+            output: "validation_result"
+          
+          - step: 12
+            name: "Execute Skill"
+            condition: "Only if validation passes"
+            action: "Follow skill's execution flow"
+            output: "generated_artifacts"
 
     error_handling:
       ambiguous_match:
-        condition: "Multiple skills with same score"
-        action: "Ask user to clarify with specific questions"
+        condition: "Multiple skills with similar scores after Phase 2"
+        action: |
+          Read full OVERVIEW.md of top candidates
+          Use Activation Rules to generate clarifying questions
+          Ask user to clarify
       
       no_match:
-        condition: "No skill scores > 0"
-        action: "Inform user that no skill matches, suggest alternatives"
+        condition: "No skill scores > 0 after Phase 2"
+        action: "Inform user that no skill matches, suggest alternatives based on available tags"
       
       validation_failure:
-        condition: "Input validation fails"
+        condition: "Input validation fails in Phase 3"
         action: "Return specific validation errors, do NOT generate"

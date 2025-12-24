@@ -1,8 +1,8 @@
 # Discovery Guidance
 
-**Version:** 3.0  
-**Date:** 2025-12-19  
-**Replaces:** discovery-guidance.md (v2.0)
+**Version:** 4.0  
+**Date:** 2025-12-24  
+**Replaces:** discovery-guidance.md (v3.0)
 
 ---
 
@@ -12,7 +12,7 @@ This document provides **guidance** for the discovery process - how the agent in
 
 > **Important:** Discovery is INTERPRETIVE, not rule-based. The agent uses semantic understanding to match user intent with platform capabilities. There are no IF/THEN rules.
 
-> **New in v3.0:** Layer-based filtering for CODE domain and skill-index.yaml for efficient discovery at scale.
+> **New in v4.0:** Tag-based discovery (Phase 2) for efficient skill discrimination. Tags are defined in skill OVERVIEW.md frontmatter. See `model/standards/authoring/TAGS.md`.
 
 ---
 
@@ -27,8 +27,9 @@ This document provides **guidance** for the discovery process - how the agent in
 │  • Understands the FULL semantic context of the user's request          │
 │  • Considers what TYPE OF OUTPUT the user expects                       │
 │  • Identifies the LAYER for CODE domain (SoE, SoI, SoR)                 │
-│  • Uses the skill-index.yaml to filter candidates efficiently           │
-│  • Matches intent against skill OVERVIEW.md descriptions                │
+│  • Uses skill-index.yaml to filter candidates (Phase 1)                 │
+│  • Extracts tags from prompt and matches against skill tags (Phase 2)   │
+│  • Reads full OVERVIEW.md only for top candidates (Phase 3)             │
 │  • Asks for clarification when uncertain                                │
 │  • Recognizes out-of-scope requests                                     │
 │                                                                          │
@@ -36,40 +37,163 @@ This document provides **guidance** for the discovery process - how the agent in
 │  • Match keywords to domains with IF/THEN rules                         │
 │  • Use pattern matching or regular expressions                          │
 │  • Assume domain based on single words                                  │
-│  • Read ALL skill OVERVIEW.md files (uses index to filter first)        │
+│  • Read ALL skill OVERVIEW.md files (uses tags to filter first)         │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Discovery Process (Updated)
+## Discovery Process (3-Phase)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         DISCOVERY FLOW                                   │
+│                    DISCOVERY FLOW (3-PHASE)                              │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  1. SCOPE         Is this SDLC-related?                                 │
-│        │          └─ No → Inform user, stop                             │
-│        ▼                                                                 │
-│  2. DOMAIN        What type of output? (CODE/DESIGN/QA/GOVERNANCE)      │
-│        │                                                                 │
-│        ▼                                                                 │
-│  3. LAYER         (CODE only) SoE / SoI / SoR?                          │
-│        │          └─ Use signals from skill-index.yaml                  │
-│        ▼                                                                 │
-│  4. INDEX         Query skill-index.yaml for candidates                 │
-│     LOOKUP        └─ domains.{domain}.skills_by_layer.{layer}           │
-│        │                                                                 │
-│        ▼                                                                 │
-│  5. SEMANTIC      Read OVERVIEW.md of filtered candidates only          │
-│     MATCH         └─ Select best match                                  │
-│        │                                                                 │
-│        ▼                                                                 │
-│  6. EXECUTE       Load skill, determine flow, execute                   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │ PHASE 1: INDEX FILTERING (skill-index.yaml)                     │    │
+│  │                                                                  │    │
+│  │  1. SCOPE       Is this SDLC-related?                           │    │
+│  │       │         └─ No → Inform user, stop                       │    │
+│  │       ▼                                                          │    │
+│  │  2. DOMAIN      What type of output? (CODE/DESIGN/QA/GOV)       │    │
+│  │       │                                                          │    │
+│  │       ▼                                                          │    │
+│  │  3. LAYER       (CODE only) SoE / SoI / SoR?                    │    │
+│  │       │                                                          │    │
+│  │       ▼                                                          │    │
+│  │  4. CANDIDATES  Query: domains.{domain}.skills_by_layer.{layer} │    │
+│  │                 Output: List of skill paths                      │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              │                                           │
+│                              ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │ PHASE 2: TAG MATCHING (OVERVIEW.md frontmatter)                 │    │
+│  │                                                                  │    │
+│  │  5. EXTRACT     Extract tags from user prompt                   │    │
+│  │       │         (using domain TAG-TAXONOMY.md rules)            │    │
+│  │       ▼                                                          │    │
+│  │  6. PARSE       Read YAML frontmatter from each candidate       │    │
+│  │       │         (NOT full OVERVIEW.md, just tags)               │    │
+│  │       ▼                                                          │    │
+│  │  7. SCORE       Match extracted tags vs skill tags              │    │
+│  │       │         Apply dimension weights                          │    │
+│  │       ▼                                                          │    │
+│  │  8. RANK        Sort candidates by score                        │    │
+│  │                 Output: Ranked skill list                        │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              │                                           │
+│                              ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │ PHASE 3: FULL EVALUATION (OVERVIEW.md)                          │    │
+│  │                                                                  │    │
+│  │  9. READ        Read full OVERVIEW.md of top candidate(s)       │    │
+│  │       │         (max 2-3 if scores are close)                   │    │
+│  │       ▼                                                          │    │
+│  │ 10. EVALUATE    Check "When to Use" and Activation Rules        │    │
+│  │       │                                                          │    │
+│  │       ▼                                                          │    │
+│  │ 11. SELECT      If clear winner → select                        │    │
+│  │                 If ambiguous → ask user                          │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              │                                           │
+│                              ▼                                           │
+│                         EXECUTE SKILL                                    │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 2: Tag-Based Discovery
+
+### What are Tags?
+
+Tags are structured metadata in YAML frontmatter at the start of each skill's OVERVIEW.md:
+
+```yaml
+---
+id: skill-021-api-rest-java-spring
+version: 2.2.0
+extends: skill-020-microservice-java-spring
+tags:
+  artifact-type: api
+  runtime-model: request-response
+  stack: java-spring
+  protocol: rest
+  api-model: fusion
+---
+```
+
+### Tag Extraction
+
+The agent extracts tags from the user prompt using domain-specific rules.
+
+See `model/domains/{domain}/TAG-TAXONOMY.md` for:
+- Valid tag dimensions and values
+- Keywords that map to each tag value
+- Default values when not specified
+
+**Example (CODE domain):**
+
+```
+User: "Genera una Fusion Domain API para Customer"
+
+Extracted tags:
+  artifact-type: api         # "API" keyword
+  api-model: fusion          # "Fusion" keyword
+  protocol: rest             # Default for API
+  stack: java-spring         # Default for CODE/SOI
+  runtime-model: request-response  # Default
+```
+
+### Tag Scoring
+
+Match extracted tags against skill tags, applying weights:
+
+```
+For each candidate skill:
+  score = 0
+  
+  For each dimension in extracted_tags:
+    if skill.tags[dimension] == extracted_tags[dimension]:
+      score += weight(dimension)
+  
+  Return score
+```
+
+**Weights (CODE domain):**
+
+| Dimension | Weight |
+|-----------|--------|
+| artifact-type | 3 |
+| api-model | 3 |
+| protocol | 2 |
+| stack | 1 |
+| runtime-model | 1 |
+
+### Example Scoring
+
+```
+Candidates after Phase 1: [skill-020, skill-021]
+Extracted tags: artifact-type=api, api-model=fusion, protocol=rest, stack=java-spring
+
+skill-020 tags: artifact-type=service, runtime-model=r-r, stack=java-spring
+  artifact-type: service ≠ api → +0
+  stack: java-spring = java-spring → +1
+  runtime-model: r-r = r-r → +1
+  Total: 2
+
+skill-021 tags: artifact-type=api, protocol=rest, api-model=fusion, stack=java-spring, runtime-model=r-r
+  artifact-type: api = api → +3
+  api-model: fusion = fusion → +3
+  protocol: rest = rest → +2
+  stack: java-spring = java-spring → +1
+  runtime-model: r-r = r-r → +1
+  Total: 10
+
+Winner: skill-021 (10 vs 2)
 ```
 
 ---
@@ -450,9 +574,11 @@ Discovery can improve over time:
 
 | Document | Purpose |
 |----------|---------|
-| `runtime/discovery/skill-index.yaml` | Pre-computed index for efficient discovery |
+| `model/standards/authoring/TAGS.md` | Cross-domain tag format and discovery process |
+| `model/domains/{domain}/TAG-TAXONOMY.md` | Domain-specific tag dimensions and extraction rules |
+| `runtime/discovery/skill-index.yaml` | Pre-computed index for Phase 1 filtering |
 | `model/domains/{domain}/DOMAIN.md` | Domain-specific discovery signals |
-| `skills/{domain}/{layer}/*/OVERVIEW.md` | Skill descriptions for semantic matching |
+| `skills/{domain}/{layer}/*/OVERVIEW.md` | Skill tags (frontmatter) and descriptions |
 | `model/CONSUMER-PROMPT.md` | Full agent context specification |
 
 ---

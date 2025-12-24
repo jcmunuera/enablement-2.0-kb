@@ -1,7 +1,7 @@
 # Authoring Standards
 
-**Version:** 2.3  
-**Last Updated:** 2025-12-22
+**Version:** 2.4  
+**Last Updated:** 2025-12-24
 
 ---
 
@@ -18,7 +18,26 @@ This directory contains **authoring guides** for creating assets in the Enableme
 
 ---
 
-## What's New in v2.3
+## What's New in v2.4
+
+> **Key changes:** Tag-based discovery system
+
+| Guide | Change |
+|-------|--------|
+| **TAGS.md v1.1** | NEW - Tag system for skill discovery (cross-domain) |
+| **SKILL.md v2.7** | YAML frontmatter tags required in OVERVIEW.md |
+
+### Key Concepts
+
+**Tags for Discovery:** Skills declare tags in YAML frontmatter. Discovery uses tags to filter and rank candidates before reading full OVERVIEW.md.
+
+```
+User Request → Extract Tags → Match vs Skill Tags → Rank → Select
+```
+
+See `TAGS.md` for cross-domain tag format. See `model/domains/{domain}/TAG-TAXONOMY.md` for domain-specific taxonomies.
+
+### Previous (v2.3)
 
 > **Key changes:** Coherence and Determinism support
 
@@ -56,9 +75,10 @@ ERI (implementation_options) → MODULE (variants)
 | ADR | [ADR.md](./ADR.md) | 1.0 | Architecture Decision Records |
 | ERI | [ERI.md](./ERI.md) | **1.2** | Enterprise Reference Implementations ⭐ |
 | Module | [MODULE.md](./MODULE.md) | **1.8** | Reusable code templates ⭐ |
-| Skill | [SKILL.md](./SKILL.md) | **2.6** | Automation skills ⭐ |
+| Skill | [SKILL.md](./SKILL.md) | **2.7** | Automation skills ⭐ |
 | Validator | [VALIDATOR.md](./VALIDATOR.md) | 1.0 | Artifact validation components |
 | Flow | [FLOW.md](./FLOW.md) | **1.1** | Execution flows by skill type ⭐ |
+| **Tags** | [TAGS.md](./TAGS.md) | **1.1** | **Skill discovery tags** ⭐ NEW |
 
 ### Complementary Asset Types
 
@@ -160,7 +180,8 @@ Assets can be created incrementally across sessions. Each authoring guide specif
 | Build reusable templates | [MODULE.md](./MODULE.md) |
 | Create automated capability | [SKILL.md](./SKILL.md) |
 | Add validation for new technology | [VALIDATOR.md](./VALIDATOR.md) |
-| **Define how a skill type executes** | [FLOW.md](./FLOW.md) |
+| Define how a skill type executes | [FLOW.md](./FLOW.md) |
+| **Define discovery tags for skills** | [TAGS.md](./TAGS.md) |
 
 ---
 
@@ -233,4 +254,4 @@ The **FLOW.md** guide is critical for maintaining consistency:
 
 ---
 
-**Last Updated:** 2025-12-22
+**Last Updated:** 2025-12-24

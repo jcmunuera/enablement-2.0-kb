@@ -1,3 +1,15 @@
+---
+id: skill-021-api-rest-java-spring
+version: 2.2.0
+extends: skill-020-microservice-java-spring
+tags:
+  artifact-type: api
+  runtime-model: request-response
+  stack: java-spring
+  protocol: rest
+  api-model: fusion
+---
+
 # skill-021-api-rest-java-spring
 
 ## Overview
@@ -174,12 +186,14 @@ customer-management-api/
 
 ## Tags
 
-`generation` `api` `rest` `spring-boot` `java` `hexagonal` `pagination` `hateoas` `compensation` `domain-api`
+> Tags are defined in YAML frontmatter at the top of this file.
+> All tags are explicit (including those matching parent skill).
+> See `model/domains/code/TAG-TAXONOMY.md` for CODE domain taxonomy.
 
 ---
 
 ## Version
 
-**Current:** 2.1.0  
+**Current:** 2.2.0  
 **Status:** Active  
-**Last Updated:** 2025-12-23
+**Last Updated:** 2025-12-24

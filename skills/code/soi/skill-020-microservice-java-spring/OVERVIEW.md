@@ -1,3 +1,12 @@
+---
+id: skill-020-microservice-java-spring
+version: 2.1.0
+tags:
+  artifact-type: service
+  runtime-model: request-response
+  stack: java-spring
+---
+
 # skill-020-microservice-java-spring
 
 ## Overview
@@ -155,12 +164,13 @@ customer-service/
 
 ## Tags
 
-`generation` `microservice` `spring-boot` `java` `hexagonal` `internal` `base-skill` `extensible`
+> Tags are defined in YAML frontmatter at the top of this file.
+> See `model/domains/code/TAG-TAXONOMY.md` for CODE domain taxonomy.
 
 ---
 
 ## Version
 
-**Current:** 2.0.0  
+**Current:** 2.1.0  
 **Status:** Active  
-**Last Updated:** 2025-12-19
+**Last Updated:** 2025-12-24

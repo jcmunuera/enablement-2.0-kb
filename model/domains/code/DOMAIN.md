@@ -1,10 +1,10 @@
 ---
 id: code
 name: "CODE"
-version: 1.1
+version: 1.2
 status: Active
 created: 2025-01-15
-updated: 2025-12-17
+updated: 2025-12-24
 swarm_alignment: "CODE Swarm"
 ---
 
@@ -13,6 +13,19 @@ swarm_alignment: "CODE Swarm"
 ## Purpose
 
 Code generation, modification, and migration. This domain produces executable code artifacts following organizational standards defined in ADRs and implemented according to ERIs.
+
+---
+
+## Tag Taxonomy
+
+> **NEW in v1.2:** Tag-based discovery for CODE skills.
+
+CODE domain skills use tags for discovery. See **[TAG-TAXONOMY.md](./TAG-TAXONOMY.md)** for:
+
+- Tag dimensions: `artifact-type`, `stack`, `runtime-model`, `protocol`, `api-model`
+- Extraction rules from user prompts
+- Default values and weights
+- Coherence rules for skill extension
 
 ---
 

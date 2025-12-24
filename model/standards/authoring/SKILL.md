@@ -1,13 +1,21 @@
 # Authoring Guide: SKILL
 
-**Version:** 2.6  
-**Last Updated:** 2025-12-22  
+**Version:** 2.7  
+**Last Updated:** 2025-12-24  
 **Asset Type:** Skill  
 **Priority:** CRITICAL
 
 ---
 
-## What's New in v2.6
+## What's New in v2.7
+
+| Change | Description |
+|--------|-------------|
+| **YAML Frontmatter Tags** | OVERVIEW.md now requires YAML frontmatter with structured tags for discovery |
+| **Tag-based Discovery** | Discovery now uses tags (Phase 2) instead of keywords in skill-index.yaml |
+| **Tags Reference** | See `TAGS.md` for complete tag taxonomy and inheritance rules |
+
+### Previous (v2.6)
 
 | Change | Description |
 |--------|-------------|
@@ -19,7 +27,7 @@
 | Change | Description |
 |--------|-------------|
 | **Skill Extension Pattern** | Skills can now extend other skills using `extends:` declaration |
-| **Discovery Keywords** | Skills can declare positive/negative keywords for discovery |
+| **Discovery Keywords** | ~~Skills can declare positive/negative keywords for discovery~~ (DEPRECATED: use tags) |
 | **Inheritance Model** | Child skills inherit modules, parameters, validation from parent |
 
 ### Previous (v2.4)
@@ -227,21 +235,33 @@ tags:
 
 ### 2. OVERVIEW.md - Quick Reference (CRITICAL for Discovery)
 
-> **UPDATED in v2.3:** OVERVIEW.md is the PRIMARY document for skill discovery.
-> The agent reads this file to determine if a skill matches user intent.
-> Write it with discovery in mind.
+> **UPDATED in v2.7:** OVERVIEW.md MUST include YAML frontmatter with structured tags.
+> Tags enable efficient skill discovery without reading the full document.
+> See `TAGS.md` for complete tag taxonomy.
 
 **OVERVIEW.md Structure:**
 
 ```markdown
-# skill-{domain}-{NNN}-{type}-{target}
+---
+id: skill-021-api-rest-java-spring
+version: 2.2.0
+extends: skill-020-microservice-java-spring  # Optional: parent skill
+tags:
+  artifact-type: api
+  runtime-model: request-response
+  stack: java-spring
+  protocol: rest
+  api-model: fusion
+---
+
+# skill-021-api-rest-java-spring
 
 ## Overview
 
-**Skill ID:** skill-{domain}-{NNN}-{type}-{target}-{framework}-{library}  
-**Type:** {TYPE}  
-**Framework:** {framework} (if applicable)  
-**Architecture:** {architecture pattern}
+**Skill ID:** skill-021-api-rest-java-spring  
+**Type:** GENERATE  
+**Framework:** Java 17+ / Spring Boot 3.2.x  
+**Architecture:** Hexagonal Light + API Standards
 
 ---
 
@@ -1292,20 +1312,34 @@ When `extends` is present, differentiate parent from child during discovery:
 
 OVERVIEW.md must clearly state when to use parent vs child.
 
-Use `keywords.positive` and `keywords.negative` in skill-index.yaml:
+**Use tags in OVERVIEW.md frontmatter (NOT keywords in skill-index.yaml):**
 
 ```yaml
-- id: skill-020-microservice-java-spring
-  keywords:
-    positive: ["microservice", "internal", "DDD"]
-    negative: ["API", "pagination", "HATEOAS"]
+# Parent skill (skill-020)
+---
+id: skill-020-microservice-java-spring
+version: 2.1.0
+tags:
+  artifact-type: service
+  runtime-model: request-response
+  stack: java-spring
+---
 
-- id: skill-021-api-rest-java-spring
-  extends: skill-020-microservice-java-spring
-  keywords:
-    positive: ["API", "REST", "pagination", "HATEOAS"]
-    negative: ["internal", "gRPC", "async"]
+# Child skill (skill-021)
+---
+id: skill-021-api-rest-java-spring
+version: 2.2.0
+extends: skill-020-microservice-java-spring
+tags:
+  artifact-type: api          # Override: service → api
+  protocol: rest              # Add: new dimension
+  api-model: fusion           # Add: new dimension
+  # runtime-model: inherited
+  # stack: inherited
+---
 ```
+
+> **See `TAGS.md`** for complete tag taxonomy and inheritance rules.
 
 ### Best Practices
 
@@ -1336,6 +1370,7 @@ Module              Validator           Traceability
 
 ## Related
 
+- `model/standards/authoring/TAGS.md` - Tag taxonomy and discovery rules ⭐ NEW
 - `model/standards/ASSET-STANDARDS-v1.4.md` - Skill structure specification
 - `runtime/discovery/skill-index.yaml` - Skill index for discovery
 - `model/standards/traceability/` - Traceability profiles
@@ -1345,4 +1380,4 @@ Module              Validator           Traceability
 
 ---
 
-**Last Updated:** 2025-11-28
+**Last Updated:** 2025-12-24
