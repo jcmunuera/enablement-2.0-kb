@@ -1,6 +1,6 @@
 # Skill Type: CODE/GENERATE
 
-**Version:** 2.6  
+**Version:** 2.7  
 **Date:** 2026-01-08  
 **Domain:** CODE
 
@@ -689,6 +689,60 @@ All generated classes MUST include:
  * @variant {variant-id}  // If non-default
  */
 ```
+
+---
+
+## Output Delivery
+
+> ⚠️ **MANDATORY**: After generation completes, the agent MUST deliver the complete Flow output to the user.
+
+### Delivery Steps
+
+1. **Package the complete Flow output** as a TAR or ZIP archive:
+   ```bash
+   cd /path/to/gen-{artifact}-{timestamp}-{id}
+   tar -czvf gen-{artifact}-{timestamp}-{id}.tar.gz .
+   ```
+
+2. **Copy to outputs directory**:
+   ```bash
+   cp gen-{artifact}-{timestamp}-{id}.tar.gz /mnt/user-data/outputs/
+   ```
+
+3. **Present the archive to the user** using `present_files`:
+   ```
+   present_files(["/mnt/user-data/outputs/gen-{artifact}-{timestamp}-{id}.tar.gz"])
+   ```
+
+### What to Deliver
+
+| Deliverable | Format | Content |
+|-------------|--------|---------|
+| **Primary** | `.tar.gz` or `.zip` | Complete Flow directory with `input/`, `output/`, `trace/`, `validation/` |
+| **Summary** | In response | Brief summary table with execution ID, skill used, files generated, validation status |
+
+### Anti-patterns (DO NOT)
+
+- ❌ Present only individual files (README, manifest, trace separately)
+- ❌ Present only the `output/` subdirectory without `input/`, `trace/`, `validation/`
+- ❌ Skip the archive and present the folder path only
+- ❌ Forget to include validation scripts in the delivery
+
+### Correct Example
+
+```bash
+# After generation completes:
+cd /home/claude
+tar -czvf gen-customer-api-20260108-143052-a7b3.tar.gz gen-customer-api-20260108-143052-a7b3/
+cp gen-customer-api-20260108-143052-a7b3.tar.gz /mnt/user-data/outputs/
+present_files(["/mnt/user-data/outputs/gen-customer-api-20260108-143052-a7b3.tar.gz"])
+```
+
+The user receives a single downloadable archive containing:
+- `input/` - Original request and specs (reproducibility)
+- `output/{artifact}/` - Generated code with `.enablement/manifest.json`
+- `trace/generation-trace.md` - Decision log
+- `validation/*.sh` - Validation scripts
 
 ---
 
