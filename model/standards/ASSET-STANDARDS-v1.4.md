@@ -1368,7 +1368,7 @@ This document is part of Enablement 2.0 model framework:
 
 ### Master Document
 
-- **ENABLEMENT-MODEL-v1.3.md** - Complete conceptual model
+- **ENABLEMENT-MODEL-v1.7.md** - Complete conceptual model
   - Asset hierarchy and relationships
   - Capability hierarchy (Capability → Feature → Component → Module)
   - Skill domains and types
@@ -1394,7 +1394,7 @@ This document is part of Enablement 2.0 model framework:
 ### How These Documents Work Together
 
 ```
-ENABLEMENT-MODEL-v1.3.md (Master)
+ENABLEMENT-MODEL-v1.7.md (Master)
     ↓
 Defines: Conceptual model, asset hierarchy, capability hierarchy, 
          skill domains, validation system, workflows
