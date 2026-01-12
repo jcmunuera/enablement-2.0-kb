@@ -645,7 +645,7 @@ enablement-2.0/
 │   └── ERIs/                    # Reference implementations
 │
 ├── model/                        # META-MODEL
-│   ├── ENABLEMENT-MODEL-v1.6.md # This document
+│   ├── ENABLEMENT-MODEL-v1.7.md # This document
 │   ├── CONSUMER-PROMPT.md       # Consumer agent system prompt
 │   ├── AUTHOR-PROMPT.md         # Author/C4E system prompt
 │   ├── standards/               # Asset standards

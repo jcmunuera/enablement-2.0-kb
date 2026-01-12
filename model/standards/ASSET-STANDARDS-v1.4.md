@@ -4,7 +4,7 @@
 **Date:** 2025-12-19  
 **Status:** Active  
 **Purpose:** Define mandatory structure and content for all Enablement 2.0 knowledge base assets  
-**Master Document:** See `ENABLEMENT-MODEL-v1.6.md` for complete conceptual model
+**Master Document:** See `ENABLEMENT-MODEL-v1.7.md` for complete conceptual model
 
 ---
 

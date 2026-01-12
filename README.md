@@ -33,7 +33,7 @@ enablement-2.0/
 │   └── ERIs/              # Enterprise Reference Implementations (tactical)
 │
 ├── model/                  # META-MODEL (defines the Enablement system)
-│   ├── ENABLEMENT-MODEL-v1.6.md   # Master document
+│   ├── ENABLEMENT-MODEL-v1.7.md   # Master document
 │   ├── CONSUMER-PROMPT.md         # Consumer agent system prompt
 │   ├── AUTHOR-PROMPT.md           # Author/C4E system prompt
 │   ├── standards/                 # Asset standards and authoring guides
@@ -182,7 +182,7 @@ ls runtime/
 
 ### Understand the Model
 
-1. Start with: `model/ENABLEMENT-MODEL-v1.6.md`
+1. Start with: `model/ENABLEMENT-MODEL-v1.7.md`
 2. Then: `model/standards/ASSET-STANDARDS-v1.4.md`
 3. To create assets: `model/standards/authoring/`
 

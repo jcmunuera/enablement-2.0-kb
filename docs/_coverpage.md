@@ -1,6 +1,6 @@
 <!-- docs/_coverpage.md -->
 
-![logo](https://img.shields.io/badge/version-2.2.0-blue.svg)
+![logo](https://img.shields.io/badge/version-2.4.1-blue.svg)
 ![status](https://img.shields.io/badge/status-active-green.svg)
 
 # Enablement 2.0
@@ -15,5 +15,5 @@
 - 📊 **Full Traceability** - Complete audit trail
 
 [Get Started](GETTING-STARTED.md)
-[Model v1.6](model/ENABLEMENT-MODEL-v1.6.md)
+[Model v1.7](model/ENABLEMENT-MODEL-v1.7.md)
 [GitHub](https://github.com/jcmunuera/enablement-2.0)
