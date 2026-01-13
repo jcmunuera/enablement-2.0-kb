@@ -1,7 +1,7 @@
 # Determinism Rules for Code Generation
 
-**Version:** 1.0  
-**Date:** 2025-12-22  
+**Version:** 1.2  
+**Date:** 2026-01-13  
 **Status:** Active
 
 ---
@@ -401,6 +401,256 @@ exit 0
 
 ---
 
+## Code Style Conventions (v1.1)
+
+> **NEW in v1.1:** These conventions ensure consistent code style across generations.
+
+### Method Ordering
+
+**Rule:** Methods in generated classes MUST follow this order:
+
+```
+1. Static factory methods (of, from, create, generate)
+2. Constructor(s)
+3. Public business methods (alphabetically)
+4. Public getters (alphabetically)
+5. Protected methods (alphabetically)
+6. Private methods (alphabetically)
+7. equals/hashCode/toString (if not record)
+8. Builder class (if applicable)
+```
+
+**Example:**
+
+```java
+public class CustomerApplicationService {
+    
+    // 1. Static factory (none in this case)
+    
+    // 2. Constructor
+    public CustomerApplicationService(CustomerRepository repository) {
+        this.repository = repository;
+    }
+    
+    // 3. Public business methods (alphabetically)
+    public CustomerResponse createCustomer(CreateCustomerRequest request) { ... }
+    
+    public void deleteCustomer(CustomerId id) { ... }
+    
+    public CustomerResponse getCustomer(CustomerId id) { ... }
+    
+    public List<CustomerResponse> listCustomers() { ... }
+    
+    public CustomerResponse updateCustomer(CustomerId id, UpdateCustomerRequest request) { ... }
+    
+    // 4. Private methods
+    private Customer mapToDomain(CreateCustomerRequest request) { ... }
+    
+    private CustomerResponse mapToResponse(Customer customer) { ... }
+}
+```
+
+### Javadoc Standards
+
+**Rule:** Generated code MUST include Javadoc for:
+- Class/interface declarations
+- Public methods
+- Complex private methods
+
+**Javadoc Template:**
+
+```java
+/**
+ * Brief description (one line).
+ * 
+ * Extended description if needed (optional).
+ * 
+ * @param paramName parameter description
+ * @return return value description
+ * @throws ExceptionType when this happens
+ * 
+ * @generated {skillId} v{skillVersion}
+ * @module {moduleId}
+ */
+```
+
+**Mandatory Javadoc Elements:**
+
+| Element | Required | Example |
+|---------|----------|---------|
+| Brief description | ✅ Yes | `Customer repository port.` |
+| @param | ✅ If has params | `@param id the customer ID` |
+| @return | ✅ If non-void | `@return the customer if found` |
+| @throws | ⚠️ If throws | `@throws CustomerNotFoundException` |
+| @generated | ✅ Yes | `@generated skill-021 v2.3.0` |
+| @module | ✅ Yes | `@module mod-code-015` |
+
+**Example:**
+
+```java
+/**
+ * Find customer by ID.
+ * 
+ * Retrieves customer from System API and maps to domain model.
+ * 
+ * @param id the customer ID (must not be null)
+ * @return Optional containing the customer if found, empty otherwise
+ * @throws SystemApiUnavailableException if System API is down
+ * 
+ * @generated skill-021-api-rest-java-spring v2.3.0
+ * @module mod-code-017-persistence-systemapi
+ */
+public Optional<Customer> findById(CustomerId id) {
+    ...
+}
+```
+
+---
+
+## Method Ordering Convention (v1.2)
+
+**Rule:** Methods in generated classes MUST follow this order:
+
+### For all classes:
+
+```
+1. Static factory methods (of(), from(), create())
+2. Constructor(s)
+3. Public methods (alphabetical)
+4. Package-private methods (alphabetical)
+5. Private methods (alphabetical)
+```
+
+### For Controllers:
+
+```
+1. POST (create)
+2. GET by ID (read one)
+3. GET all (read many/list)
+4. PUT (update)
+5. PATCH (partial update)
+6. DELETE (delete)
+```
+
+### For Repositories:
+
+```
+1. findById()
+2. findAll()
+3. save()
+4. deleteById()
+5. existsById()
+6. Custom query methods (alphabetical)
+```
+
+### For Services:
+
+```
+1. Create operations
+2. Read operations (get, find, list)
+3. Update operations
+4. Delete operations
+5. Validation/utility methods
+```
+
+**Example - ApplicationService:**
+
+```java
+@Service
+public class CustomerApplicationService {
+    
+    // 1. Create
+    public CustomerResponse createCustomer(CreateCustomerRequest request) { ... }
+    
+    // 2. Read
+    public CustomerResponse getCustomer(UUID id) { ... }
+    public Page<CustomerResponse> listCustomers(Pageable pageable) { ... }
+    
+    // 3. Update
+    public CustomerResponse updateCustomer(UUID id, UpdateCustomerRequest request) { ... }
+    
+    // 4. Delete
+    public void deleteCustomer(UUID id) { ... }
+}
+```
+
+---
+
+## Javadoc Standards (v1.2)
+
+**Rule:** All public classes and methods MUST have Javadoc comments.
+
+### Class-level Javadoc:
+
+```java
+/**
+ * Brief description of the class purpose.
+ * 
+ * <p>Additional details if needed, explaining behavior or constraints.</p>
+ * 
+ * @generated {skillId} v{skillVersion}
+ * @module {moduleId}
+ */
+public class CustomerApplicationService { ... }
+```
+
+### Method-level Javadoc:
+
+```java
+/**
+ * Brief description of what the method does.
+ * 
+ * @param paramName description of the parameter
+ * @return description of return value
+ * @throws ExceptionType when this exception is thrown
+ */
+public CustomerResponse getCustomer(UUID id) { ... }
+```
+
+### Required Tags:
+
+| Element | Required Tags |
+|---------|---------------|
+| Public class | Description + `@generated` + `@module` |
+| Public method | Description + `@param` (all) + `@return` (if not void) + `@throws` (if applicable) |
+| Interface | Description + purpose |
+| Enum | Description + each constant |
+
+### Forbidden:
+
+```java
+// ❌ WRONG - No Javadoc
+public CustomerResponse getCustomer(UUID id) { ... }
+
+// ❌ WRONG - Empty Javadoc
+/**
+ */
+public CustomerResponse getCustomer(UUID id) { ... }
+
+// ❌ WRONG - Redundant/useless Javadoc
+/**
+ * Gets the customer.
+ * @param id the id
+ * @return the customer
+ */
+public CustomerResponse getCustomer(UUID id) { ... }
+```
+
+### Correct:
+
+```java
+/**
+ * Retrieves a customer by their unique identifier.
+ * 
+ * @param id the customer's UUID
+ * @return the customer data including personal information and status
+ * @throws CustomerNotFoundException if no customer exists with the given ID
+ */
+public CustomerResponse getCustomer(UUID id) { ... }
+```
+
+---
+
 ## Applicability by Module
 
 | Module | Applies | Notes |
@@ -420,7 +670,8 @@ exit 0
 - `model/standards/authoring/MODULE.md` - Module authoring guide
 - `model/standards/ASSET-STANDARDS-v1.4.md` - Asset standards
 - `runtime/flows/code/GENERATE.md` - Generation flow with variant selection
+- `runtime/schemas/manifest.schema.json` - Manifest JSON Schema (v1.1)
 
 ---
 
-**Last Updated:** 2025-12-22
+**Last Updated:** 2026-01-13
