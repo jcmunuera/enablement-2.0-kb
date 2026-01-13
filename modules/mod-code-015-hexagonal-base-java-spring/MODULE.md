@@ -1,9 +1,9 @@
 ---
 id: mod-code-015-hexagonal-base-java-spring
 title: "MOD-015: Hexagonal Base - Java/Spring Boot"
-version: 1.2
+version: 1.3
 date: 2025-12-01
-updated: 2025-12-22
+updated: 2026-01-13
 status: Active
 derived_from: eri-code-001-hexagonal-light-java-spring
 domain: code
@@ -20,7 +20,7 @@ used_by:
 # MOD-015: Hexagonal Base - Java/Spring Boot
 
 **Module ID:** mod-code-015-hexagonal-base-java-spring  
-**Version:** 1.2  
+**Version:** 1.3  
 **Source ERI:** eri-code-001-hexagonal-light-java-spring  
 **Framework:** Java 17+ / Spring Boot 3.2.x  
 **Used by:** skill-code-020-generate-microservice-java-spring
@@ -506,23 +506,43 @@ public class {{entityName}}DomainService {
 
 #### Template: Repository Interface (Port)
 
+> **UPDATED v1.3:** Repository contract now defines standard operations.
+> All methods are part of the contract. If backend doesn't support an operation,
+> adapter throws `UnsupportedOperationException`.
+
+**Repository Contract:**
+
+| Method | Description |
+|--------|-------------|
+| `findById(id)` | Retrieve entity by ID |
+| `findAll()` | List all entities (may support pagination) |
+| `save(entity)` | Create or update entity |
+| `deleteById(id)` | Delete entity by ID |
+| `existsById(id)` | Check existence |
+
 ```java
 package {{basePackage}}.domain.repository;
 
 import {{basePackage}}.domain.model.{{entityName}};
 import {{basePackage}}.domain.model.{{entityName}}Id;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Repository interface (port) defined in domain layer.
  * Implementation provided by adapter layer.
+ * 
+ * If adapter cannot implement a method, it should throw
+ * UnsupportedOperationException with clear message.
  */
 public interface {{entityName}}Repository {
     
-    {{entityName}} save({{entityName}} entity);
-    
     Optional<{{entityName}}> findById({{entityName}}Id id);
+    
+    List<{{entityName}}> findAll();
+    
+    {{entityName}} save({{entityName}} entity);
     
     void deleteById({{entityName}}Id id);
     

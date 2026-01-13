@@ -1,7 +1,7 @@
 # Skill Type: CODE/GENERATE
 
-**Version:** 2.7  
-**Date:** 2026-01-08  
+**Version:** 2.8  
+**Date:** 2026-01-13  
 **Domain:** CODE
 
 ---
@@ -448,6 +448,88 @@ customer-api-generation/
 │  - The agent generates code following those patterns                         │
 │  - The agent may adapt patterns to fit the specific context                  │
 │  - Templates are NOT executed as scripts                                     │
+│                                                                              │
+│  ════════════════════════════════════════════════════════════════════════   │
+│  PHASE B.5: COMPILATION & CORRECTION (v2.8)                                  │
+│  ════════════════════════════════════════════════════════════════════════   │
+│                                                                              │
+│  > NEW in v2.8: Iterative compilation to detect and fix code errors.        │
+│                                                                              │
+│  STEP 5.5: COMPILE AND CORRECT                                               │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  Action: Compile generated code and fix errors iteratively                   │
+│  Input:  Generated project in output/{serviceName}                           │
+│  Output: Compilable project or error report                                  │
+│                                                                              │
+│  WHY THIS PHASE EXISTS:                                                      │
+│  LLM code generation can produce:                                            │
+│  - Hallucinated APIs (methods that don't exist)                              │
+│  - Incomplete implementations (missing interface methods)                    │
+│  - Syntax errors                                                             │
+│                                                                              │
+│  These are NOT preventable with rules - the compiler is the validator.       │
+│                                                                              │
+│  ALGORITHM:                                                                  │
+│  ```                                                                         │
+│  max_attempts = 3                                                            │
+│  attempt = 1                                                                 │
+│                                                                              │
+│  while attempt <= max_attempts:                                              │
+│      result = execute("mvn compile -q", cwd=output/{serviceName})            │
+│                                                                              │
+│      if result.success:                                                      │
+│          log("✅ Compilation successful on attempt {attempt}")               │
+│          break                                                               │
+│                                                                              │
+│      else:                                                                   │
+│          errors = parse_compiler_errors(result.stderr)                       │
+│          log("❌ Compilation failed, attempt {attempt}/{max_attempts}")      │
+│          log("   Errors: {errors}")                                          │
+│                                                                              │
+│          if attempt < max_attempts:                                          │
+│              for error in errors:                                            │
+│                  fix = agent.request_fix(                                    │
+│                      file=error.file,                                        │
+│                      line=error.line,                                        │
+│                      message=error.message,                                  │
+│                      context=read_file_context(error.file, error.line)       │
+│                  )                                                           │
+│                  apply_fix(fix)                                              │
+│                                                                              │
+│          attempt += 1                                                        │
+│                                                                              │
+│  if not result.success:                                                      │
+│      record_in_trace("compilation_failed", errors)                           │
+│      # Continue to validation - will be flagged there                        │
+│  ```                                                                         │
+│                                                                              │
+│  ERROR PARSING:                                                              │
+│  Maven compiler errors follow pattern:                                       │
+│  ```                                                                         │
+│  [ERROR] /path/to/File.java:[line,col] error message                         │
+│  ```                                                                         │
+│                                                                              │
+│  Extract: file, line, column, message                                        │
+│                                                                              │
+│  AGENT FIX REQUEST:                                                          │
+│  For each error, provide to agent:                                           │
+│  - Full error message                                                        │
+│  - File content around error line (±10 lines)                                │
+│  - Request: "Fix this compilation error"                                     │
+│                                                                              │
+│  COMMON FIXES:                                                               │
+│  | Error Type | Typical Fix |                                                │
+│  |------------|-------------|                                                │
+│  | Method not found | Use correct API method |                               │
+│  | Missing implementation | Add missing method to class |                    │
+│  | Type mismatch | Correct type or add cast |                                │
+│  | Missing import | Add import statement |                                   │
+│                                                                              │
+│  TRACEABILITY:                                                               │
+│  Record in trace/generation-trace.md:                                        │
+│  - Number of compilation attempts                                            │
+│  - Errors found and fixes applied                                            │
+│  - Final compilation status                                                  │
 │                                                                              │
 │  ════════════════════════════════════════════════════════════════════════   │
 │  PHASE C: VALIDATION (Sequential)                                            │
