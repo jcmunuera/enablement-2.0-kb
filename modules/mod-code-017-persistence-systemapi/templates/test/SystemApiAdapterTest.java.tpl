@@ -1,5 +1,5 @@
 // Template: SystemApiAdapterTest.java.tpl
-// Output: {{basePackagePath}}/adapter/systemapi/{{Entity}}SystemApiAdapterTest.java
+// Output: {{basePackagePath}}/adapter/out/systemapi/{{Entity}}SystemApiAdapterTest.java
 // Purpose: Unit test for System API adapter
 
 package {{basePackage}}.adapter.systemapi;

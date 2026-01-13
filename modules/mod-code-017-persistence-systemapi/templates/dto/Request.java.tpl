@@ -1,9 +1,9 @@
 // Template: Request.java.tpl
-// Output: {{basePackage}}/adapter/out/persistence/dto/{{Entity}}SystemApiRequest.java
+// Output: {{basePackage}}/adapter/out/systemapi/dto/{{Entity}}SystemApiRequest.java
 // Purpose: Request DTO for System API communication
 // STRUCTURE: MUST be record (per DETERMINISM-RULES.md)
 
-package {{basePackage}}.adapter.out.persistence.dto;
+package {{basePackage}}.adapter.out.systemapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

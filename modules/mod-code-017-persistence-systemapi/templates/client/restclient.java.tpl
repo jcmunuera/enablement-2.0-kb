@@ -1,9 +1,9 @@
 // Template: restclient.java.tpl
-// Output: {{basePackage}}/adapter/systemapi/client/{{Entity}}SystemApiClient.java
+// Output: {{basePackage}}/adapter/out/systemapi/client/{{Entity}}SystemApiClient.java
 // Purpose: RestClient (Spring 6.1+) for System API communication
 // Variant: restclient
 
-package {{basePackage}}.adapter.systemapi.client;
+package {{basePackage}}.adapter.out.systemapi.client;
 
 import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
 import lombok.RequiredArgsConstructor;

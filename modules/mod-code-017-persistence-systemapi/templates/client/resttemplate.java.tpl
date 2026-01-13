@@ -1,9 +1,9 @@
 // Template: resttemplate.java.tpl
-// Output: {{basePackage}}/adapter/systemapi/client/{{Entity}}SystemApiClient.java
+// Output: {{basePackage}}/adapter/out/systemapi/client/{{Entity}}SystemApiClient.java
 // Purpose: RestTemplate client for System API communication
 // Variant: resttemplate
 
-package {{basePackage}}.adapter.systemapi.client;
+package {{basePackage}}.adapter.out.systemapi.client;
 
 import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
 import lombok.RequiredArgsConstructor;

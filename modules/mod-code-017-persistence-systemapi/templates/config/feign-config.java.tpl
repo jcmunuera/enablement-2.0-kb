@@ -1,9 +1,9 @@
 // Template: feign-config.java.tpl
-// Output: {{basePackage}}/adapter/systemapi/client/{{Entity}}SystemApiFeignConfig.java
+// Output: {{basePackage}}/adapter/out/systemapi/client/{{Entity}}SystemApiFeignConfig.java
 // Purpose: Feign client configuration with headers and interceptors
 // Variant: feign (only generated when using Feign)
 
-package {{basePackage}}.adapter.systemapi.client;
+package {{basePackage}}.adapter.out.systemapi.client;
 
 import feign.RequestInterceptor;
 import org.slf4j.MDC;

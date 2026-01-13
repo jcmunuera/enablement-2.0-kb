@@ -1,9 +1,9 @@
 // Template: SystemApiMapper.java.tpl
-// Output: {{basePackage}}/adapter/out/persistence/mapper/{{Entity}}SystemApiMapper.java
+// Output: {{basePackage}}/adapter/out/systemapi/mapper/{{Entity}}SystemApiMapper.java
 // Purpose: Maps between domain entities and System API DTOs
 // IMPORTANT: Code mapping (enum ↔ external codes) is done HERE, not in enums
 
-package {{basePackage}}.adapter.out.persistence.mapper;
+package {{basePackage}}.adapter.out.systemapi.mapper;
 
 import {{basePackage}}.adapter.out.persistence.dto.{{Entity}}SystemApiResponse;
 import {{basePackage}}.adapter.out.persistence.dto.{{Entity}}SystemApiRequest;

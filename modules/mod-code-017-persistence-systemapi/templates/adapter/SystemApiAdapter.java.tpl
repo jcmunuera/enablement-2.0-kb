@@ -1,12 +1,12 @@
 // Template: SystemApiAdapter.java.tpl
-// Output: {{basePackage}}/adapter/systemapi/{{Entity}}SystemApiAdapter.java
+// Output: {{basePackage}}/adapter/out/systemapi/{{Entity}}SystemApiAdapter.java
 // Purpose: Adapter implementing repository port via System API calls
 
-package {{basePackage}}.adapter.systemapi;
+package {{basePackage}}.adapter.out.systemapi;
 
-import {{basePackage}}.adapter.systemapi.client.{{Entity}}SystemApiClient;
-import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
-import {{basePackage}}.adapter.systemapi.mapper.{{Entity}}SystemApiMapper;
+import {{basePackage}}.adapter.out.systemapi.client.{{Entity}}SystemApiClient;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.systemapi.mapper.{{Entity}}SystemApiMapper;
 import {{basePackage}}.domain.model.{{Entity}};
 import {{basePackage}}.domain.repository.{{Entity}}Repository;
 

@@ -1,8 +1,9 @@
 ---
 id: mod-code-017-persistence-systemapi
 title: "MOD-017: System API Persistence"
-version: 1.2
+version: 1.3
 date: 2025-12-01
+updated: 2026-01-13
 status: Active
 derived_from: eri-code-012-persistence-patterns-java-spring
 depends_on:
@@ -32,6 +33,48 @@ Reusable templates for implementing persistence via System API delegation. The D
 
 > ⚠️ **IMPORTANT:** This module provides the adapter layer only (DTO, Mapper, Adapter).  
 > REST client templates are in **mod-018**. Use both modules together.
+
+---
+
+## Naming Conventions (v1.3)
+
+> **CRITICAL:** These naming conventions MUST be followed for deterministic code generation.
+
+### Class Naming
+
+| Component | Pattern | Example |
+|-----------|---------|---------|
+| Adapter | `{Entity}SystemApiAdapter` | `CustomerSystemApiAdapter` |
+| Client | `{Entity}SystemApiClient` | `CustomerSystemApiClient` |
+| Mapper | `{Entity}SystemApiMapper` | `CustomerSystemApiMapper` |
+| Request DTO | `{Entity}SystemApiRequest` | `CustomerSystemApiRequest` |
+| Response DTO | `{Entity}SystemApiResponse` | `CustomerSystemApiResponse` |
+| Config | `{Entity}SystemApiFeignConfig` | `CustomerSystemApiFeignConfig` |
+
+### Package Structure
+
+All System API persistence classes go under `adapter.out.systemapi`:
+
+```
+{basePackage}/
+└── adapter/
+    └── out/
+        └── systemapi/
+            ├── {Entity}SystemApiAdapter.java      # Repository implementation
+            ├── SystemApiUnavailableException.java # Shared exception
+            ├── client/
+            │   ├── {Entity}SystemApiClient.java   # HTTP client interface
+            │   └── {Entity}SystemApiFeignConfig.java
+            ├── dto/
+            │   ├── {Entity}SystemApiRequest.java  # Request to System API
+            │   └── {Entity}SystemApiResponse.java # Response from System API
+            └── mapper/
+                └── {Entity}SystemApiMapper.java   # Domain ↔ DTO mapping
+```
+
+> **Note:** This structure follows hexagonal architecture:
+> - `adapter/out/` = Outbound adapters (driven)
+> - `adapter/in/` = Inbound adapters (driving) - see mod-015
 
 ---
 

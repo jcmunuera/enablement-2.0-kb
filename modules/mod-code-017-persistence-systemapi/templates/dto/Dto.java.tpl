@@ -1,10 +1,10 @@
 // Template: Dto.java.tpl
-// Output: {{basePackage}}/adapter/out/persistence/dto/{{Entity}}SystemApiResponse.java
+// Output: {{basePackage}}/adapter/out/systemapi/dto/{{Entity}}SystemApiResponse.java
 // Purpose: Response DTO for System API communication
 // STRUCTURE: MUST be record (per DETERMINISM-RULES.md)
 // NOTE: NO Lombok - records are preferred for DTOs
 
-package {{basePackage}}.adapter.out.persistence.dto;
+package {{basePackage}}.adapter.out.systemapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -1,9 +1,9 @@
 // Template: feign.java.tpl
-// Output: {{basePackage}}/adapter/systemapi/client/{{Entity}}SystemApiClient.java
+// Output: {{basePackage}}/adapter/out/systemapi/client/{{Entity}}SystemApiClient.java
 // Purpose: Feign client for System API communication
 // Variant: feign
 
-package {{basePackage}}.adapter.systemapi.client;
+package {{basePackage}}.adapter.out.systemapi.client;
 
 import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
 import org.springframework.cloud.openfeign.FeignClient;

@@ -1,7 +1,7 @@
 ---
 id: mod-code-015-hexagonal-base-java-spring
 title: "MOD-015: Hexagonal Base - Java/Spring Boot"
-version: 1.3
+version: 1.4
 date: 2025-12-01
 updated: 2026-01-13
 status: Active
@@ -63,6 +63,68 @@ templates/
 └── test/
     └── DomainServiceTest.java.tpl    # Domain layer tests
 ```
+
+---
+
+## Package Structure (v1.3)
+
+> **CRITICAL:** This structure MUST be followed for deterministic code generation.
+
+### Generated Package Layout
+
+```
+{basePackage}/
+├── domain/                          # DOMAIN LAYER (Pure Java)
+│   ├── model/
+│   │   ├── {Entity}.java            # Domain entity
+│   │   ├── {Entity}Id.java          # Value object for ID
+│   │   └── {Enum}.java              # Domain enums
+│   ├── repository/
+│   │   └── {Entity}Repository.java  # Port interface
+│   ├── service/
+│   │   └── {Entity}DomainService.java  # Domain logic (optional)
+│   └── exception/
+│       └── {Entity}NotFoundException.java
+│
+├── application/                     # APPLICATION LAYER
+│   ├── service/
+│   │   └── {Entity}ApplicationService.java  # Use cases
+│   └── dto/                         # ⭐ API DTOs HERE (protocol-agnostic)
+│       ├── Create{Entity}Request.java
+│       ├── Update{Entity}Request.java
+│       └── {Entity}Response.java
+│
+├── adapter/                         # ADAPTER LAYER
+│   ├── in/                          # Inbound (driving) adapters
+│   │   └── rest/
+│   │       ├── {Entity}Controller.java
+│   │       └── assembler/           # HATEOAS (if enabled)
+│   │           └── {Entity}ModelAssembler.java
+│   └── out/                         # Outbound (driven) adapters
+│       └── systemapi/               # See mod-017
+│           └── ...
+│
+└── infrastructure/                  # INFRASTRUCTURE
+    ├── config/
+    │   └── ApplicationConfig.java
+    ├── web/
+    │   ├── GlobalExceptionHandler.java
+    │   └── CorrelationIdFilter.java
+    └── ...
+```
+
+### DTO Location Rules
+
+| DTO Type | Location | Rationale |
+|----------|----------|-----------|
+| API Request/Response | `application/dto/` | Protocol-agnostic, used by ApplicationService |
+| System API DTOs | `adapter/out/systemapi/dto/` | Specific to outbound adapter (see mod-017) |
+| HATEOAS Models | `adapter/in/rest/assembler/` | REST-specific, only for HATEOAS-enabled APIs |
+
+> **Why `application/dto/` for API DTOs?**
+> - Hexagonal purity: DTOs are part of the use case, not the transport
+> - Reusability: Same DTOs can be used by REST, gRPC, or async adapters
+> - Testability: ApplicationService tests don't depend on web layer
 
 ---
 

@@ -1,8 +1,8 @@
 // Template: SystemApiUnavailableException.java.tpl
-// Output: {{basePackage}}/adapter/systemapi/SystemApiUnavailableException.java
+// Output: {{basePackage}}/adapter/out/systemapi/SystemApiUnavailableException.java
 // Purpose: Exception for System API unavailability (circuit breaker open)
 
-package {{basePackage}}.adapter.systemapi;
+package {{basePackage}}.adapter.out.systemapi;
 
 /**
  * Exception thrown when System API is unavailable.
