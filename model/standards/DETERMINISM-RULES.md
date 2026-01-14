@@ -1,6 +1,6 @@
 # Determinism Rules for Code Generation
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Date:** 2026-01-13  
 **Status:** Active
 
@@ -674,4 +674,66 @@ public CustomerResponse getCustomer(UUID id) { ... }
 
 ---
 
-**Last Updated:** 2026-01-13
+## Known LLM Hallucinations (CRITICAL)
+
+> **These are patterns that LLMs consistently generate incorrectly.**
+> **Memorize these anti-patterns and NEVER use them.**
+
+### HALLUCINATION-001: String.replace with 3 arguments
+
+**The LLM frequently generates:**
+```java
+// ❌ DOES NOT COMPILE - This method does not exist in Java
+String result = value.replace("-", "T", 3);
+String result = value.replace(".", ":", 3);
+
+// ❌ DOES NOT COMPILE - replace() does not accept an index parameter
+value.replace(":", ".", value.lastIndexOf('.'));
+```
+
+**Java String.replace() signatures:**
+- `replace(char oldChar, char newChar)` ✅
+- `replace(CharSequence target, CharSequence replacement)` ✅
+- `replace(String, String, int)` ❌ **DOES NOT EXIST**
+
+**Correct alternative for DB2 timestamp parsing:**
+```java
+// ✅ CORRECT - Use substring() for positional manipulation
+// DB2 format: 2024-01-15-10.30.00.000000 (26 chars)
+// ISO format: 2024-01-15T10:30:00.000000Z
+if (timestamp.length() >= 26) {
+    String iso = timestamp.substring(0, 10) + "T" +  // yyyy-MM-dd
+        timestamp.substring(11, 13) + ":" +          // HH
+        timestamp.substring(14, 16) + ":" +          // mm
+        timestamp.substring(17, 19) + "." +          // ss
+        timestamp.substring(20) + "Z";               // SSSSSS
+    return Instant.parse(iso);
+}
+```
+
+**Common context:** DB2 timestamp parsing (`yyyy-MM-dd-HH.mm.ss.SSSSSS`)
+
+**Correct implementation:** See `mod-code-017-persistence-systemapi/MODULE.md` section "CRITICAL: Timestamp Parsing"
+
+### HALLUCINATION-002: @Transactional with System API
+
+**The LLM frequently generates:**
+```java
+// ❌ WRONG - No local transactions with HTTP calls
+@Service
+@Transactional
+public class CustomerApplicationService {
+```
+
+**Why it's wrong:** `@Transactional` manages database transactions. When persistence is via System API (HTTP), there are no local transactions to manage.
+
+**Correct:**
+```java
+// ✅ CORRECT - No @Transactional with System API persistence
+@Service
+public class CustomerApplicationService {
+```
+
+---
+
+**Last Updated:** 2026-01-14

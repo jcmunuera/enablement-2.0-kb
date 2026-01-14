@@ -1,7 +1,7 @@
 # Skill Type: CODE/GENERATE
 
-**Version:** 2.8  
-**Date:** 2026-01-13  
+**Version:** 2.11  
+**Date:** 2026-01-14  
 **Domain:** CODE
 
 ---
@@ -450,86 +450,283 @@ customer-api-generation/
 │  - Templates are NOT executed as scripts                                     │
 │                                                                              │
 │  ════════════════════════════════════════════════════════════════════════   │
-│  PHASE B.5: COMPILATION & CORRECTION (v2.8)                                  │
+│  PHASE B.5: CODE VALIDATION & AUTO-CORRECTION (v2.11)                        │
 │  ════════════════════════════════════════════════════════════════════════   │
 │                                                                              │
-│  > NEW in v2.8: Iterative compilation to detect and fix code errors.        │
+│  > UPDATED in v2.11: Three-tier compilation with ECJ fallback.              │
 │                                                                              │
-│  STEP 5.5: COMPILE AND CORRECT                                               │
-│  ───────────────────────────────────────────────────────────────────────────│
-│  Action: Compile generated code and fix errors iteratively                   │
-│  Input:  Generated project in output/{serviceName}                           │
-│  Output: Compilable project or error report                                  │
+│  ⚠️ THIS PHASE IS MANDATORY - Code that doesn't compile is NOT acceptable.  │
 │                                                                              │
 │  WHY THIS PHASE EXISTS:                                                      │
-│  LLM code generation can produce:                                            │
-│  - Hallucinated APIs (methods that don't exist)                              │
+│  LLM code generation WILL produce errors that only compilation can catch:   │
+│  - Hallucinated APIs (methods that don't exist in Java)                      │
 │  - Incomplete implementations (missing interface methods)                    │
-│  - Syntax errors                                                             │
+│  - Syntax errors (unbalanced braces, missing semicolons)                     │
 │                                                                              │
-│  These are NOT preventable with rules - the compiler is the validator.       │
+│  Documentation rules CANNOT prevent these - only validation can detect them.│
 │                                                                              │
-│  ALGORITHM:                                                                  │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  COMPILATION STRATEGY (Automatic Fallback)                                   │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────┐│
+│  │  TIER 1: MAVEN COMPILE (Best)                                           ││
+│  │  Requirements: JDK (javac) + Maven Central access                       ││
+│  │  Command: mvn compile -q                                                ││
+│  │  Detects: ALL compilation errors + dependency issues                    ││
+│  │  Confidence: HIGH                                                       ││
+│  ├─────────────────────────────────────────────────────────────────────────┤│
+│  │  TIER 2: ECJ COMPILE (Fallback - No JDK Required)                       ││
+│  │  Requirements: JRE only + Maven Central access (to download ecj.jar)   ││
+│  │  Command: java -jar ecj.jar -source 17 $(find . -name '*.java')        ││
+│  │  Detects: Compilation errors in source code                             ││
+│  │  Limitation: Cannot resolve Maven dependencies                          ││
+│  │  Confidence: MEDIUM-HIGH                                                ││
+│  ├─────────────────────────────────────────────────────────────────────────┤│
+│  │  TIER 3: SYNTAX CHECK (Last Resort - No Network)                        ││
+│  │  Requirements: Bash only                                                ││
+│  │  Command: syntax-check.sh                                               ││
+│  │  Detects: Known hallucinations + basic syntax errors                    ││
+│  │  Confidence: MEDIUM                                                     ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  STEP 5.5: VALIDATE AND CORRECT CODE                                         │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  ALGORITHM (ALWAYS EXECUTE):                                                 │
+│  ```                                                                         │
+│  PROJECT_DIR = output/{serviceName}                                          │
+│  MAX_ATTEMPTS = 3                                                            │
+│  validation_mode = "unknown"                                                 │
+│  corrections_made = []                                                       │
+│                                                                              │
+│  # ─────────────────────────────────────────────────────────────────────────│
+│  # STEP 1: Detect environment capabilities                                   │
+│  # ─────────────────────────────────────────────────────────────────────────│
+│  has_javac = execute("which javac").success                                  │
+│  has_maven_central = curl("https://repo1.maven.org/maven2/", timeout=5).ok   │
+│                                                                              │
+│  if has_javac and has_maven_central:                                         │
+│      validation_mode = "maven"                                               │
+│  elif has_maven_central:                                                     │
+│      validation_mode = "ecj"                                                 │
+│      # Download ECJ if not present                                           │
+│      if not exists("/home/claude/ecj.jar"):                                  │
+│          download("repo1.maven.org/.../ecj-3.36.0.jar", "/home/claude/ecj.jar")│
+│  else:                                                                       │
+│      validation_mode = "syntax"                                              │
+│                                                                              │
+│  log(f"Validation mode: {validation_mode}")                                  │
+│                                                                              │
+│  # ─────────────────────────────────────────────────────────────────────────│
+│  # STEP 2: Compile-and-fix loop                                              │
+│  # ─────────────────────────────────────────────────────────────────────────│
+│  for attempt in 1..MAX_ATTEMPTS:                                             │
+│      log(f"=== Compilation attempt {attempt}/{MAX_ATTEMPTS} ===")            │
+│                                                                              │
+│      # Execute compilation based on mode                                     │
+│      if validation_mode == "maven":                                          │
+│          result = execute(f"cd {PROJECT_DIR} && mvn compile -q 2>&1")        │
+│      elif validation_mode == "ecj":                                          │
+│          java_files = find(f"{PROJECT_DIR}/src/main/java", "*.java")         │
+│          result = execute(f"java -jar /home/claude/ecj.jar -source 17 {java_files}")│
+│      else:  # syntax                                                         │
+│          result = execute(f"syntax-check.sh {PROJECT_DIR}")                  │
+│                                                                              │
+│      if result.success:                                                      │
+│          log(f"✅ Validation PASSED on attempt {attempt}")                   │
+│          break                                                               │
+│                                                                              │
+│      # Parse errors                                                          │
+│      errors = parse_compilation_errors(result.output)                        │
+│      log(f"❌ Found {len(errors)} error(s)")                                 │
+│                                                                              │
+│      if attempt < MAX_ATTEMPTS:                                              │
+│          for error in errors:                                                │
+│              # Read file context                                             │
+│              context = read_file(error.file, error.line - 10, error.line + 10)│
+│              # Apply fix                                                     │
+│              fix = determine_fix(error, context)                             │
+│              apply_fix_with_str_replace(error.file, fix)                     │
+│              corrections_made.append({                                       │
+│                  "file": error.file,                                         │
+│                  "line": error.line,                                         │
+│                  "error": error.message,                                     │
+│                  "fix": fix.description                                      │
+│              })                                                              │
+│                                                                              │
+│  # ─────────────────────────────────────────────────────────────────────────│
+│  # STEP 3: Record results in trace                                           │
+│  # ─────────────────────────────────────────────────────────────────────────│
+│  record_in_trace("phase_b5_validation", {                                    │
+│      "mode": validation_mode,                                                │
+│      "attempts": attempt,                                                    │
+│      "final_status": "PASS" if result.success else "FAIL",                   │
+│      "corrections": corrections_made,                                        │
+│      "confidence": "HIGH" if validation_mode == "maven" else                 │
+│                    "MEDIUM-HIGH" if validation_mode == "ecj" else "MEDIUM"  │
+│  })                                                                          │
+│  ```                                                                         │
+│                                                                              │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  ECJ SETUP (When Maven Not Available)                                        │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  ECJ (Eclipse Compiler for Java) allows compilation with JRE only:           │
+│                                                                              │
+│  ```bash                                                                     │
+│  # Download ECJ (one-time, 2.3MB)                                            │
+│  curl -sL -o /home/claude/ecj.jar \                                          │
+│    "https://repo1.maven.org/maven2/org/eclipse/jdt/ecj/3.36.0/ecj-3.36.0.jar"│
+│                                                                              │
+│  # Compile Java files                                                        │
+│  java -jar /home/claude/ecj.jar \                                            │
+│    -source 17 \                                                              │
+│    -d target/classes \                                                       │
+│    $(find src/main/java -name "*.java")                                      │
+│  ```                                                                         │
+│                                                                              │
+│  ECJ error format is similar to javac:                                       │
+│  ```                                                                         │
+│  1. ERROR in /path/File.java (at line N)                                     │
+│     The method replace(String, String, int) is undefined for type String    │
+│  ```                                                                         │
+│                                                                              │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  KNOWN HALLUCINATIONS CATALOG                                                │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  Reference: model/standards/DETERMINISM-RULES.md "Known LLM Hallucinations" │
+│                                                                              │
+│  HALLUCINATION-001: String.replace with 3 arguments                          │
+│  ┌─────────────────────────────────────────────────────────────────────────┐│
+│  │ DETECTION PATTERN:                                                       ││
+│  │   grep -rn "\.replace\s*([^,]*,[^,]*,[^)]*)" --include="*.java"         ││
+│  │                                                                          ││
+│  │ EXAMPLES OF INVALID CODE:                                                ││
+│  │   .replace("-", "T", 3)                    // ❌ 3 args                  ││
+│  │   .replace(".", ":", index)                // ❌ 3 args                  ││
+│  │   .replace(":", ".", str.lastIndexOf('.')) // ❌ 3 args                  ││
+│  │                                                                          ││
+│  │ CORRECT FIX (use substring):                                             ││
+│  │   // For DB2 timestamp: 2024-01-15-10.30.00.000000 → ISO format         ││
+│  │   if (timestamp.length() >= 26) {                                        ││
+│  │       String iso = timestamp.substring(0, 10) + "T" +                    ││
+│  │           timestamp.substring(11, 13) + ":" +                            ││
+│  │           timestamp.substring(14, 16) + ":" +                            ││
+│  │           timestamp.substring(17, 19) + "." +                            ││
+│  │           timestamp.substring(20) + "Z";                                 ││
+│  │       return Instant.parse(iso);                                         ││
+│  │   }                                                                      ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  HALLUCINATION-002: @Transactional with System API                           │
+│  ┌─────────────────────────────────────────────────────────────────────────┐│
+│  │ DETECTION PATTERN:                                                       ││
+│  │   grep -rn "@Transactional" adapter/out/systemapi/ --include="*.java"   ││
+│  │                                                                          ││
+│  │ CORRECT FIX: Remove @Transactional annotation entirely                   ││
+│  │   HTTP calls to System APIs don't support local transactions.            ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  DEEP CODE REVIEW (When Maven Not Available)                                 │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  When Maven compilation is not available, the agent MUST:                    │
+│                                                                              │
+│  1. READ EVERY Java file in output/{serviceName}/src/                        │
+│  2. For each file, check:                                                    │
+│     - Package declaration matches directory structure                        │
+│     - All imports are valid (no typos, correct packages)                     │
+│     - Class/interface/enum/record declaration is valid                       │
+│     - Brace and parenthesis balance                                          │
+│     - Method signatures are syntactically correct                            │
+│     - No hallucinated method calls (String.replace with 3 args, etc.)       │
+│     - Annotations are valid (@Override, @Service, @Repository, etc.)        │
+│  3. FIX any errors found using str_replace tool                              │
+│  4. CREATE a validation report in trace/                                     │
+│                                                                              │
+│  VALIDATION REPORT FORMAT:                                                   │
+│  ```markdown                                                                 │
+│  ## Code Validation Report                                                   │
+│                                                                              │
+│  | File | Status | Issues Found | Fixes Applied |                           │
+│  |------|--------|--------------|---------------|                           │
+│  | CustomerController.java | ✅ PASS | 0 | 0 |                               │
+│  | PartyMapper.java | ✅ FIXED | 1 | 1 |                                     │
+│  | ... | ... | ... | ... |                                                   │
+│                                                                              │
+│  ### Issues Detected and Fixed                                               │
+│  1. PartyMapper.java:188 - String.replace with 3 args → Fixed with substring│
+│  ```                                                                         │
+│                                                                              │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  MAVEN COMPILE LOOP (When Available)                                         │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
 │  ```                                                                         │
 │  max_attempts = 3                                                            │
-│  attempt = 1                                                                 │
-│                                                                              │
-│  while attempt <= max_attempts:                                              │
-│      result = execute("mvn compile -q", cwd=output/{serviceName})            │
+│  for attempt in 1..max_attempts:                                             │
+│      result = execute("mvn compile -q 2>&1")                                 │
 │                                                                              │
 │      if result.success:                                                      │
 │          log("✅ Compilation successful on attempt {attempt}")               │
 │          break                                                               │
 │                                                                              │
-│      else:                                                                   │
-│          errors = parse_compiler_errors(result.stderr)                       │
-│          log("❌ Compilation failed, attempt {attempt}/{max_attempts}")      │
-│          log("   Errors: {errors}")                                          │
+│      errors = parse_maven_errors(result.stderr)                              │
+│      # Pattern: [ERROR] /path/File.java:[line,col] message                   │
 │                                                                              │
-│          if attempt < max_attempts:                                          │
-│              for error in errors:                                            │
-│                  fix = agent.request_fix(                                    │
-│                      file=error.file,                                        │
-│                      line=error.line,                                        │
-│                      message=error.message,                                  │
-│                      context=read_file_context(error.file, error.line)       │
-│                  )                                                           │
-│                  apply_fix(fix)                                              │
-│                                                                              │
-│          attempt += 1                                                        │
+│      for error in errors:                                                    │
+│          # Read context around error                                         │
+│          context = read_file_lines(error.file, error.line - 10, error.line + 10)│
+│          # Apply fix                                                         │
+│          fix = agent.fix_compilation_error(error, context)                   │
+│          apply_fix(fix)                                                      │
 │                                                                              │
 │  if not result.success:                                                      │
+│      # Log remaining errors but continue                                     │
 │      record_in_trace("compilation_failed", errors)                           │
-│      # Continue to validation - will be flagged there                        │
 │  ```                                                                         │
 │                                                                              │
-│  ERROR PARSING:                                                              │
-│  Maven compiler errors follow pattern:                                       │
-│  ```                                                                         │
-│  [ERROR] /path/to/File.java:[line,col] error message                         │
-│  ```                                                                         │
+│  COMMON MAVEN ERROR FIXES:                                                   │
+│  | Error Type | Example | Fix |                                              │
+│  |------------|---------|-----|                                              │
+│  | Method not found | "no suitable method found for replace(String,String,int)" | Use correct method signature │
+│  | Missing import | "cannot find symbol: class LocalDate" | Add import statement │
+│  | Type mismatch | "incompatible types: String cannot be converted to UUID" | Add conversion or cast │
+│  | Missing method | "class X does not override abstract method Y" | Implement missing method │
 │                                                                              │
-│  Extract: file, line, column, message                                        │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  TRACEABILITY REQUIREMENTS                                                   │
+│  ───────────────────────────────────────────────────────────────────────────│
 │                                                                              │
-│  AGENT FIX REQUEST:                                                          │
-│  For each error, provide to agent:                                           │
-│  - Full error message                                                        │
-│  - File content around error line (±10 lines)                                │
-│  - Request: "Fix this compilation error"                                     │
-│                                                                              │
-│  COMMON FIXES:                                                               │
-│  | Error Type | Typical Fix |                                                │
-│  |------------|-------------|                                                │
-│  | Method not found | Use correct API method |                               │
-│  | Missing implementation | Add missing method to class |                    │
-│  | Type mismatch | Correct type or add cast |                                │
-│  | Missing import | Add import statement |                                   │
-│                                                                              │
-│  TRACEABILITY:                                                               │
 │  Record in trace/generation-trace.md:                                        │
-│  - Number of compilation attempts                                            │
-│  - Errors found and fixes applied                                            │
-│  - Final compilation status                                                  │
+│  ```markdown                                                                 │
+│  ## Phase B.5: Code Validation                                               │
+│                                                                              │
+│  ### Environment Detection                                                   │
+│  - JDK (javac) available: {yes/no}                                           │
+│  - Maven Central accessible: {yes/no}                                        │
+│  - **Validation Mode**: {maven/ecj/syntax}                                   │
+│                                                                              │
+│  ### Compilation Results                                                     │
+│  - **Attempts**: {1-3}                                                       │
+│  - **Final Status**: {PASS/FAIL}                                             │
+│  - **Confidence**: {HIGH/MEDIUM-HIGH/MEDIUM}                                 │
+│                                                                              │
+│  ### Corrections Applied                                                     │
+│  | Attempt | File | Line | Error | Fix Applied |                            │
+│  |---------|------|------|-------|-------------|                            │
+│  | 1 | PartyMapper.java | 188 | String.replace 3 args | substring() |       │
+│  | ... | ... | ... | ... | ... |                                             │
+│                                                                              │
+│  ### Validation Mode Details                                                 │
+│  - **maven**: Full compilation with dependency resolution (HIGH confidence) │
+│  - **ecj**: ECJ compiler, no JDK required (MEDIUM-HIGH confidence)          │
+│  - **syntax**: Static analysis only, known patterns (MEDIUM confidence)     │
+│  ```                                                                         │
 │                                                                              │
 │  ════════════════════════════════════════════════════════════════════════   │
 │  PHASE C: VALIDATION (Sequential)                                            │

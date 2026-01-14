@@ -1,7 +1,7 @@
 ---
 id: mod-code-017-persistence-systemapi
 title: "MOD-017: System API Persistence"
-version: 1.3
+version: 1.4
 date: 2025-12-01
 updated: 2026-01-13
 status: Active
@@ -462,6 +462,74 @@ public class CustomerSystemApiMapper {
     }
 }
 ```
+
+### ⚠️ CRITICAL: Timestamp Parsing - MANDATORY CODE
+
+> **THIS IS A KNOWN LLM HALLUCINATION POINT**
+> 
+> LLMs frequently generate INVALID code for DB2 timestamp parsing.
+> The code below is the ONLY correct implementation. COPY IT EXACTLY.
+
+**✅ CORRECT - USE THIS EXACTLY:**
+
+```java
+// In Mapper class - COPY EXACTLY AS-IS
+private static final DateTimeFormatter DB2_TIMESTAMP_FORMAT = 
+    DateTimeFormatter.ofPattern("yyyy-MM-dd-HH.mm.ss.SSSSSS");
+
+/**
+ * Converts DB2 timestamp string to Instant.
+ * DB2 format: yyyy-MM-dd-HH.mm.ss.SSSSSS
+ * Example: "2024-01-15-10.30.00.000000"
+ *
+ * @generated mod-code-017-persistence-systemapi v1.4
+ */
+public Instant parseDb2Timestamp(String db2Timestamp) {
+    if (db2Timestamp == null || db2Timestamp.isBlank()) {
+        return null;
+    }
+    try {
+        // DB2 format: 2024-01-15-10.30.00.000000 (26 chars)
+        // ISO format: 2024-01-15T10:30:00.000000Z
+        if (db2Timestamp.length() >= 26) {
+            String isoFormat = db2Timestamp.substring(0, 10) + "T" +    // yyyy-MM-dd + T
+                db2Timestamp.substring(11, 13) + ":" +                   // HH + :
+                db2Timestamp.substring(14, 16) + ":" +                   // mm + :
+                db2Timestamp.substring(17, 19) + "." +                   // ss + .
+                db2Timestamp.substring(20) + "Z";                        // SSSSSS + Z
+            return Instant.parse(isoFormat);
+        }
+        return null;
+    } catch (DateTimeParseException e) {
+        return null;
+    }
+}
+```
+
+**❌ ANTI-PATTERN - NEVER USE:**
+
+```java
+// THIS IS WRONG - String.replace(String, String, int) DOES NOT EXIST IN JAVA
+String isoFormat = value.replace("-", "T", 3);  // ❌ COMPILATION ERROR!
+
+// THIS IS WRONG - replace() only takes 2 arguments
+value.replace(".", ":", 3);  // ❌ COMPILATION ERROR!
+
+// THIS IS WRONG - chained replace with index parameter
+value.replace(":", ".", value.lastIndexOf('.'));  // ❌ COMPILATION ERROR!
+```
+
+**Why this matters:**
+- `String.replace(CharSequence, CharSequence)` exists ✅
+- `String.replace(char, char)` exists ✅  
+- `String.replace(String, String, int)` DOES NOT EXIST ❌
+
+The Java String class has NO replace method that takes 3 arguments.
+Any code using 3-argument replace WILL FAIL COMPILATION.
+
+**The ONLY safe approach for DB2 timestamp parsing is substring().**
+
+---
 
 ### Providing mapping.json
 
