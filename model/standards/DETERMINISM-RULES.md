@@ -1,7 +1,7 @@
 # Determinism Rules for Code Generation
 
-**Version:** 1.3  
-**Date:** 2026-01-13  
+**Version:** 1.4  
+**Date:** 2026-01-19  
 **Status:** Active
 
 ---
@@ -22,6 +22,21 @@ These rules apply to:
 - All CODE domain modules (`mod-code-*`)
 - All CODE domain skills (`skill-code-*`)
 - All generated Java/Spring Boot code
+
+---
+
+## Rule Priority (Conflict Resolution)
+
+When rules conflict, follow this priority (highest to lowest):
+
+| Priority | Source | Example |
+|----------|--------|---------|
+| 1 (Highest) | MODULE.md `## ⚠️ CRITICAL` section | "NO @Transactional with System API" |
+| 2 | MODULE.md templates | Specific code patterns |
+| 3 | DETERMINISM-RULES.md | Global patterns (this file) |
+| 4 (Lowest) | LLM training knowledge | Default behavior |
+
+**Principle:** Specific rules override general rules. Module rules override global rules.
 
 ---
 
@@ -679,6 +694,20 @@ public CustomerResponse getCustomer(UUID id) { ... }
 > **These are patterns that LLMs consistently generate incorrectly.**
 > **Memorize these anti-patterns and NEVER use them.**
 
+### Module-Specific Rules
+
+Some hallucination rules are **module-specific** and documented in their respective MODULE.md files:
+
+| Rule | Module | Description |
+|------|--------|-------------|
+| NO @Transactional with System API | mod-017 | Don't use database transactions with HTTP persistence |
+| NO Spring Data Pageable without JPA | mod-019 | Use @RequestParam for pagination, not Pageable |
+| RestClient is DEFAULT | mod-018 | Only use Feign if explicitly requested |
+
+**Principle:** Module-specific rules live with their modules. If a module is deprecated, its rules go with it.
+
+---
+
 ### HALLUCINATION-001: String.replace with 3 arguments
 
 **The LLM frequently generates:**
@@ -714,32 +743,6 @@ if (timestamp.length() >= 26) {
 **Common context:** DB2 timestamp parsing (`yyyy-MM-dd-HH.mm.ss.SSSSSS`)
 
 **Correct implementation:** See `mod-code-017-persistence-systemapi/MODULE.md` section "CRITICAL: Timestamp Parsing"
-
-### HALLUCINATION-002: @Transactional with System API
-
-**The LLM frequently generates:**
-```java
-// ❌ WRONG - No local transactions with HTTP calls
-@Service
-@Transactional
-public class CustomerApplicationService {
-```
-
-**Why it's wrong:** `@Transactional` manages database transactions. When persistence is via System API (HTTP), there are no local transactions to manage.
-
-**Correct:**
-```java
-// ✅ CORRECT - No @Transactional with System API persistence
-@Service
-public class CustomerApplicationService {
-```
-
----
-
-**Last Updated:** 2026-01-19
-
----
-
 ## Mandatory Dependency Versions (CRITICAL)
 
 > **LLMs frequently generate incorrect or non-existent dependency versions.**
@@ -867,121 +870,6 @@ public class CustomerApplicationService {
 | `<n>` instead of `<name>` | Typo/truncation | Use `<name>` tag |
 | Missing version for resilience4j | Not in Spring Boot BOM | Add explicit version |
 | Wrong parent version | Hallucination | Use 3.2.0 |
-
----
-
-### RULE-004: REST Client Selection (RestClient is Default)
-
-**The Generator MUST use RestClient by default unless the user explicitly requests Feign.**
-
-**Default - RestClient (no extra dependencies):**
-```java
-// ✅ DEFAULT - RestClient is included in spring-boot-starter-web
-@Component
-public class PartiesSystemApiClient {
-    
-    private final RestClient restClient;
-    
-    public PartiesSystemApiClient(RestClient.Builder builder,
-                                   @Value("${system-api.parties.url}") String baseUrl) {
-        this.restClient = builder.baseUrl(baseUrl).build();
-    }
-    
-    public PartyResponse getParty(String id) {
-        return restClient.get()
-            .uri("/parties/{id}", id)
-            .retrieve()
-            .body(PartyResponse.class);
-    }
-}
-```
-
-**Alternative - Feign (ONLY if user explicitly requests):**
-
-If user requests Feign, you MUST add the dependency to pom.xml:
-```xml
-<!-- REQUIRED for Feign -->
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-openfeign</artifactId>
-</dependency>
-```
-
-```java
-// ⚠️ Only if user explicitly requests Feign AND dependency is added
-@EnableFeignClients
-@SpringBootApplication
-public class MyApplication { }
-
-@FeignClient(name = "parties-api", url = "${system-api.parties.url}")
-public interface PartiesSystemApiClient {
-    @GetMapping("/parties/{id}")
-    PartyResponse getParty(@PathVariable String id);
-}
-```
-
-**Rule:** Use RestClient by default. Only use Feign if explicitly requested AND add its dependency.
-
----
-
-### HALLUCINATION-005: Using @Transactional with System API
-
-**The LLM frequently generates:**
-```java
-// ❌ WRONG - No local transactions with HTTP calls
-@Service
-@Transactional
-public class CustomerApplicationService {
-```
-
-**Why it's wrong:** 
-- `@Transactional` manages database transactions
-- System API persistence uses HTTP, not database
-- Requires `spring-boot-starter-data-jpa` which is not included
-
-**Correct:**
-```java
-// ✅ CORRECT - No @Transactional with System API persistence
-@Service
-public class CustomerApplicationService {
-```
-
-**Rule:** NEVER use `@Transactional` when persistence is via System API (HTTP calls).
-
----
-
-### HALLUCINATION-003: Using Spring Data Pageable without JPA
-
-**The LLM frequently generates:**
-```java
-// ❌ WRONG - Pageable requires spring-data-commons or spring-boot-starter-data-jpa
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
-
-@GetMapping
-public ResponseEntity<List<CustomerResponse>> getAll(
-    @PageableDefault(size = 20) Pageable pageable) {
-```
-
-**Why it's wrong:**
-- `Pageable`, `PageableDefault`, `EnableSpringDataWebSupport` are in `spring-data-commons`
-- This dependency is NOT included when using System API persistence
-- Only available with `spring-boot-starter-data-jpa` or explicit `spring-data-commons`
-
-**Correct - Manual pagination parameters:**
-```java
-// ✅ CORRECT - Use explicit parameters, not Spring Data Pageable
-import org.springframework.web.bind.annotation.RequestParam;
-
-@GetMapping
-public ResponseEntity<List<CustomerResponse>> getAll(
-    @RequestParam(defaultValue = "0") int page,
-    @RequestParam(defaultValue = "20") int size) {
-    // Pagination logic using page and size
-}
-```
-
-**Rule:** NEVER use `Pageable`, `PageableDefault`, or `EnableSpringDataWebSupport` when persistence is via System API. Use explicit `@RequestParam` for pagination.
 
 ---
 

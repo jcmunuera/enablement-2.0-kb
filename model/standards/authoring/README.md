@@ -1,7 +1,7 @@
 # Authoring Standards
 
-**Version:** 2.4  
-**Last Updated:** 2025-12-24
+**Version:** 2.5  
+**Last Updated:** 2026-01-19
 
 ---
 
@@ -15,6 +15,31 @@ This directory contains **authoring guides** for creating assets in the Enableme
 - Examples of well-formed assets
 - Relationship requirements (what other assets must exist/be referenced)
 - **Coherence rules** (how assets relate to each other)
+
+---
+
+## What's New in v2.5
+
+> **Key changes:** Determinism Rules Architecture
+
+| Guide | Change |
+|-------|--------|
+| **MODULE.md v2.1** | NEW section "Determinism and Module-Specific Rules" |
+| **README.md** | NEW section "Determinism Rules Architecture" |
+
+### Key Concepts
+
+**Rule Cohesion:** Module-specific rules live with their modules. When a module is deprecated, its rules go with it.
+
+```
+DETERMINISM-RULES.md (Global)    MODULE.md (Specific)
+├── Java patterns                ├── ## ⚠️ CRITICAL section
+├── Required annotations         │   └── Rules that ONLY apply
+├── Code style                   │       to THIS module
+└── Dependency versions          └── Priority: HIGHEST
+```
+
+**Priority:** MODULE.md CRITICAL > MODULE.md templates > DETERMINISM-RULES.md > LLM training
 
 ---
 
@@ -227,8 +252,22 @@ The **MODULE.md** guide clarifies:
 1. **Modules as knowledge for GENERATE** - Templates are guidance, not scripts
 2. **Modules as transformation for ADD** - More deterministic application
 3. **Tier-3 validation** - Runs AFTER generation to verify compliance
+4. **Module-specific rules** - CRITICAL sections for rules that only apply to this module
 
 **Understand module role before creating templates.**
+
+### Determinism Rules Architecture
+
+Rules for deterministic code generation are split between global and module-specific:
+
+| Location | Contains | Priority |
+|----------|----------|----------|
+| `DETERMINISM-RULES.md` | Global patterns (records, DTOs, style) | Base |
+| `MODULE.md` `## ⚠️ CRITICAL` | Module-specific rules | **Highest** |
+
+**Principle:** Module-specific rules override global rules. When a module is deprecated, its rules go with it.
+
+See `MODULE.md` section "Determinism and Module-Specific Rules" for details.
 
 ### FLOW.md and CONSUMER-PROMPT Updates
 

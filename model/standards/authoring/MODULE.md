@@ -1,7 +1,7 @@
 # Authoring Guide: MODULE
 
-**Version:** 2.0  
-**Last Updated:** 2025-01-15  
+**Version:** 2.1  
+**Last Updated:** 2026-01-19  
 **Asset Type:** Module  
 **Model Version:** 2.0
 
@@ -396,7 +396,90 @@ Tier-3 validators check:
 
 ---
 
-## Validation Checklist
+## Determinism and Module-Specific Rules
+
+### Rule Architecture
+
+Rules for code generation follow a **cohesion principle**: module-specific rules live with their modules.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         RULE ARCHITECTURE                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  DETERMINISM-RULES.md (Global)         MODULE.md (Specific)             │
+│  ├── Java patterns (records, DTOs)     ├── ## ⚠️ CRITICAL section       │
+│  ├── Required annotations              │   └── Rules that ONLY apply    │
+│  ├── Forbidden patterns (Lombok)       │       to THIS module           │
+│  ├── Code style conventions            ├── Templates                     │
+│  └── Dependency versions               └── Module-specific patterns      │
+│                                                                          │
+│  Priority: MODULE.md CRITICAL > MODULE.md templates > DETERMINISM-RULES │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### The `## ⚠️ CRITICAL` Section
+
+Modules SHOULD include a CRITICAL section at the top of the markdown body for rules that:
+- **Only apply to this module** (not globally)
+- **Override general patterns** when there's a conflict
+- **Prevent known hallucinations** specific to this module's technology
+
+```markdown
+# Module: My Module
+
+## ⚠️ CRITICAL: [Rule Name]
+
+**[Clear statement of the rule]**
+
+\`\`\`java
+// ❌ WRONG - [Explanation]
+bad code example
+
+// ✅ CORRECT - [Explanation]  
+good code example
+\`\`\`
+
+**Why?**
+- Bullet points explaining rationale
+- Reference to specific constraints
+
+**This rule OVERRIDES [other rule/module] when [condition].**
+
+---
+```
+
+### Examples of Module-Specific Rules
+
+| Module | CRITICAL Rule | Why Module-Specific |
+|--------|---------------|---------------------|
+| mod-017 (System API) | NO @Transactional | Only applies when persistence is via HTTP |
+| mod-018 (REST Client) | RestClient is DEFAULT | Only applies to API integration |
+| mod-019 (API Exposure) | NO Spring Data Pageable | Only applies when not using JPA |
+
+### Rule Lifecycle
+
+When a module is **deprecated**, its specific rules go with it:
+
+```
+mod-017 DEPRECATED
+  ├── MODULE.md archived
+  ├── Templates archived  
+  └── "NO @Transactional" rule automatically obsolete
+      (No need to update DETERMINISM-RULES.md)
+```
+
+### What Goes Where
+
+| Rule Type | Location | Example |
+|-----------|----------|---------|
+| **Global Java/Spring patterns** | DETERMINISM-RULES.md | "Use records for DTOs" |
+| **Module-specific constraints** | MODULE.md CRITICAL | "NO @Transactional with System API" |
+| **Known hallucinations (global)** | DETERMINISM-RULES.md | "String.replace has no 3-arg version" |
+| **Known hallucinations (module)** | MODULE.md CRITICAL | "Pageable requires spring-data" |
+
+---
 
 ### Required in MODULE.md
 
