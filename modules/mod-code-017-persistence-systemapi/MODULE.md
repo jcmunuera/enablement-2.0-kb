@@ -42,6 +42,31 @@ Reusable templates for implementing persistence via System API delegation. The D
 
 ---
 
+## ⚠️ CRITICAL: NO @Transactional with System API
+
+**When persistence is via System API (HTTP), DO NOT use `@Transactional`.**
+
+```java
+// ❌ WRONG - System API uses HTTP, not database transactions
+@Service
+@Transactional  // <-- REMOVE THIS
+public class CustomerApplicationService {
+
+// ✅ CORRECT - No @Transactional with System API persistence
+@Service
+public class CustomerApplicationService {
+```
+
+**Why?**
+- `@Transactional` manages **database transactions** (JPA/JDBC)
+- System API persistence uses **HTTP calls**, not database
+- There is no local transaction to manage
+- Requires `spring-boot-starter-data-jpa` which is NOT in dependencies
+
+**This rule OVERRIDES mod-code-015 examples** which show `@Transactional` for JPA persistence.
+
+---
+
 ## Structure
 
 ```
@@ -103,149 +128,116 @@ public class {Entity}Dto {
 
 ---
 
-## Template: Client (Feign)
+## Template: Client (RestClient - DEFAULT)
+
+> **Client selection:** This module uses REST clients from [mod-code-018](../mod-code-018-api-integration-rest-java-spring/MODULE.md).
+> **Default:** RestClient (no extra dependencies needed)
+> If user explicitly requests Feign or RestTemplate, see mod-code-018 for those templates.
 
 ```java
-// File: {basePackage}/adapter/systemapi/client/{Entity}SystemApiClient.java
+// File: {basePackage}/adapter/out/systemapi/client/{Entity}SystemApiClient.java
 
-package {basePackage}.adapter.systemapi.client;
+package {basePackage}.adapter.out.systemapi.client;
 
-import {basePackage}.adapter.systemapi.dto.{Entity}Dto;
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-@FeignClient(
-    name = "{serviceName}-system-api",
-    url = "${system-api.{serviceName}.base-url}",
-    configuration = SystemApiFeignConfig.class
-)
-public interface {Entity}SystemApiClient {
-    
-    @GetMapping("/api/v1/{resourcePath}/{id}")
-    {Entity}Dto findById(@PathVariable("id") String id);
-    
-    @PostMapping("/api/v1/{resourcePath}")
-    {Entity}Dto save(@RequestBody {Entity}Dto dto);
-    
-    @DeleteMapping("/api/v1/{resourcePath}/{id}")
-    void deleteById(@PathVariable("id") String id);
-}
-```
-
----
-
-## Template: Client (RestTemplate)
-
-```java
-// File: {basePackage}/adapter/systemapi/client/{Entity}SystemApiClient.java
-
-package {basePackage}.adapter.systemapi.client;
-
-import {basePackage}.adapter.systemapi.dto.{Entity}Dto;
-import lombok.RequiredArgsConstructor;
+import {basePackage}.adapter.out.systemapi.dto.{Entity}Response;
+import {basePackage}.adapter.out.systemapi.dto.{Entity}Request;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-
-@Component
-@RequiredArgsConstructor
-public class {Entity}SystemApiClient {
-    
-    private final RestTemplate restTemplate;
-    
-    @Value("${system-api.{serviceName}.base-url}")
-    private String baseUrl;
-    
-    public {Entity}Dto findById(String id) {
-        HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<{Entity}Dto> response = restTemplate.exchange(
-            baseUrl + "/api/v1/{resourcePath}/{id}",
-            HttpMethod.GET,
-            entity,
-            {Entity}Dto.class,
-            id
-        );
-        return response.getBody();
-    }
-    
-    public {Entity}Dto save({Entity}Dto dto) {
-        HttpEntity<{Entity}Dto> entity = new HttpEntity<>(dto, createHeaders());
-        ResponseEntity<{Entity}Dto> response = restTemplate.exchange(
-            baseUrl + "/api/v1/{resourcePath}",
-            HttpMethod.POST,
-            entity,
-            {Entity}Dto.class
-        );
-        return response.getBody();
-    }
-    
-    public void deleteById(String id) {
-        HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-        restTemplate.exchange(
-            baseUrl + "/api/v1/{resourcePath}/{id}",
-            HttpMethod.DELETE,
-            entity,
-            Void.class,
-            id
-        );
-    }
-    
-    private HttpHeaders createHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-Source-System", "{serviceName}-domain-api");
-        headers.set("X-Correlation-Id", java.util.UUID.randomUUID().toString());
-        return headers;
-    }
-}
-```
-
----
-
-## Template: Client (RestClient)
-
-```java
-// File: {basePackage}/adapter/systemapi/client/{Entity}SystemApiClient.java
-
-package {basePackage}.adapter.systemapi.client;
-
-import {basePackage}.adapter.systemapi.dto.{Entity}Dto;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.slf4j.MDC;
 
+/**
+ * REST client for System API integration.
+ * Uses Spring RestClient (Spring 6.1+ / Boot 3.2+).
+ * 
+ * @generated mod-code-017-persistence-systemapi
+ */
 @Component
-@RequiredArgsConstructor
 public class {Entity}SystemApiClient {
     
     private final RestClient restClient;
     
-    public {Entity}Dto findById(String id) {
-        return restClient.get()
-            .uri("/api/v1/{resourcePath}/{id}", id)
-            .header("X-Source-System", "{serviceName}-domain-api")
-            .retrieve()
-            .body({Entity}Dto.class);
+    public {Entity}SystemApiClient(
+            RestClient.Builder restClientBuilder,
+            @Value("${system-api.{service-name}.base-url}") String baseUrl) {
+        this.restClient = restClientBuilder
+            .baseUrl(baseUrl)
+            .build();
     }
     
-    public {Entity}Dto save({Entity}Dto dto) {
-        return restClient.post()
-            .uri("/api/v1/{resourcePath}")
-            .header("X-Source-System", "{serviceName}-domain-api")
-            .body(dto)
+    public {Entity}Response findById(String id) {
+        return restClient.get()
+            .uri("/{resource}/{id}", id)
+            .headers(this::addCorrelationHeaders)
             .retrieve()
-            .body({Entity}Dto.class);
+            .body({Entity}Response.class);
+    }
+    
+    public {Entity}Response create({Entity}Request request) {
+        return restClient.post()
+            .uri("/{resource}")
+            .headers(this::addCorrelationHeaders)
+            .body(request)
+            .retrieve()
+            .body({Entity}Response.class);
+    }
+    
+    public {Entity}Response update(String id, {Entity}Request request) {
+        return restClient.put()
+            .uri("/{resource}/{id}", id)
+            .headers(this::addCorrelationHeaders)
+            .body(request)
+            .retrieve()
+            .body({Entity}Response.class);
     }
     
     public void deleteById(String id) {
         restClient.delete()
-            .uri("/api/v1/{resourcePath}/{id}", id)
-            .header("X-Source-System", "{serviceName}-domain-api")
+            .uri("/{resource}/{id}", id)
+            .headers(this::addCorrelationHeaders)
             .retrieve()
             .toBodilessEntity();
+    }
+    
+    private void addCorrelationHeaders(org.springframework.http.HttpHeaders headers) {
+        String correlationId = MDC.get("X-Correlation-ID");
+        if (correlationId != null) {
+            headers.set("X-Correlation-ID", correlationId);
+        }
+    }
+}
+```
+
+### Alternative: Feign (Only if explicitly requested)
+
+If user requests Feign, see [mod-code-018 Template 2](../mod-code-018-api-integration-rest-java-spring/MODULE.md#template-2-feign-only-if-explicitly-requested).
+
+**Remember:** Feign requires adding `spring-cloud-starter-openfeign` to pom.xml.
+
+---
+
+## Template: RestClient Configuration
+
+```java
+// File: {basePackage}/infrastructure/config/RestClientConfig.java
+
+package {basePackage}.infrastructure.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
+
+/**
+ * RestClient configuration.
+ * 
+ * @generated mod-code-017-persistence-systemapi
+ */
+@Configuration
+public class RestClientConfig {
+    
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder();
     }
 }
 ```
@@ -519,38 +511,6 @@ public class {Entity}SystemApiAdapter implements {Entity}Repository {
 
 ---
 
-## Template: Feign Configuration
-
-```java
-// File: {basePackage}/adapter/systemapi/config/SystemApiFeignConfig.java
-
-package {basePackage}.adapter.systemapi.config;
-
-import feign.Logger;
-import feign.RequestInterceptor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class SystemApiFeignConfig {
-    
-    @Bean
-    public Logger.Level feignLoggerLevel() {
-        return Logger.Level.BASIC;
-    }
-    
-    @Bean
-    public RequestInterceptor systemApiRequestInterceptor() {
-        return requestTemplate -> {
-            requestTemplate.header("X-Source-System", "{serviceName}-domain-api");
-            requestTemplate.header("X-Correlation-Id", java.util.UUID.randomUUID().toString());
-        };
-    }
-}
-```
-
----
-
 ## Template: Configuration
 
 ### application.yml
@@ -561,15 +521,6 @@ system-api:
     base-url: ${SYSTEM_API_{SERVICE_NAME}_URL:http://localhost:8081}
     connect-timeout: 5s
     read-timeout: 10s
-
-# Feign (if using Feign)
-feign:
-  client:
-    config:
-      {serviceName}-system-api:
-        connectTimeout: 5000
-        readTimeout: 10000
-        loggerLevel: basic
 
 # Resilience4j
 resilience4j:
@@ -604,20 +555,20 @@ management:
 
 ## Template: Dependencies
 
-### pom.xml (Feign)
+### pom.xml (RestClient - DEFAULT)
 
 ```xml
-<!-- Feign Client -->
+<!-- Web (includes RestClient) -->
 <dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-openfeign</artifactId>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
 </dependency>
 
-<!-- Resilience4j -->
+<!-- Resilience4j - version 2.2.0 -->
 <dependency>
     <groupId>io.github.resilience4j</groupId>
     <artifactId>resilience4j-spring-boot3</artifactId>
-    <version>2.1.0</version>
+    <version>${resilience4j.version}</version>
 </dependency>
 
 <dependency>
@@ -626,25 +577,15 @@ management:
 </dependency>
 ```
 
-### pom.xml (RestTemplate/RestClient)
+### pom.xml (Feign - Only if explicitly requested)
+
+If user requests Feign, **add this dependency:**
 
 ```xml
-<!-- Web Client -->
+<!-- REQUIRED for Feign - only add if using Feign -->
 <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-web</artifactId>
-</dependency>
-
-<!-- Resilience4j -->
-<dependency>
-    <groupId>io.github.resilience4j</groupId>
-    <artifactId>resilience4j-spring-boot3</artifactId>
-    <version>2.1.0</version>
-</dependency>
-
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-aop</artifactId>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
 </dependency>
 ```
 
@@ -741,11 +682,15 @@ class {Entity}SystemApiAdapterTest {
 
 ## Client Selection
 
-| Client | Use When | Dependencies |
-|--------|----------|--------------|
-| **Feign** | New projects, clean interfaces | spring-cloud-starter-openfeign |
-| **RestTemplate** | Legacy code, simple cases | spring-boot-starter-web |
-| **RestClient** | Spring Boot 3.2+, modern API | spring-boot-starter-web |
+| Client | Status | Dependencies | When to Use |
+|--------|--------|--------------|-------------|
+| **RestClient** | ✅ **DEFAULT** | None (in spring-boot-starter-web) | Always, unless user explicitly requests another |
+| **Feign** | ⚠️ Optional | Must add `spring-cloud-starter-openfeign` | Only if user explicitly requests |
+| **RestTemplate** | ⚠️ Deprecated | None (in spring-boot-starter-web) | Legacy compatibility only |
+
+**Default Rule:** Use RestClient unless user explicitly requests Feign or RestTemplate.
+
+See [mod-code-018](../mod-code-018-api-integration-rest-java-spring/MODULE.md) for complete client templates.
 
 ---
 

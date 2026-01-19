@@ -867,3 +867,83 @@ public class CustomerApplicationService {
 | `<n>` instead of `<name>` | Typo/truncation | Use `<name>` tag |
 | Missing version for resilience4j | Not in Spring Boot BOM | Add explicit version |
 | Wrong parent version | Hallucination | Use 3.2.0 |
+
+---
+
+### RULE-004: REST Client Selection (RestClient is Default)
+
+**The Generator MUST use RestClient by default unless the user explicitly requests Feign.**
+
+**Default - RestClient (no extra dependencies):**
+```java
+// ✅ DEFAULT - RestClient is included in spring-boot-starter-web
+@Component
+public class PartiesSystemApiClient {
+    
+    private final RestClient restClient;
+    
+    public PartiesSystemApiClient(RestClient.Builder builder,
+                                   @Value("${system-api.parties.url}") String baseUrl) {
+        this.restClient = builder.baseUrl(baseUrl).build();
+    }
+    
+    public PartyResponse getParty(String id) {
+        return restClient.get()
+            .uri("/parties/{id}", id)
+            .retrieve()
+            .body(PartyResponse.class);
+    }
+}
+```
+
+**Alternative - Feign (ONLY if user explicitly requests):**
+
+If user requests Feign, you MUST add the dependency to pom.xml:
+```xml
+<!-- REQUIRED for Feign -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+```java
+// ⚠️ Only if user explicitly requests Feign AND dependency is added
+@EnableFeignClients
+@SpringBootApplication
+public class MyApplication { }
+
+@FeignClient(name = "parties-api", url = "${system-api.parties.url}")
+public interface PartiesSystemApiClient {
+    @GetMapping("/parties/{id}")
+    PartyResponse getParty(@PathVariable String id);
+}
+```
+
+**Rule:** Use RestClient by default. Only use Feign if explicitly requested AND add its dependency.
+
+---
+
+### HALLUCINATION-005: Using @Transactional with System API
+
+**The LLM frequently generates:**
+```java
+// ❌ WRONG - No local transactions with HTTP calls
+@Service
+@Transactional
+public class CustomerApplicationService {
+```
+
+**Why it's wrong:** 
+- `@Transactional` manages database transactions
+- System API persistence uses HTTP, not database
+- Requires `spring-boot-starter-data-jpa` which is not included
+
+**Correct:**
+```java
+// ✅ CORRECT - No @Transactional with System API persistence
+@Service
+public class CustomerApplicationService {
+```
+
+**Rule:** NEVER use `@Transactional` when persistence is via System API (HTTP calls).
