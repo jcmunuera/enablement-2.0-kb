@@ -12,14 +12,13 @@ tags:
   - rate-limiter
   - throttling
   - fault-tolerance
-used_by:
-  - skill-code-004-add-rate-limiter-java-resilience4j
-  - skill-code-020-generate-microservice-java-spring
 
 # ═══════════════════════════════════════════════════════════════════
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
+  stack: java-spring
+  pattern: annotation
   capability: resilience
   feature: rate-limiter
 ---

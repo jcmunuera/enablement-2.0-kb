@@ -19,6 +19,7 @@ used_by:
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
+  stack: java-spring
   capability: persistence
   feature: jpa
 ---

@@ -19,8 +19,9 @@ used_by:
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
-  capability: api-exposure
-  feature: rest-hateoas
+  stack: java-spring
+  capability: api-architecture
+  feature: domain-api
 ---
 
 # MOD-019: API Public Exposure - Java/Spring Boot

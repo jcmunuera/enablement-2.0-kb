@@ -1,316 +1,359 @@
 # Authoring Guide: Execution Flows
 
-**Version:** 1.4  
-**Date:** 2025-12-23
+**Version:** 3.0  
+**Date:** 2026-01-20  
+**Model Version:** 3.0
+
+---
+
+## What's New in v3.0
+
+| Change | Description |
+|--------|-------------|
+| **Skills Eliminated** | Flows are now triggered by discovery, not by skill selection |
+| **Two Primary Flows** | `flow-generate` and `flow-transform` replace GENERATE/ADD |
+| **Phase-Based Execution** | Features grouped by nature (structural → implementation → cross-cutting) |
+| **Flow Selection** | Automatic based on context (existing code or not) |
 
 ---
 
 ## Overview
 
-Execution Flows define HOW skills of a specific type are executed within a domain. They are located in `runtime/flows/{domain}/{TYPE}.md`.
+Execution Flows define HOW capabilities are applied to generate or transform code. They are located in `runtime/flows/{domain}/`.
+
+### Flow Types in v3.0
+
+| Flow | Purpose | When Used |
+|------|---------|-----------|
+| **flow-generate** | Create project from scratch | No existing code |
+| **flow-transform** | Modify existing project | Existing code provided |
+| flow-migrate | *(TBD)* Version/pattern migration | - |
+| flow-refactor | *(TBD)* Restructure code | - |
+| flow-remove | *(TBD)* Remove capability | - |
 
 ---
 
-## When to Create a Flow
+## Flow Selection
 
-Create a new execution flow when:
+Flow selection is **automatic** based on context:
 
-- A new skill type is introduced to a domain
-- The execution pattern for a skill type needs formal documentation
-- A domain is being activated (moving from "Planned" to "Active")
+```python
+def select_flow(context):
+    if not context.has_existing_code:
+        return "flow-generate"
+    else:
+        return "flow-transform"
+```
+
+**Key principle:** The user doesn't choose the flow; the discovery process determines it.
 
 ---
 
 ## Location
 
 ```
-runtime/flows/{domain}/{SKILL_TYPE}.md
+runtime/flows/{domain}/flow-{type}.md
 ```
 
 Examples:
-- `runtime/flows/code/GENERATE.md`
-- `runtime/flows/code/ADD.md`
-- `runtime/flows/design/ARCHITECTURE.md`
+- `runtime/flows/code/flow-generate.md`
+- `runtime/flows/code/flow-transform.md`
 
 ---
 
 ## Required Structure
 
-Every execution flow document MUST include:
+Every flow document MUST include:
 
 ```markdown
-# Skill Type: {DOMAIN}/{TYPE}
+# Flow: {Type}
 
-**Version:** X.Y  
-**Date:** YYYY-MM-DD  
-**Domain:** {DOMAIN}
+## Overview
+[What this flow does and when it's used]
 
----
+## When to Use
+[Conditions that trigger this flow]
 
-## Purpose
+## Input
+[What the flow receives from discovery]
 
-[What this skill type does and when it's used]
+## Execution
+### Phase Planning
+[How features are grouped into phases]
 
----
+### Per-Phase Execution
+[Steps executed in each phase]
 
-## Execution Philosophy
+## Output
+[Structure of generated/modified files]
 
-[Key principles for this type - e.g., holistic vs atomic]
+## Validation
+[How to validate the output]
 
----
-
-## Characteristics
-
-| Aspect | Description |
-|--------|-------------|
-| Input | [What the skill receives] |
-| Output | [What the skill produces] |
-| Modules | [How modules are used] |
-| Complexity | [Low/Medium/High] |
-
----
-
-## Execution Flow
-
-[Detailed step-by-step flow, preferably with ASCII diagram]
-
----
-
-## Required Steps (v1.1)
-
-Every execution flow that uses modules MUST include these steps:
-
-### Variant Resolution Step
-
-If the flow uses modules, it MUST include a **Variant Resolution** step after module loading:
-
-```
-STEP N: RESOLVE VARIANTS
-───────────────────────────────────────────────────────────────────────────
-Action: Select implementation variant for each module that has variants
-Input:  List of modules + Request features
-Output: Selected variant per module (default or alternative)
-
-For each module with variants.enabled = true:
-
-1. CHECK INPUT for explicit variant selection
-2. EVALUATE recommendation conditions (if selection_mode = auto-suggest)
-3. IF alternative recommended → ASK USER for confirmation
-4. OTHERWISE → Use default variant
-5. RECORD selection in manifest
-───────────────────────────────────────────────────────────────────────────
-```
-
-### Determinism Rules Reference
-
-For CODE domain flows, add reference to determinism rules:
-
-```
-During code generation, the agent MUST follow:
-- model/standards/DETERMINISM-RULES.md (global patterns)
-- Each module's ## Determinism section (module-specific patterns)
+## Error Handling
+[How to handle common errors]
 ```
 
 ---
 
-## Module Resolution Table
+## Flow Input (from Discovery)
 
-[If applicable - how features map to modules]
+Every flow receives the **Discovery Result**:
+
+```yaml
+flow: flow-generate          # Selected flow
+stack: java-spring           # Resolved technology stack
+features:                    # Matched features
+  - architecture.hexagonal-light
+  - api-architecture.domain-api
+  - persistence.systemapi
+  - resilience.circuit-breaker
+modules:                     # Resolved modules
+  - mod-code-015
+  - mod-code-019
+  - mod-code-017
+  - mod-code-001
+config:                      # Merged feature configs
+  hateoas: true
+  compensation_available: true
+input_spec:                  # Required user input
+  serviceName: { type: string, required: true }
+  basePackage: { type: string, required: true }
+  entities: { type: array, required: true }
+```
+
+---
+
+## Phase Planning
+
+Features are grouped into phases based on their **nature**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           PHASE PLANNING                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  PHASE 1: STRUCTURAL                                                        │
+│  Nature: Defines project structure, cannot be modified later                │
+│  Features: architecture.*, api-architecture.*                               │
+│  Examples: hexagonal-light, domain-api                                      │
+│                                                                              │
+│  PHASE 2: IMPLEMENTATION                                                    │
+│  Nature: Implements ports, connects to backends                             │
+│  Features: persistence.*, integration.*                                     │
+│  Examples: systemapi, api-rest                                              │
+│                                                                              │
+│  PHASE 3+: CROSS-CUTTING                                                    │
+│  Nature: Adds aspects on top of existing code                               │
+│  Features: resilience.*, distributed-transactions.*                         │
+│  Examples: circuit-breaker, retry, saga-compensation                        │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Phase Grouping Rules
+
+```python
+def get_feature_nature(feature: str) -> str:
+    capability = feature.split('.')[0]
+    
+    STRUCTURAL = ['architecture', 'api-architecture']
+    IMPLEMENTATION = ['persistence', 'integration']
+    
+    if capability in STRUCTURAL:
+        return 'structural'
+    elif capability in IMPLEMENTATION:
+        return 'implementation'
+    else:
+        return 'cross-cutting'
+```
+
+---
+
+## Per-Phase Execution
+
+Each phase follows this sequence:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PER-PHASE EXECUTION                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. LOAD MODULES                                                            │
+│     Load only the modules for features in this phase                        │
+│     Keeps context size manageable                                           │
+│                                                                              │
+│  2. PREPARE CONTEXT                                                         │
+│     - User input                                                            │
+│     - Feature config                                                        │
+│     - Previously generated code (if phase > 1)                              │
+│                                                                              │
+│  3. GENERATE/TRANSFORM                                                      │
+│     Execute code generation using module templates                          │
+│                                                                              │
+│  4. VALIDATE IMMUTABLES                                                     │
+│     Ensure files from previous phases aren't incorrectly modified           │
+│                                                                              │
+│  5. COMPILE/CHECK                                                           │
+│     Verify generated code compiles                                          │
+│     If errors, iterate to fix                                               │
+│                                                                              │
+│  6. UPDATE CONTEXT                                                          │
+│     Add generated files to context for next phase                           │
+│     Mark files as immutable if appropriate                                  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Output Structure
 
-Flows MUST define two output structures with clear separation of responsibilities:
+### Flow Output (flow-generate)
 
-### 1. Flow Output Structure (v1.4)
-
-> ⚠️ **THIS IS THE OUTPUT OF THE FLOW, NOT OF THE SKILL**
->
-> The Flow defines this structure. The Skill defines what goes inside `output/`.
-> The user provides only input files; the agent MUST create this complete structure.
-
-**MANDATORY**: This section should appear EARLY in the flow document (after Characteristics).
-
-```markdown
-## Flow Output Structure
-
-Every {FLOW} execution produces this structure:
-
+```
 {flow-execution}/
-├── input/                          # All inputs (copied + generated)
+├── input/                          # All inputs
 │   ├── prompt.md                   # Original user prompt
-│   ├── generation-request.json     # Structured request (generated by agent)
-│   └── {referenced-files}          # API specs, mappings, etc.
+│   ├── generation-request.json     # Structured request
+│   └── {referenced-files}          # API specs, etc.
 │
-├── output/                         # Generated artifact (Skill-specific)
-│   └── {artifact}/                 # Structure defined by Skill
+├── output/                         # Generated artifact
+│   └── {serviceName}/              # Project directory
+│       ├── .enablement/
+│       │   └── manifest.json       # Traceability
+│       ├── pom.xml
+│       ├── src/
+│       └── ...
 │
 ├── trace/                          # Execution traceability
 │   └── generation-trace.md         # Discovery & generation decisions
 │
-└── validation/                     # Reproducibility scripts
-    ├── tier-1-universal.sh
-    ├── tier-2-technology.sh
-    ├── tier-3-skill.sh
-    └── {artifact-specific}.sh      # compile.sh, test.sh, package.sh
+└── validation/                     # Validation scripts
+    ├── compile.sh
+    └── test.sh
 ```
 
-**Responsibility separation:**
+### Flow Output (flow-transform)
 
-| Component | Defined By | Content |
-|-----------|------------|---------|
-| `input/`, `trace/`, `validation/` | **Flow** | Standard for all executions of this flow |
-| `output/{artifact}/` | **Skill** | Specific to each skill/technology |
-
-**Traceability separation:**
-
-| File | Scope | Purpose |
-|------|-------|---------|
-| `trace/generation-trace.md` | Flow execution | Why decisions were made |
-| `output/{artifact}/.enablement/manifest.json` | Artifact | What was used to generate |
-
-### 2. Artifact Structure
-
-The structure of the generated artifact itself. This is **Skill-specific** and goes inside `output/`.
-
-```markdown
-## Artifact Structure
-
-The generated artifact follows this structure inside `output/`:
-
-output/{serviceName}/
-├── .enablement/
-│   └── manifest.json       # Artifact traceability (REQUIRED)
-├── src/
-│   ├── main/
-│   └── test/
-├── pom.xml
-└── README.md
+```
+{flow-execution}/
+├── input/                          # Inputs
+│   ├── prompt.md
+│   └── existing-code/              # Code to modify
+│
+├── output/                         # Modified files only
+│   ├── modified/                   # Files that were changed
+│   │   └── {path}/
+│   └── created/                    # New files
+│       └── {path}/
+│
+├── trace/
+│   └── transformation-trace.md     # What was changed and why
+│
+└── validation/
+    └── compile.sh
 ```
 
-> The Artifact Structure is defined by the **Skill**, not the Flow.
-> Each Skill specifies its own artifact structure based on technology/domain.
+---
+
+## File Mutability
+
+### Immutable Files (never modified after creation)
+
+```
+domain/model/*.java          # Entities, Value Objects
+domain/port/*.java           # Repository interfaces
+application/dto/*.java       # DTOs
+adapter/in/rest/*Controller.java
+```
+
+### Modifiable Files (with contract)
+
+```
+ApplicationService.java      # Method bodies can be modified
+Adapter*.java               # Annotations can be added
+pom.xml                     # Dependencies can be added
+application.yml             # Sections can be added
+```
+
+---
+
+## Determinism Rules
+
+During code generation, the agent MUST follow:
+
+- `model/standards/DETERMINISM-RULES.md` (global patterns)
+- Each module's `## Determinism` section (module-specific)
+
+Key rules:
+1. Same input → Same output (deterministic)
+2. Follow module templates exactly
+3. Respect file mutability contracts
+4. Use validation to verify output
 
 ---
 
 ## Validation Requirements
 
-[What validations apply]
+### Per-Phase Validation
+
+After each phase:
+1. **Immutable check:** Files from previous phases unchanged
+2. **Compilation:** `mvn compile` succeeds
+3. **Structure:** Expected files exist
+
+### Final Validation
+
+After all phases:
+1. **Full build:** `mvn package` succeeds
+2. **Tests:** `mvn test` passes
+3. **Traceability:** Manifest complete
 
 ---
 
-## Error Handling
+## Creating a New Flow
 
-[How to handle common errors]
+### Step 1: Determine Need
 
----
+Create a new flow when:
+- A new execution pattern is needed
+- Existing flows don't cover the use case
+- The pattern is fundamentally different from generate/transform
 
-## Example Skills
+### Step 2: Document the Flow
 
-[List of skills that use this flow]
-```
+Create `runtime/flows/{domain}/flow-{type}.md` following required structure.
 
----
+### Step 3: Update References
 
-## Post-Creation Checklist
-
-> ⚠️ **CRITICAL:** After creating a new execution flow, you MUST complete these steps.
-
-### 1. Update CONSUMER-PROMPT.md
-
-Location: `model/CONSUMER-PROMPT.md`
-
-Update the **Domain-Specific Execution** table:
-
-```markdown
-| Domain | Execution Flows Location | Notes |
-|--------|--------------------------|-------|
-| CODE | `runtime/flows/code/` | GENERATE (holistic), ADD (atomic), ... |
-| DESIGN | `runtime/flows/design/` | (Planned) → UPDATE THIS |
-```
-
-**Change required:**
-- If domain was "(Planned)", replace with actual flow names
-- If adding to existing domain, add the new flow name to the list
-
-### 2. Update Domain DOMAIN.md
-
-Location: `model/domains/{domain}/DOMAIN.md`
-
-Ensure the **Skill Types** section lists the new type and references the flow:
-
-```markdown
-## Skill Types
-
-| Type | Purpose | Flow |
-|------|---------|------|
-| GENERATE | Create new projects | `runtime/flows/code/GENERATE.md` |
-| NEW_TYPE | [Purpose] | `runtime/flows/{domain}/NEW_TYPE.md` |
-```
-
-### 3. Verify Discovery Path
-
-Ensure the agent can discover and execute:
-
-1. ✅ DOMAIN.md has discovery guidance for when this skill type applies
-2. ✅ At least one skill exists that uses this flow (or is planned)
-3. ✅ CONSUMER-PROMPT.md references the flow location
+- Update `runtime/flows/README.md`
+- Update `discovery-guidance.md` flow selection logic
 
 ---
 
 ## Validation Checklist
 
-Before considering the flow complete:
+Before considering a flow complete:
 
 - [ ] Document follows required structure
-- [ ] Execution philosophy is clearly stated
-- [ ] Step-by-step flow is documented
-- [ ] **Variant Resolution step included** (if flow uses modules)
-- [ ] **Determinism rules referenced** (for CODE domain)
-- [ ] **Flow Output Structure defined EARLY** (before execution phases)
-- [ ] **Artifact Structure defined** (Skill-specific, inside output/)
-- [ ] Error handling is defined
-- [ ] **CONSUMER-PROMPT.md updated** ← Don't forget!
-- [ ] **DOMAIN.md updated** ← Don't forget!
-- [ ] At least one example skill listed
-
----
-
-## Examples
-
-### Good: CODE/GENERATE
-
-See `runtime/flows/code/GENERATE.md` for a complete example including:
-- Clear holistic execution philosophy
-- Detailed ASCII flow diagram
-- Module resolution table
-- Why holistic matters (with code examples)
-- Complete traceability requirements
-
-### Good: CODE/ADD
-
-See `runtime/flows/code/ADD.md` for a complete example of atomic execution flow.
-
----
-
-## Common Mistakes
-
-| Mistake | Impact | Prevention |
-|---------|--------|------------|
-| Not updating CONSUMER-PROMPT.md | Agent doesn't know flow exists | Use checklist above |
-| Missing execution philosophy | Unclear how to execute | Always start with philosophy |
-| No ASCII flow diagram | Hard to understand sequence | Include visual representation |
-| No module resolution | Agent can't map features to modules | Include resolution table |
+- [ ] Phase planning is clearly defined
+- [ ] Per-phase execution steps documented
+- [ ] Output structure defined
+- [ ] File mutability rules defined
+- [ ] Validation requirements specified
+- [ ] Error handling documented
+- [ ] Example execution included
 
 ---
 
 ## Related Documents
 
-- `model/CONSUMER-PROMPT.md` - Must be updated when adding flows
-- `model/domains/{domain}/DOMAIN.md` - Must list skill types
-- `authoring/SKILL.md` - Skills reference flows
-- `authoring/VALIDATOR.md` - Flows define validation requirements
+- `runtime/discovery/discovery-guidance.md` - Flow selection logic
+- `runtime/flows/code/flow-generate.md` - Generation flow
+- `runtime/flows/code/flow-transform.md` - Transformation flow
+- `model/standards/DETERMINISM-RULES.md` - Code generation rules
+- `authoring/MODULE.md` - Module structure
 
 ---
 

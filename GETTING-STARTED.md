@@ -1,7 +1,7 @@
 # Getting Started with Enablement 2.0
 
-**Version:** 2.0  
-**Last Updated:** 2025-12-17  
+**Version:** 3.0  
+**Last Updated:** 2026-01-20  
 **Purpose:** Onboarding guide for different roles
 
 ---
@@ -23,8 +23,8 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 |------|------|------|------------|
 | [Executive / Manager](#executive-path) | 15 min | Understand value proposition | ↓ |
 | [Architect](#architect-path) | 1-2 hours | Understand the model and governance | ↓ |
-| [Engineer - Creating Assets](#engineer-creating-assets) | 2-4 hours | Learn to author ADRs, ERIs, Modules, Skills | ↓ |
-| [Engineer - Using Skills](#engineer-using-skills) | 30 min | Generate code using existing Skills | ↓ |
+| [Engineer - Creating Assets](#engineer-creating-assets) | 2-4 hours | Learn to author ADRs, ERIs, Modules, Capabilities | ↓ |
+| [Engineer - Using Capabilities](#engineer-using-skills) | 30 min | Generate code using existing Capabilities | ↓ |
 
 ---
 
@@ -48,7 +48,7 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 ### Key Takeaways
 
 - Every generated artifact traces back to approved architecture decisions
-- Skills automate repetitive development tasks with guaranteed compliance
+- Capabilities automate repetitive development tasks with guaranteed compliance
 - The platform reduces onboarding time and ensures consistency
 
 ---
@@ -63,16 +63,16 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 1. **[README.md](README.md)** (5 min)
    - Repository structure overview
 
-2. **[model/ENABLEMENT-MODEL-v2.0.md](model/ENABLEMENT-MODEL-v2.0.md)** (30 min)
+2. **[model/ENABLEMENT-MODEL-v3.0.md](model/ENABLEMENT-MODEL-v3.0.md)** (30 min)
    - Complete conceptual model
-   - Asset hierarchy: ADR → ERI → Module → Skill
+   - Asset hierarchy: ADR → ERI → Module → Capability Feature
    - **Discovery philosophy** (interpretive, not rule-based)
    - **Execution model** (holistic for GENERATE, atomic for ADD)
    - Validation system (4 tiers)
 
 3. **[model/ENABLEMENT-TECHNICAL-GUIDE.md](model/ENABLEMENT-TECHNICAL-GUIDE.md)** (20 min)
    - Technical implementation details
-   - How Skills execute
+   - How flows execute
    - How validation works
 
 4. **[model/standards/ASSET-STANDARDS-v1.4.md](model/standards/ASSET-STANDARDS-v1.4.md)** (20 min)
@@ -180,17 +180,17 @@ After completing the reading:
 
 ### Key Takeaways
 
-- Always create assets in order: ADR → ERI → Module → Skill
+- Always create assets in order: ADR → ERI → Module → Capability Feature
 - OVERVIEW.md is the key document for skill discovery
 - For GENERATE skills, modules are knowledge to consult, not steps to execute
 - Tier-3 validation runs for each module consulted
 
 ---
 
-## Engineer - Using Skills
+## Engineer - Using Capabilities
 
 **Time:** 30 minutes  
-**Goal:** Generate code using existing Skills
+**Goal:** Generate code using existing Capabilities
 
 ### Reading Order
 
@@ -253,7 +253,7 @@ enablement-2.0/
 │
 ├── model/                          ← META-MODEL
 │   ├── README.md                   ← Model overview
-│   ├── ENABLEMENT-MODEL-v2.0.md    ← ⭐ Master document
+│   ├── ENABLEMENT-MODEL-v3.0.md    ← ⭐ Master document
 │   ├── CONSUMER-PROMPT.md          ← Consumer agent system prompt
 │   ├── AUTHOR-PROMPT.md            ← Author/C4E system prompt
 │   ├── ENABLEMENT-EXECUTIVE-BRIEF.md  ← For executives
@@ -315,7 +315,7 @@ enablement-2.0/
 
 ### Q: Where do I start if I just want to generate code?
 
-Go to [Engineer - Using Skills](#engineer-using-skills) path. You can be productive in 30 minutes.
+Go to [Engineer - Using Capabilities](#engineer-using-skills) path. You can be productive in 30 minutes.
 
 ### Q: I want to add a new pattern (e.g., Bulkhead). What do I need?
 
@@ -358,4 +358,4 @@ See `model/standards/validation/README.md`. The validation tier depends on:
 
 ---
 
-**Last Updated:** 2025-12-17
+**Last Updated:** 2026-01-20

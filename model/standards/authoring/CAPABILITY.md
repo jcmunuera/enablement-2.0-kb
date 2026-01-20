@@ -1,68 +1,66 @@
 # Authoring Guide: CAPABILITY
 
-**Version:** 2.0  
-**Last Updated:** 2025-01-15  
+**Version:** 3.0  
+**Last Updated:** 2026-01-20  
 **Asset Type:** Capability  
-**Model Version:** 2.0
+**Model Version:** 3.0
 
 ---
 
-## What's New in v2.0
+## What's New in v3.0
 
 | Change | Description |
 |--------|-------------|
-| **Capability Types** | Capabilities are now `structural` or `compositional` |
-| **Transformable Flag** | Indicates if capability can be target of transformation skills |
-| **Features with Modules** | Each feature maps 1:1 to a module |
-| **Compatibility Declarations** | Capabilities declare their own compatibility |
-| **capability-index.yaml** | Central source of truth for capability→feature→module |
+| **Skills Eliminated** | Capabilities are now the entry point for discovery |
+| **Features Enriched** | Features include `config`, `input_spec`, `implementations` |
+| **Multi-Implementation** | One feature can have multiple implementations (by stack/pattern) |
+| **Stack Detection** | Explicit stack resolution with detection rules and defaults |
+| **Single Discovery Path** | All discovery goes through capability-index only |
 
 ---
 
 ## Overview
 
-Capabilities are **technical characteristics** that can be part of generated code. They are the bridge between Skills (what to generate) and Modules (how to implement).
+Capabilities are **conceptual groupings of related features**. They represent technical concerns (architecture, persistence, resilience, etc.) and are the primary entry point for discovery.
 
 ### Capability Types
 
 | Type | Description | Transformable | Example |
 |------|-------------|---------------|---------|
-| **Structural** | Defines fundamental code structure | NO | `architecture.hexagonal-base` |
+| **Structural** | Defines fundamental code structure | NO | `architecture` |
 | **Compositional** | Adds functionality on top of structure | YES | `resilience`, `persistence` |
 
 ---
 
-## Capability Model
+## Entity Hierarchy
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CAPABILITY                                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  STRUCTURAL                         COMPOSITIONAL                           │
-│  ───────────                        ─────────────                           │
-│  • Defines code foundation          • Adds features to foundation          │
-│  • transformable: false             • transformable: true                   │
-│  • Cannot be transformation target  • CAN be transformation target         │
-│  • Always REQUIRED in generation    • REQUIRED or OPTIONAL in generation   │
-│                                                                              │
-│  Example: architecture              Examples: resilience, persistence,      │
-│                                              api-exposure, caching          │
-│                                                                              │
+│                       CAPABILITY HIERARCHY (v3.0)                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  CAPABILITY                                                                 │
 │      │                                                                      │
 │      ├── type: structural | compositional                                   │
 │      ├── transformable: true | false                                        │
-│      ├── compatible_with: [other capabilities]                              │
-│      ├── incompatible_with: [exclusive capabilities]                        │
+│      ├── keywords: [...]                                                    │
 │      │                                                                      │
 │      └── FEATURES                                                           │
 │              │                                                              │
-│              ├── feature-1 ──────────────► module-1 (1:1)                  │
-│              ├── feature-2 ──────────────► module-2 (1:1)                  │
-│              └── feature-3 ──────────────► module-3 (1:1)                  │
+│              ├── keywords: [...]                                            │
+│              ├── requires: [other.features]                                 │
+│              ├── incompatible_with: [other.features]                        │
+│              ├── config: { key: value }                                     │
+│              ├── input_spec: { field: schema }                              │
+│              │                                                              │
+│              └── IMPLEMENTATIONS                                            │
+│                      │                                                      │
+│                      ├── id: unique-identifier                              │
+│                      ├── stack: java-spring | nodejs | ...                  │
+│                      ├── pattern: annotation | client-config | ...          │
+│                      └── module: mod-code-xxx                               │
+│                                                                              │
+│              └── default: implementation-id                                 │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -81,8 +79,9 @@ runtime/discovery/capability-index.yaml
 
 This is the **single source of truth** for:
 - Capability type and transformable flag
-- Features and their module mappings
-- Compatibility rules
+- Features with all enriched attributes
+- Implementations per stack/pattern
+- Compatibility rules and defaults
 - Keywords for discovery
 
 ### 2. Capability Documentation (Explanatory - Human Readable)
@@ -93,20 +92,53 @@ model/domains/code/capabilities/{capability}.md
 
 This provides:
 - Detailed explanation of the capability
-- Usage guidelines
-- Examples
+- Usage guidelines and examples
 - Related ADRs and ERIs
 
 ---
 
-## capability-index.yaml Structure
+## capability-index.yaml Structure (v2.1)
 
 ```yaml
+version: "2.1"
+domain: code
+
+# ─────────────────────────────────────────────────────────────────
+# DEFAULTS
+# ─────────────────────────────────────────────────────────────────
+defaults:
+  stack: java-spring                    # Organizational default
+  patterns:
+    timeout: annotation                 # Default when multiple patterns exist
+
+# ─────────────────────────────────────────────────────────────────
+# STACKS (with detection rules)
+# ─────────────────────────────────────────────────────────────────
+stacks:
+  java-spring:
+    description: "Java 17+ with Spring Boot 3.x"
+    detection:
+      - file: pom.xml
+        contains: "spring-boot-starter"
+    keywords: [java, spring, spring boot]
+  
+  java-quarkus:
+    detection:
+      - file: pom.xml
+        contains: "quarkus"
+    keywords: [java, quarkus]
+  
+  nodejs:
+    detection:
+      - file: package.json
+    keywords: [node, nodejs, javascript]
+
+# ─────────────────────────────────────────────────────────────────
+# CAPABILITIES
+# ─────────────────────────────────────────────────────────────────
 capabilities:
 
-  # ─────────────────────────────────────────────────────────────────
   # STRUCTURAL CAPABILITY
-  # ─────────────────────────────────────────────────────────────────
   architecture:
     description: "Foundational architectural patterns"
     type: structural
@@ -114,85 +146,107 @@ capabilities:
     documentation: "model/domains/code/capabilities/architecture.md"
     
     features:
-      hexagonal-base:
+      hexagonal-light:
         description: "Hexagonal Light architecture"
-        module: mod-code-015-hexagonal-base-java-spring
-        stack: [java-spring]
         keywords:
           - hexagonal
           - clean architecture
           - ports and adapters
+        
+        implementations:
+          - id: java-spring
+            module: mod-code-015-hexagonal-base-java-spring
+            stack: java-spring
+          # Future:
+          # - id: java-quarkus
+          #   module: mod-code-015-hexagonal-base-java-quarkus
+          #   stack: java-quarkus
+        
+        default: java-spring
 
-  # ─────────────────────────────────────────────────────────────────
-  # COMPOSITIONAL CAPABILITY
-  # ─────────────────────────────────────────────────────────────────
-  resilience:
-    description: "Fault tolerance and resilience patterns"
+  # COMPOSITIONAL CAPABILITY (with enriched features)
+  api-architecture:
+    description: "API types according to Fusion model"
     type: compositional
     transformable: true
-    documentation: "model/domains/code/capabilities/resilience.md"
-    
-    # Capability-level compatibility
-    compatible_with:
-      - architecture.hexagonal-base
-    stack: [java-spring]
-    keywords:
-      - resilience
-      - fault tolerance
+    documentation: "model/domains/code/capabilities/api_architecture.md"
+    keywords: [API, REST, Fusion]
     
     features:
-      circuit-breaker:
-        description: "Circuit Breaker pattern"
-        module: mod-code-001-circuit-breaker-java-resilience4j
+      domain-api:
+        description: "Domain API - exposes business capabilities"
         keywords:
-          - circuit breaker
-          - CB
-      
-      retry:
-        description: "Retry with backoff"
-        module: mod-code-002-retry-java-resilience4j
-        keywords:
-          - retry
-          - reintento
-      
-      timeout:
-        description: "Timeout pattern"
-        module: mod-code-003-timeout-java-resilience4j
-        keywords:
-          - timeout
+          - Domain API
+          - API de dominio
+          - business API
+        
+        # Dependencies
+        requires:
+          - architecture.hexagonal-light
+        
+        # Feature-specific configuration
+        config:
+          hateoas: true
+          compensation_available: true
+        
+        # Input specification (what user must provide)
+        input_spec:
+          serviceName:
+            type: string
+            required: true
+            pattern: "^[a-z][a-z0-9-]*$"
+          basePackage:
+            type: string
+            required: true
+          entities:
+            type: array
+            required: true
+        
+        # Multiple implementations
+        implementations:
+          - id: java-spring
+            module: mod-code-019-api-public-exposure-java-spring
+            stack: java-spring
+        
+        default: java-spring
 
-  # ─────────────────────────────────────────────────────────────────
   # COMPOSITIONAL WITH INCOMPATIBILITIES
-  # ─────────────────────────────────────────────────────────────────
   persistence:
     description: "Data persistence strategies"
     type: compositional
     transformable: true
-    documentation: "model/domains/code/capabilities/persistence.md"
-    compatible_with:
-      - architecture.hexagonal-base
-    stack: [java-spring]
     
     features:
       jpa:
         description: "JPA/Hibernate persistence"
-        module: mod-code-016-persistence-jpa-spring
-        keywords:
-          - JPA
-          - database
+        keywords: [JPA, database, SQL]
+        
         incompatible_with:
-          - persistence.systemapi        # Mutually exclusive
+          - persistence.systemapi
+        
+        implementations:
+          - id: java-spring
+            module: mod-code-016-persistence-jpa-spring
+            stack: java-spring
+        
+        default: java-spring
       
       systemapi:
         description: "Persistence via System API"
-        module: mod-code-017-persistence-systemapi
-        keywords:
-          - System API
-          - backend
+        keywords: [System API, backend, legacy]
+        
         requires:
-          - api-integration.restclient   # Dependency
+          - integration.api-rest
+        
         incompatible_with:
-          - persistence.jpa              # Mutually exclusive
+          - persistence.jpa
+        
+        implementations:
+          - id: java-spring
+            module: mod-code-017-persistence-systemapi
+            stack: java-spring
+        
+        default: java-spring
 ```
 
 ---
@@ -208,25 +262,26 @@ capabilities:
 | Would changing it require regenerating the code? | Structural |
 | Is it a cross-cutting concern? | Compositional |
 
-### Step 2: Add to capability-index.yaml
+### Step 2: Define Features
+
+For each feature, determine:
+- **keywords:** How users will request this feature
+- **requires:** Dependencies on other features
+- **incompatible_with:** Mutually exclusive features
+- **config:** Feature-specific configuration values
+- **input_spec:** What user input is needed
+- **implementations:** Which modules implement this (per stack)
+
+### Step 3: Add to capability-index.yaml
 
 ```yaml
 # In runtime/discovery/capability-index.yaml
 
-caching:                                    # New capability
+caching:
   description: "Caching strategies"
-  type: compositional                       # Can be added to existing code
-  transformable: true                       # Can be target of transformation
+  type: compositional
+  transformable: true
   documentation: "model/domains/code/capabilities/caching.md"
-  
-  compatible_with:
-    - architecture.hexagonal-base           # Requires hexagonal
-  
-  incompatible_with:
-    - deployment.serverless                 # Doesn't make sense for serverless
-  
-  stack: [java-spring]
-  
   keywords:
     - cache
     - caching
@@ -234,227 +289,179 @@ caching:                                    # New capability
   features:
     redis:
       description: "Distributed cache with Redis"
-      module: mod-code-025-cache-redis      # Must exist
       keywords:
         - Redis
         - distributed cache
+      
+      config:
+        ttl_default: 3600
+        serializer: json
+      
+      input_spec:
+        cacheName:
+          type: string
+          required: true
+        ttl:
+          type: integer
+          required: false
+          default: 3600
+      
+      implementations:
+        - id: java-spring
+          module: mod-code-025-cache-redis-java-spring
+          stack: java-spring
+      
+      default: java-spring
     
     local:
       description: "Local cache with Caffeine"
-      module: mod-code-026-cache-local-caffeine
       keywords:
         - local cache
         - Caffeine
+        - in-memory
+      
+      implementations:
+        - id: java-spring
+          module: mod-code-026-cache-local-caffeine
+          stack: java-spring
+      
+      default: java-spring
 ```
 
-### Step 3: Create Documentation
+### Step 4: Create Documentation
 
 ```markdown
 # model/domains/code/capabilities/caching.md
 
 # Capability: Caching
 
-**Capability ID:** caching  
-**Type:** Compositional  
-**Transformable:** Yes
-
----
-
 ## Overview
 
-Caching strategies for improving performance by storing frequently 
-accessed data in memory.
+Caching strategies for improving performance.
 
----
+## Type
+
+- **Type:** Compositional
+- **Transformable:** Yes
 
 ## Features
 
-| Feature | Module | Use Case |
-|---------|--------|----------|
-| `redis` | mod-code-025 | Distributed applications |
-| `local` | mod-code-026 | Single-instance applications |
+### redis
+- Distributed cache using Redis
+- Module: mod-code-025
 
----
-
-## Compatibility
-
-**Requires:**
-- architecture.hexagonal-base
-
-**Incompatible with:**
-- deployment.serverless (stateless environment)
-
----
-
-## Usage
-
-### In Generation Skills
-
-```yaml
-# Inferred from prompt
-Prompt: "Generate Customer API with Redis caching"
-→ Adds caching.redis capability
-→ Resolves to mod-code-025
-```
-
-### In Transformation Skills
-
-```yaml
-skill-043-add-caching-java-spring:
-  type: transformation
-  target_capability: caching
-```
-
----
+### local
+- Local in-memory cache using Caffeine
+- Module: mod-code-026
 
 ## Related
 
-- **ADR:** adr-015-caching-patterns
-- **ERI:** eri-code-020-cache-redis
+- ADR: adr-015-caching-patterns
+- ERI: eri-code-020-cache-redis
 ```
 
-### Step 4: Create Associated Module(s)
+### Step 5: Create Associated Module(s)
 
-Each feature must have a corresponding module. See `authoring/MODULE.md`.
-
-### Step 5: (Optional) Create Transformation Skill
-
-If `transformable: true`, consider creating a transformation skill:
-
-```yaml
-skill-043-add-caching-java-spring:
-  type: transformation
-  target_capability: caching
-  compatible_with:
-    - architecture.hexagonal-base
-```
+Each implementation must have a corresponding module. See `authoring/MODULE.md`.
 
 ---
 
-## Compatibility Rules
+## Feature Attributes Reference
 
-### compatible_with
+### keywords (Required)
 
-Declares what this capability REQUIRES to function:
+Terms for discovery matching:
 
 ```yaml
-resilience:
-  compatible_with:
-    - architecture.hexagonal-base    # Must have hexagonal
+keywords:
+  - circuit breaker    # English
+  - cortocircuito      # Spanish
+  - CB                 # Abbreviation
+  - breaker            # Partial
 ```
 
-**Validation:** If the resolved context doesn't include required capabilities, 
-the capability is rejected.
+**Guidelines:**
+- Include synonyms and abbreviations
+- Include Spanish equivalents
+- Avoid generic terms ("code", "service")
 
-### incompatible_with
+### requires (Optional)
 
-Declares what CANNOT coexist with this capability:
+Dependencies auto-added during discovery:
 
 ```yaml
-persistence:
-  features:
-    jpa:
-      incompatible_with:
-        - persistence.systemapi      # Can't have both
+requires:
+  - architecture.hexagonal-light    # Always added if missing
+  - integration.api-rest            # Always added if missing
 ```
 
-**Validation:** If both are requested, reject with clear error message.
+### incompatible_with (Optional)
 
-### requires
-
-Declares dependencies that are AUTO-ADDED if missing:
+Mutually exclusive features:
 
 ```yaml
-persistence:
-  features:
-    systemapi:
-      requires:
-        - api-integration.restclient # Auto-add if not present
+incompatible_with:
+  - persistence.jpa                 # Error if both selected
 ```
 
-**Resolution:** If requirement is missing, add it automatically.
+### config (Optional)
 
----
-
-## Feature to Module Mapping
-
-### Rule: 1 Feature = 1 Module
-
-Every feature maps to exactly one module. This is enforced.
+Feature-specific configuration passed to module:
 
 ```yaml
-# CORRECT
-features:
-  circuit-breaker:
-    module: mod-code-001-circuit-breaker    # Single module
-
-# INCORRECT (not allowed)
-features:
-  circuit-breaker:
-    modules:                                 # Multiple modules
-      - mod-001
-      - mod-002
+config:
+  hateoas: true
+  compensation_available: true
+  max_retries: 3
 ```
 
-### Why 1:1?
+### input_spec (Optional)
 
-- **Simplicity:** Clear traceability from capability→feature→module
-- **Modularity:** Each module is self-contained
-- **Discovery:** Unambiguous resolution
-
-### What if a feature needs multiple modules?
-
-Create a "composite" module that orchestrates others:
+Schema for user input:
 
 ```yaml
-# Instead of:
-features:
-  full-resilience:
-    modules: [mod-001, mod-002, mod-003]   # NOT ALLOWED
-
-# Do this:
-features:
-  circuit-breaker:
-    module: mod-001
-  retry:
-    module: mod-002
-  timeout:
-    module: mod-003
-
-# Or create a composite module:
-features:
-  full-resilience:
-    module: mod-005-resilience-bundle      # Single module that includes all
+input_spec:
+  serviceName:
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: "Service name in kebab-case"
+    example: "customer-api"
+  
+  entities:
+    type: array
+    required: true
+    items:
+      type: object
+      properties:
+        name: { type: string }
+        fields: { type: array }
 ```
 
----
+### implementations (Required)
 
-## Keywords for Discovery
-
-Keywords help the discovery agent match user prompts to capabilities/features.
-
-### Guidelines
-
-1. **Include synonyms:** "retry", "reintento", "reintentos"
-2. **Include common misspellings:** (if applicable)
-3. **Include related terms:** "circuit breaker", "CB", "breaker"
-4. **Be language-inclusive:** Include Spanish equivalents
-5. **Avoid generic terms:** "code", "service" are too broad
-
-### Hierarchy
-
-Keywords at feature level have priority over capability level:
+List of implementations per stack/pattern:
 
 ```yaml
-resilience:
-  keywords:
-    - resilience              # Matches all features
-    - fault tolerance
-  features:
-    circuit-breaker:
-      keywords:
-        - circuit breaker     # Specific to this feature
-        - CB
+implementations:
+  - id: java-spring-annotation       # Unique within feature
+    module: mod-code-003-timeout     # Must exist
+    stack: java-spring               # Required
+    pattern: annotation              # Optional (if alternatives)
+    description: "@TimeLimiter"      # Optional
+  
+  - id: java-spring-client-config
+    module: mod-code-003b-timeout-restclient
+    stack: java-spring
+    pattern: client-config
+```
+
+### default (Required if multiple implementations)
+
+Default implementation when not specified:
+
+```yaml
+default: java-spring-annotation
 ```
 
 ---
@@ -466,11 +473,13 @@ resilience:
 - [ ] Has `type: structural` or `type: compositional`
 - [ ] Has `transformable: true` or `false`
 - [ ] Structural capabilities have `transformable: false`
-- [ ] Has `compatible_with` list (compositional)
-- [ ] Has `stack` declaration
-- [ ] Each feature has exactly one `module`
+- [ ] Each feature has `keywords` array
+- [ ] Each feature has `implementations` array
+- [ ] Each implementation has `id`, `module`, `stack`
+- [ ] Feature has `default` if multiple implementations
 - [ ] All referenced modules exist
-- [ ] Keywords are descriptive and non-generic
+- [ ] `requires` references valid features
+- [ ] `incompatible_with` references valid features
 
 ### In documentation
 
@@ -484,35 +493,59 @@ resilience:
 
 ## Common Patterns
 
+### Multi-Implementation Feature
+
+```yaml
+timeout:
+  implementations:
+    - id: java-spring-annotation
+      module: mod-003-timeout-resilience4j
+      stack: java-spring
+      pattern: annotation
+    
+    - id: java-spring-client
+      module: mod-003b-timeout-restclient
+      stack: java-spring
+      pattern: client-config
+  
+  default: java-spring-annotation
+```
+
+### Feature with Config
+
+```yaml
+domain-api:
+  config:
+    hateoas: true
+    compensation_available: true
+  
+  implementations:
+    - id: java-spring
+      module: mod-019
+      stack: java-spring
+```
+
+### Feature with Input Spec
+
+```yaml
+domain-api:
+  input_spec:
+    serviceName:
+      type: string
+      required: true
+    entities:
+      type: array
+      required: true
+```
+
 ### Mutually Exclusive Features
 
 ```yaml
-persistence:
-  features:
-    jpa:
-      incompatible_with: [persistence.systemapi]
-    systemapi:
-      incompatible_with: [persistence.jpa]
-```
+jpa:
+  incompatible_with: [persistence.systemapi]
 
-### Feature with Dependencies
-
-```yaml
-persistence:
-  features:
-    systemapi:
-      requires: [api-integration.restclient]
-```
-
-### Stack-Specific Features
-
-```yaml
-api-exposure:
-  features:
-    rest-hateoas:
-      stack: [java-spring]          # Only for Spring
-    rest-express:
-      stack: [node-express]         # Only for Express
+systemapi:
+  incompatible_with: [persistence.jpa]
 ```
 
 ---
@@ -520,11 +553,10 @@ api-exposure:
 ## Related
 
 - `runtime/discovery/capability-index.yaml` - Central capability index
-- `ENABLEMENT-MODEL-v2.0.md` - Core model documentation
-- `authoring/SKILL.md` - How skills reference capabilities
+- `ENABLEMENT-MODEL-v3.0.md` - Core model documentation
 - `authoring/MODULE.md` - How modules implement features
 - `runtime/discovery/discovery-guidance.md` - Discovery algorithm
 
 ---
 
-**Last Updated:** 2025-01-15
+**Last Updated:** 2026-01-20

@@ -57,8 +57,9 @@ variants:
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
-  capability: api-integration
-  feature: restclient
+  stack: java-spring
+  capability: integration
+  feature: api-rest
 ---
 
 # MOD-018: API Integration REST - Java/Spring

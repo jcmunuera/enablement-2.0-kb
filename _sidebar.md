@@ -1,4 +1,4 @@
-<!-- _sidebar.md -->
+<!-- _sidebar.md - Enablement 2.0 v3.0 -->
 
 * **Getting Started**
   * [Overview](README.md)
@@ -7,7 +7,7 @@
 
 * **Model** 
   * [Model Overview](model/README.md)
-  * [Enablement Model v2.0](model/ENABLEMENT-MODEL-v2.0.md)
+  * [Enablement Model v3.0](model/ENABLEMENT-MODEL-v3.0.md)
   * [Consumer Prompt](model/CONSUMER-PROMPT.md)
   * [Author Prompt](model/AUTHOR-PROMPT.md)
   * [Executive Brief](model/ENABLEMENT-EXECUTIVE-BRIEF.md)
@@ -20,6 +20,14 @@
   * [QA Domain](model/domains/qa/DOMAIN.md)
   * [GOVERNANCE Domain](model/domains/governance/DOMAIN.md)
 
+* **Capabilities**
+  * [Architecture](model/domains/code/capabilities/architecture.md)
+  * [API Architecture](model/domains/code/capabilities/api_architecture.md)
+  * [Integration](model/domains/code/capabilities/integration.md)
+  * [Persistence](model/domains/code/capabilities/persistence.md)
+  * [Resilience](model/domains/code/capabilities/resilience.md)
+  * [Distributed Transactions](model/domains/code/capabilities/distributed_transactions.md)
+
 * **Standards**
   * [Asset Standards v1.4](model/standards/ASSET-STANDARDS-v1.4.md)
   * [Determinism Rules](model/standards/DETERMINISM-RULES.md)
@@ -28,7 +36,7 @@
     * [ADR Guide](model/standards/authoring/ADR.md)
     * [ERI Guide](model/standards/authoring/ERI.md)
     * [Module Guide](model/standards/authoring/MODULE.md)
-    * [Skill Guide](model/standards/authoring/SKILL.md)
+    * [Capability Guide](model/standards/authoring/CAPABILITY.md)
     * [Flow Guide](model/standards/authoring/FLOW.md)
     * [Validator Guide](model/standards/authoring/VALIDATOR.md)
 
@@ -37,10 +45,6 @@
   * [ADRs Index](knowledge/ADRs/README.md)
   * [ERIs Index](knowledge/ERIs/README.md)
 
-* **Skills**
-  * [Skills Overview](skills/README.md)
-  * [CODE Skills](skills/code/README.md)
-
 * **Modules**
   * [Modules Overview](modules/README.md)
 
@@ -48,10 +52,10 @@
   * [Runtime Overview](runtime/README.md)
   * **Discovery**
     * [Discovery Guidance](runtime/discovery/discovery-guidance.md)
-    * [Skill Index](runtime/discovery/skill-index.yaml)
+    * [Capability Index](runtime/discovery/capability-index.yaml)
   * **Flows**
-    * [GENERATE Flow](runtime/flows/code/GENERATE.md)
-    * [ADD Flow](runtime/flows/code/ADD.md)
+    * [Flow: Generate](runtime/flows/code/flow-generate.md)
+    * [Flow: Transform](runtime/flows/code/flow-transform.md)
 
 * **Resources**
   * [Methodology](docs/METHODOLOGY.md)

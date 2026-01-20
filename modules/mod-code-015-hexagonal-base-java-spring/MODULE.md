@@ -20,8 +20,9 @@ used_by:
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
+  stack: java-spring
   capability: architecture
-  feature: hexagonal-base
+  feature: hexagonal-light
 ---
 
 # MOD-015: Hexagonal Base - Java/Spring Boot

@@ -2,6 +2,9 @@
 
 > AI-powered platform for full SDLC automation with governance
 
+**Version:** 3.0  
+**Last Updated:** 2026-01-20
+
 ## Overview
 
 Enablement 2.0 is a **multi-domain platform** that combines a structured Knowledge Base with AI capabilities to automate the entire Software Development Lifecycle (SDLC) following organizational standards.
@@ -39,244 +42,170 @@ A **capability-based Knowledge Base** that feeds specialized AI agents to:
 ```
 enablement-2.0/
 │
-├── knowledge/              # KNOWLEDGE BASE (context for humans & agents)
+├── knowledge/              # KNOWLEDGE BASE
 │   ├── ADRs/              # Architecture Decision Records (strategic)
 │   └── ERIs/              # Enterprise Reference Implementations (tactical)
 │
-├── model/                  # META-MODEL (defines the Enablement system)
-│   ├── ENABLEMENT-MODEL-v2.0.md   # Master document
+├── model/                  # META-MODEL
+│   ├── ENABLEMENT-MODEL-v3.0.md   # Master document
 │   ├── CONSUMER-PROMPT.md         # Consumer agent system prompt
 │   ├── AUTHOR-PROMPT.md           # Author/C4E system prompt
 │   ├── standards/                 # Asset standards and authoring guides
-│   └── domains/                   # Domain definitions with capabilities
-│       └── {domain}/capabilities/ # Domain-specific capabilities
+│   └── domains/                   # Domain definitions
+│       └── code/capabilities/     # Capability documentation
 │
-├── skills/                 # SKILLS (executable units for agents)
-│   ├── code/              # CODE domain skills
-│   │   ├── soe/          # System of Engagement (frontend)
-│   │   ├── soi/          # System of Integration (microservices)
-│   │   └── sor/          # System of Record (mainframe)
-│   ├── design/            # DESIGN domain skills
-│   ├── qa/                # QA domain skills
-│   └── governance/        # GOVERNANCE domain skills
-│
-├── modules/                # MODULES (reusable templates, CODE domain)
+├── modules/                # MODULES (reusable templates)
 │   └── mod-code-{NNN}-...
 │
-├── runtime/                # RUNTIME (orchestration and execution)
-│   ├── discovery/         # Interpretive discovery + skill-index.yaml
-│   ├── flows/             # Execution flows by domain/type
+├── runtime/                # RUNTIME
+│   ├── discovery/         # capability-index.yaml + discovery guidance
+│   ├── flows/             # Execution flows (generate, transform)
 │   └── validators/        # Tier-1 and Tier-2 validators
 │
 └── docs/                   # Project documentation
 ```
 
-> **Note:** Proofs of concept (PoCs) are maintained in a separate workspace directory outside this repository to keep generated outputs separate from the versioned model.
+---
+
+## Model v3.0 - Capability-Based Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ENABLEMENT 2.0 v3.0                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  KNOWLEDGE LAYER                                                            │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  ADRs ──────────> ERIs                                               │   │
+│  │  (Strategic)      (Tactical Reference)                               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                              │                                              │
+│                              ▼                                              │
+│  CAPABILITY LAYER                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Capability ──> Feature ──> Implementation ──> Module                │   │
+│  │  (resilience)   (circuit-breaker)  (java-spring)   (mod-001)        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                              │                                              │
+│                              ▼                                              │
+│  EXECUTION LAYER                                                            │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Discovery ──> Flow Selection ──> Phase Planning ──> Generation     │   │
+│  │  (keywords)    (generate/transform)  (structural→impl→cross-cut)    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Capability** | Conceptual grouping (architecture, resilience, persistence) |
+| **Feature** | Specific option within capability (circuit-breaker, retry) |
+| **Implementation** | Stack-specific realization (java-spring, nodejs) |
+| **Module** | Templates and rules for code generation |
+| **Flow** | Execution pattern (generate, transform) |
 
 ---
 
-## Model v2.0 - Capability-Based Architecture
+## Discovery Flow
+
+All discovery goes through `capability-index.yaml`:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         ENABLEMENT 2.0                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  KNOWLEDGE LAYER (what to know)                                      │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  ADRs ──────────> ERIs                                       │    │
-│  │  (Strategic)      (Tactical Reference)                       │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│                              ▼                                       │
-│  CAPABILITY LAYER (what can be done) ← NEW in v2.0                  │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Domain ──> Capability ──> Feature                           │    │
-│  │  (CODE)     (resilience)   (circuit-breaker)                 │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│                              ▼                                       │
-│  EXECUTION LAYER (what to do)                                        │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Skills ─────────────────> Output                            │    │
-│  │  (implement capabilities)  (Generated Artifacts)             │    │
-│  │       │                                                       │    │
-│  │       └──> Modules (templates for skills)                    │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│                              ▼                                       │
-│  RUNTIME LAYER (how to execute)                                      │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Discovery ──> Flow ──> Validation                           │    │
-│  │  (Interpretive) (Holistic/Atomic)  (Sequential)              │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Key Concepts in Model v2.0
-
-**Capabilities:** Domain-specific abilities that skills implement.
-
-```yaml
-# Example: CODE domain capabilities
-resilience:
-  features: [circuit-breaker, retry, timeout, rate-limiter]
-persistence:
-  features: [jpa, systemapi]
-api-exposure:
-  features: [rest-hateoas]
-```
-
-**Skill Types:**
-- `CREATION` - Generate complete artifacts from scratch
-- `TRANSFORMATION` - Add/modify capabilities to existing code
-- `ANALYSIS` - Analyze without modification
-- `VALIDATION` - Verify compliance
-
-### Current Inventory (v2.5.0)
-
-| Asset Type | Count | Location |
-|------------|-------|----------|
-| **Domains** | 4 | model/domains/ (CODE active, others planned) |
-| **Capabilities** | 8 | model/domains/code/capabilities/ |
-| **ADRs** | 6 | knowledge/ADRs/ |
-| **ERIs** | 9 | knowledge/ERIs/ |
-| **Modules** | 10 | modules/ |
-| **Skills** | 5 | skills/ |
-| **Flows** | 10 | runtime/flows/code/ |
-
----
-
-## Quick Start
-
-**New here?** Start with [GETTING-STARTED.md](GETTING-STARTED.md) which provides onboarding paths for:
-- Executives (15 min)
-- Architects (1-2 hours)
-- Engineers creating assets (2-4 hours)
-- Engineers using skills (30 min)
-
-### Explore the Repository
-
-```bash
-# View knowledge (ADRs, ERIs)
-ls knowledge/
-
-# View model and domains
-ls model/domains/
-
-# View capabilities
-ls model/domains/code/capabilities/
-
-# View available skills
-ls skills/
-
-# View available modules
-ls modules/
-
-# View runtime (flows, validators)
-ls runtime/
-```
-
-### Understand the Model
-
-1. Start with: `model/ENABLEMENT-MODEL-v2.0.md`
-2. Then: `model/standards/ASSET-STANDARDS-v1.4.md`
-3. To create assets: `model/standards/authoring/`
-
----
-
-## Execution Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  1. INPUT: User prompt                                               │
-│                                                                      │
-│  2. DISCOVERY: Interpret domain, capability, and skill (semantic)   │
-│     └── runtime/discovery/discovery-guidance.md                     │
-│                                                                      │
-│  3. LOAD: Skill specification + capabilities                         │
-│     └── skills/{skill}/SKILL.md + model/domains/{domain}/caps/      │
-│                                                                      │
-│  4. FLOW: Get execution approach for skill type                     │
-│     └── runtime/flows/{domain}/{TYPE}.md                            │
-│                                                                      │
-│  5. EXECUTE: Consult modules, generate output (holistic for GEN)    │
-│     └── modules/{mod}/MODULE.md, templates/                         │
-│                                                                      │
-│  6. VALIDATE: Run validators (sequential)                           │
-│     └── runtime/validators/ + modules/{mod}/validation/             │
-│                                                                      │
-│  7. OUTPUT: Generated artifacts + traceability manifest             │
-└─────────────────────────────────────────────────────────────────────┘
+prompt → keywords → features → implementations → modules
+                      ↓
+                 resolve dependencies
+                      ↓
+                 select flow (generate/transform)
+                      ↓
+                 phase planning → execution
 ```
 
 ---
 
-## Versioning
+## Current Capabilities (CODE Domain)
 
-We use [Semantic Versioning](https://semver.org/):
+| Capability | Type | Features |
+|------------|------|----------|
+| **architecture** | Structural | hexagonal-light |
+| **api-architecture** | Compositional | domain-api, system-api, experience-api, composable-api |
+| **integration** | Compositional | api-rest |
+| **persistence** | Compositional | jpa, systemapi |
+| **resilience** | Compositional | circuit-breaker, retry, timeout, rate-limiter |
+| **distributed-transactions** | Compositional | saga-compensation |
 
+---
+
+## Modules (java-spring)
+
+| Module | Capability | Feature |
+|--------|------------|---------|
+| mod-code-001 | resilience | circuit-breaker |
+| mod-code-002 | resilience | retry |
+| mod-code-003 | resilience | timeout |
+| mod-code-004 | resilience | rate-limiter |
+| mod-code-015 | architecture | hexagonal-light |
+| mod-code-016 | persistence | jpa |
+| mod-code-017 | persistence | systemapi |
+| mod-code-018 | integration | api-rest |
+| mod-code-019 | api-architecture | domain-api |
+| mod-code-020 | distributed-transactions | saga-compensation |
+
+---
+
+## Getting Started
+
+### For Consumers (Developers)
+
+1. Read [CONSUMER-PROMPT.md](model/CONSUMER-PROMPT.md) for the agent system prompt
+2. Understand capabilities in [capability-index.yaml](runtime/discovery/capability-index.yaml)
+3. Use natural language to request code generation
+
+**Example:**
 ```
-MAJOR.MINOR.PATCH
-
-MAJOR - Structural changes, complete new capability
-MINOR - New ERIs, MODULEs, SKILLs
-PATCH - Fixes, documentation improvements
+"Generate a Domain API for Customer management with 
+persistence via System API and circuit breaker protection"
 ```
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+### For Authors (C4E Team)
+
+1. Read [AUTHOR-PROMPT.md](model/AUTHOR-PROMPT.md)
+2. Follow [Authoring Standards](model/standards/authoring/README.md)
+3. Create ADRs → ERIs → Modules → Capability features
 
 ---
 
-## Methodology
+## Documentation
 
-See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for details on:
-- Branching strategy
-- Commit conventions
-- AI workflow
-- Session documentation
-
----
-
-## Roadmap
-
-### Current Phase: Model v2.0 (v2.x)
-- [x] Multi-domain SDLC architecture
-- [x] Capability-based skill organization
-- [x] Resilience patterns (Circuit Breaker, Retry, Timeout, Rate Limiter)
-- [x] Persistence patterns (JPA, System API)
-- [x] API patterns (HATEOAS, REST Client)
-- [x] Coherence and Determinism rules
-- [x] Code Generation PoC validated
-
-### Next Phases
-- [ ] Observability patterns (metrics, tracing, logging)
-- [ ] Event-driven patterns (Kafka, async)
-- [ ] Testing patterns (unit, integration, contract)
-- [ ] DESIGN domain activation
-- [ ] QA domain activation
-- [ ] MCP Server integration
+| Document | Purpose |
+|----------|---------|
+| [ENABLEMENT-MODEL-v3.0.md](model/ENABLEMENT-MODEL-v3.0.md) | Core model definition |
+| [Discovery Guidance](runtime/discovery/discovery-guidance.md) | How discovery works |
+| [Flow: Generate](runtime/flows/code/flow-generate.md) | Project generation flow |
+| [Flow: Transform](runtime/flows/code/flow-transform.md) | Code transformation flow |
 
 ---
 
-## Contributing
+## What's New in v3.0
 
-This is an internal project of the Center for Enablement (C4E).
-
-To contribute:
-1. Review `docs/METHODOLOGY.md`
-2. Follow standards in `model/standards/authoring/`
-3. Validate changes before committing
-
----
-
-## License
-
-Internal project - All rights reserved.
+| Change | Description |
+|--------|-------------|
+| **Skills Eliminated** | Logic moved to enriched Features |
+| **Single Discovery Path** | All through capability-index.yaml |
+| **Multi-Implementation** | Features support multiple stacks/patterns |
+| **Stack Detection** | Automatic detection from existing code |
+| **Two Generic Flows** | flow-generate and flow-transform |
 
 ---
 
-**Version:** 2.5.0  
-**Model:** v2.0  
-**Last Updated:** 2025-01-15
+## Related
+
+- [Getting Started](GETTING-STARTED.md)
+- [Changelog](CHANGELOG.md)
+- [Methodology](docs/METHODOLOGY.md)
+
+---
+
+**Last Updated:** 2026-01-20

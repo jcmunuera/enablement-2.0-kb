@@ -12,14 +12,13 @@ tags:
   - resilience4j
   - circuit-breaker
   - fault-tolerance
-used_by:
-  - skill-code-001-add-circuit-breaker-java-resilience4j
-  - skill-code-020-generate-microservice-java-spring
 
 # ═══════════════════════════════════════════════════════════════════
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
+  stack: java-spring
+  pattern: annotation
   capability: resilience
   feature: circuit-breaker
 ---

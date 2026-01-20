@@ -1,7 +1,8 @@
 # Authoring Standards
 
-**Version:** 2.5  
-**Last Updated:** 2026-01-19
+**Version:** 3.0  
+**Last Updated:** 2026-01-20  
+**Model Version:** 3.0
 
 ---
 
@@ -13,81 +14,28 @@ This directory contains **authoring guides** for creating assets in the Enableme
 - Field specifications and valid values
 - Checklists for completeness validation
 - Examples of well-formed assets
-- Relationship requirements (what other assets must exist/be referenced)
-- **Coherence rules** (how assets relate to each other)
+- Relationship requirements
+- Coherence rules
 
 ---
 
-## What's New in v2.5
+## What's New in v3.0
 
-> **Key changes:** Determinism Rules Architecture
+> **Key change:** Skills eliminated as runtime entities
 
-| Guide | Change |
-|-------|--------|
-| **MODULE.md v2.1** | NEW section "Determinism and Module-Specific Rules" |
-| **README.md** | NEW section "Determinism Rules Architecture" |
+| Change | Impact |
+|--------|--------|
+| **Skills Eliminated** | SKILL.md guide removed, logic moved to CAPABILITY.md |
+| **Features Enriched** | CAPABILITY.md updated with config, input_spec, implementations |
+| **Flows Simplified** | FLOW.md updated for flow-generate and flow-transform |
+| **Single Discovery** | All discovery through capability-index.yaml |
 
-### Key Concepts
-
-**Rule Cohesion:** Module-specific rules live with their modules. When a module is deprecated, its rules go with it.
-
-```
-DETERMINISM-RULES.md (Global)    MODULE.md (Specific)
-├── Java patterns                ├── ## ⚠️ CRITICAL section
-├── Required annotations         │   └── Rules that ONLY apply
-├── Code style                   │       to THIS module
-└── Dependency versions          └── Priority: HIGHEST
-```
-
-**Priority:** MODULE.md CRITICAL > MODULE.md templates > DETERMINISM-RULES.md > LLM training
-
----
-
-## What's New in v2.4
-
-> **Key changes:** Tag-based discovery system
-
-| Guide | Change |
-|-------|--------|
-| **TAGS.md v1.1** | NEW - Tag system for skill discovery (cross-domain) |
-| **SKILL.md v2.7** | YAML frontmatter tags required in OVERVIEW.md |
-
-### Key Concepts
-
-**Tags for Discovery:** Skills declare tags in YAML frontmatter. Discovery uses tags to filter and rank candidates before reading full OVERVIEW.md.
+### Entity Model Change
 
 ```
-User Request → Extract Tags → Match vs Skill Tags → Rank → Select
+v2.x: Skill → Capability → Feature → Module
+v3.0:         Capability → Feature → Implementation → Module
 ```
-
-See `TAGS.md` for cross-domain tag format. See `model/domains/{domain}/TAG-TAXONOMY.md` for domain-specific taxonomies.
-
-### Previous (v2.3)
-
-> **Key changes:** Coherence and Determinism support
-
-| Guide | Change |
-|-------|--------|
-| **ERI.md v1.2** | `implementation_options` structure for multi-option ERIs |
-| **MODULE.md v1.8** | `derived_from` now REQUIRED. Variant derivation from ERI. |
-| **FLOW.md v1.1** | Variant Resolution Step required in flows |
-| **SKILL.md v2.6** | Variant Handling in Module Resolution |
-
-### Key Concepts
-
-**Coherence:** Modules MUST derive from ERIs. Module variants MUST inherit from ERI options.
-
-```
-ERI (implementation_options) → MODULE (variants)
-                            ↑
-                      derived_from (REQUIRED)
-```
-
-### Previous (v2.2)
-
-| Guide | Change |
-|-------|--------|
-| **FLOW.md** | Authoring guide for execution flows with mandatory CONSUMER-PROMPT.md update checklist |
 
 ---
 
@@ -98,55 +46,53 @@ ERI (implementation_options) → MODULE (variants)
 | Asset Type | Guide | Version | Description |
 |------------|-------|---------|-------------|
 | ADR | [ADR.md](./ADR.md) | 1.0 | Architecture Decision Records |
-| ERI | [ERI.md](./ERI.md) | **1.2** | Enterprise Reference Implementations ⭐ |
-| Module | [MODULE.md](./MODULE.md) | **1.8** | Reusable code templates ⭐ |
-| Skill | [SKILL.md](./SKILL.md) | **2.7** | Automation skills ⭐ |
+| ERI | [ERI.md](./ERI.md) | 1.2 | Enterprise Reference Implementations |
+| Module | [MODULE.md](./MODULE.md) | **2.0** | Reusable code templates ⭐ |
+| **Capability** | [CAPABILITY.md](./CAPABILITY.md) | **3.0** | **Feature definitions with implementations** ⭐ |
 | Validator | [VALIDATOR.md](./VALIDATOR.md) | 1.0 | Artifact validation components |
-| Flow | [FLOW.md](./FLOW.md) | **1.1** | Execution flows by skill type ⭐ |
-| **Tags** | [TAGS.md](./TAGS.md) | **1.1** | **Skill discovery tags** ⭐ NEW |
+| Flow | [FLOW.md](./FLOW.md) | **3.0** | Execution flows (generate/transform) ⭐ |
+| Tags | [TAGS.md](./TAGS.md) | 1.1 | Discovery keywords |
 
-### Complementary Asset Types
+### Removed in v3.0
 
-| Asset Type | Guide | Version | Description |
-|------------|-------|---------|-------------|
-| Capability | [CAPABILITY.md](./CAPABILITY.md) | 1.0 | Feature groupings |
+| Asset Type | Status | Migration |
+|------------|--------|-----------|
+| ~~Skill~~ | **Eliminated** | Logic moved to Capability features |
 
 ---
 
 ## Asset Creation Order
 
-Assets should be created in this order to ensure dependencies exist:
+Assets should be created in this order:
 
 ```
 1. ADR (Strategic Decision)
    ↓
 2. ERI (Reference Implementation)
-   │  └─ Define implementation_options if multiple valid approaches
    ↓
 3. Module (Reusable Template)
    │  └─ MUST have derived_from pointing to ERI
-   │  └─ If ERI has options, Module has variants
+   │  └─ MUST declare stack in frontmatter
    ↓
-4. Validator (Quality Checks)      ← Can be created alongside Module
+4. Validator (Quality Checks)
    ↓
-5. Skill (Automation)
-   │  └─ Resolves variants at runtime
+5. Capability Feature (in capability-index.yaml)
+   │  └─ References module
+   │  └─ Defines config, input_spec
 ```
-
-> **IMPORTANT:** Before creating a Module, verify the source ERI exists and check if it has `implementation_options`. Modules CANNOT invent variants not defined in the ERI.
 
 ---
 
 ## Coherence Rules
 
-When creating assets, ensure coherence between related assets:
+When creating assets, ensure coherence:
 
 | Rule | Description |
 |------|-------------|
 | **Module → ERI** | Every Module MUST have `derived_from` pointing to an ERI |
-| **Variants → Options** | Module variants MUST derive from ERI `implementation_options` |
-| **No Invention** | Module CANNOT offer variants not in source ERI |
-| **Default Inheritance** | Module default MUST match ERI default |
+| **Module → Stack** | Every Module MUST declare its stack |
+| **Feature → Module** | Every feature implementation MUST reference existing module |
+| **Feature → Default** | Features with multiple implementations MUST have default |
 
 ---
 
@@ -154,143 +100,97 @@ When creating assets, ensure coherence between related assets:
 
 ### 1. Self-Contained Documentation
 
-Each asset MUST be understandable without external context. An AI agent reading only the asset should understand:
-- What it is
-- Why it exists
-- How to use it
-- What it relates to
+Each asset MUST be understandable without external context.
 
 ### 2. Explicit Relationships
 
-All relationships to other assets MUST be explicitly documented:
+All relationships MUST be explicitly documented:
 
-| Relationship | From | To | Example |
-|--------------|------|-----|---------|
-| `implements` | ERI | ADR | ERI implements ADR decisions |
-| `source_eri` | Module | ERI | Module derives from ERI |
-| `uses` | Skill | Module | Skill uses Module templates |
-| `validates` | Validator | Artifact | Validator checks artifact |
-| `orchestrates` | Skill | Validator | Skill runs validators |
+| Relationship | From | To |
+|--------------|------|-----|
+| `implements` | ERI | ADR |
+| `derived_from` | Module | ERI |
+| `module` | Feature Implementation | Module |
 
 ### 3. Machine-Readable Metadata
 
-Assets MUST include YAML front matter for tooling:
+Assets MUST include YAML front matter:
 
 ```yaml
 ---
 id: {type}-{id}
 version: {semver}
 status: draft|active|deprecated
-created: {ISO date}
-updated: {ISO date}
-# Asset-specific fields...
 ---
 ```
 
-### 4. Incremental Creation
-
-Assets can be created incrementally across sessions. Each authoring guide specifies:
-- **Minimum viable asset:** Required fields for a valid draft
-- **Complete asset:** All fields for production use
-- **Validation checklist:** How to verify completeness
-
 ---
 
-## Quick Reference: What to Read
+## Quick Reference
 
 | I want to... | Read this |
 |--------------|-----------|
 | Document a strategic decision | [ADR.md](./ADR.md) |
 | Create a reference implementation | [ERI.md](./ERI.md) |
 | Build reusable templates | [MODULE.md](./MODULE.md) |
-| Create automated capability | [SKILL.md](./SKILL.md) |
-| Add validation for new technology | [VALIDATOR.md](./VALIDATOR.md) |
-| Define how a skill type executes | [FLOW.md](./FLOW.md) |
-| **Define discovery tags for skills** | [TAGS.md](./TAGS.md) |
-
----
-
-## Usage
-
-### For AI Agents
-
-When creating a new asset:
-
-1. Read the appropriate authoring guide (e.g., `SKILL.md` for skills)
-2. Identify required relationships (ADRs, ERIs, etc.)
-3. Create minimum viable asset first
-4. Complete remaining sections
-5. Run validation checklist
-6. Update related assets if needed
-
-### For Humans
-
-When reviewing or extending assets:
-
-1. Use authoring guides as reference for expected structure
-2. Use checklists to verify completeness
-3. Follow templates for consistency
+| Define a capability feature | [CAPABILITY.md](./CAPABILITY.md) |
+| Add validation for technology | [VALIDATOR.md](./VALIDATOR.md) |
+| Document an execution flow | [FLOW.md](./FLOW.md) |
 
 ---
 
 ## Critical: Discovery and Execution
 
-### SKILL.md and Discovery
+### CAPABILITY.md and Discovery
 
-The **SKILL.md** guide is particularly important because:
+The **CAPABILITY.md** guide is essential because:
 
-1. **OVERVIEW.md is the key to discovery** - The agent reads OVERVIEW.md to match user intent with skill purpose
-2. **Writing for semantic interpretation** - Skills must be written so the LLM can interpret them correctly
-3. **When to Use / When NOT to Use** - These sections directly affect skill selection
+1. **capability-index.yaml is the single source of truth** - All discovery goes through it
+2. **Features are enriched** - config, input_spec, implementations
+3. **Multi-stack support** - Each feature can have multiple implementations
 
-**Read SKILL.md carefully before creating any skill.**
+**Read CAPABILITY.md before defining any feature.**
 
 ### MODULE.md and Execution
 
 The **MODULE.md** guide clarifies:
 
-1. **Modules as knowledge for GENERATE** - Templates are guidance, not scripts
-2. **Modules as transformation for ADD** - More deterministic application
-3. **Tier-3 validation** - Runs AFTER generation to verify compliance
-4. **Module-specific rules** - CRITICAL sections for rules that only apply to this module
+1. **Stack declaration required** - Every module declares its stack
+2. **Templates as guidance** - Not scripts, but structured knowledge
+3. **Determinism rules** - CRITICAL sections for consistent output
 
-**Understand module role before creating templates.**
+### FLOW.md and Execution
 
-### Determinism Rules Architecture
+The **FLOW.md** guide explains:
 
-Rules for deterministic code generation are split between global and module-specific:
+1. **Two primary flows** - flow-generate and flow-transform
+2. **Phase-based execution** - Features grouped by nature
+3. **Automatic selection** - Based on context (existing code or not)
+
+---
+
+## Determinism Rules Architecture
+
+Rules for deterministic code generation:
 
 | Location | Contains | Priority |
 |----------|----------|----------|
-| `DETERMINISM-RULES.md` | Global patterns (records, DTOs, style) | Base |
-| `MODULE.md` `## ⚠️ CRITICAL` | Module-specific rules | **Highest** |
+| `DETERMINISM-RULES.md` | Global patterns | Base |
+| `MODULE.md ## ⚠️ CRITICAL` | Module-specific rules | **Highest** |
 
-**Principle:** Module-specific rules override global rules. When a module is deprecated, its rules go with it.
-
-See `MODULE.md` section "Determinism and Module-Specific Rules" for details.
-
-### FLOW.md and CONSUMER-PROMPT Updates
-
-The **FLOW.md** guide is critical for maintaining consistency:
-
-1. **Execution flows define HOW skills execute** - Each skill type needs a documented flow
-2. **CONSUMER-PROMPT.md must be updated** - When adding a new flow, the agent context must reflect it
-3. **Post-creation checklist** - FLOW.md includes mandatory steps to update related documents
-
-**⚠️ Creating a flow without updating CONSUMER-PROMPT.md will break the agent's ability to discover and execute the new skill type.**
+**Principle:** Module-specific rules override global rules.
 
 ---
 
 ## Related Documents
 
-- [../../ENABLEMENT-MODEL-v2.0.md](../../ENABLEMENT-MODEL-v2.0.md) - Master model document
+- [../../ENABLEMENT-MODEL-v3.0.md](../../ENABLEMENT-MODEL-v3.0.md) - Master model document
 - [../../CONSUMER-PROMPT.md](../../CONSUMER-PROMPT.md) - Consumer agent system prompt
 - [../../AUTHOR-PROMPT.md](../../AUTHOR-PROMPT.md) - Author system prompt
-- [../ASSET-STANDARDS-v1.4.md](../ASSET-STANDARDS-v1.4.md) - Naming conventions and directory structure
-- [../DETERMINISM-RULES.md](../DETERMINISM-RULES.md) - Code generation patterns (**NEW**)
-- [../validation/](../validation/) - Validation system architecture
-- [../traceability/](../traceability/) - Traceability model and profiles
+- [../ASSET-STANDARDS-v1.4.md](../ASSET-STANDARDS-v1.4.md) - Naming conventions
+- [../DETERMINISM-RULES.md](../DETERMINISM-RULES.md) - Code generation patterns
+- `runtime/discovery/capability-index.yaml` - Central capability index
 
 ---
 
-**Last Updated:** 2025-12-24
+**Last Updated:** 2026-01-20

@@ -11,14 +11,13 @@ tags:
   - resilience4j
   - retry
   - fault-tolerance
-used_by:
-  - skill-code-002-add-retry-java-resilience4j
-  - skill-code-020-generate-microservice-java-spring
 
 # ═══════════════════════════════════════════════════════════════════
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
+  stack: java-spring
+  pattern: annotation
   capability: resilience
   feature: retry
 ---

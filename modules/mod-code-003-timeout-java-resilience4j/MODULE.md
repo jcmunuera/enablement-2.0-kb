@@ -12,9 +12,6 @@ tags:
   - timeout
   - time-limiter
   - fault-tolerance
-used_by:
-  - skill-code-003-add-timeout-java-resilience4j
-  - skill-code-020-generate-microservice-java-spring
 
 # Variant Configuration (v1.1)
 variants:
@@ -48,6 +45,8 @@ variants:
 # MODEL v2.0 - Capability Implementation
 # ═══════════════════════════════════════════════════════════════════
 implements:
+  stack: java-spring
+  pattern: annotation
   capability: resilience
   feature: timeout
 ---
