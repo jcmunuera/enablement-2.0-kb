@@ -920,8 +920,8 @@ public WebClient webClient() {
 
 ### Module Reference
 
-- **@TimeLimiter strategy:** [mod-code-003-timeout-java-resilience4j](../../skills/modules/mod-code-003-timeout-java-resilience4j/)
-- **Client-level strategy:** [mod-code-018-api-integration-rest-java-spring](../../skills/modules/mod-code-018-api-integration-rest-java-spring/)
+- **@TimeLimiter strategy:** [mod-code-003-timeout-java-resilience4j](../../../modules/mod-code-003-timeout-java-resilience4j/)
+- **Client-level strategy:** [mod-code-018-api-integration-rest-java-spring](../../../modules/mod-code-018-api-integration-rest-java-spring/)
 
 ---
 

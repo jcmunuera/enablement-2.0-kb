@@ -229,4 +229,4 @@ resilience4j:
 
 ## Example Module
 
-See `skills/modules/mod-code-001-circuit-breaker-java-resilience4j/` for a complete example.
+See `modules/modules/mod-code-001-circuit-breaker-java-resilience4j/` for a complete example.

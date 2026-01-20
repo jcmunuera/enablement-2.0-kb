@@ -55,5 +55,5 @@ Tier-3 validation for the Rate Limiter pattern implementation using Resilience4j
 
 ```bash
 # In skill's validate.sh
-source "$KNOWLEDGE_BASE/skills/modules/mod-code-004-rate-limiter-java-resilience4j/validation/rate-limiter-check.sh" "$TARGET_DIR"
+source "$KNOWLEDGE_BASE/modules/mod-code-004-rate-limiter-java-resilience4j/validation/rate-limiter-check.sh" "$TARGET_DIR"
 ```

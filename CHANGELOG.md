@@ -7,6 +7,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.0] - 2026-01-20
+
+### 🚀 Major: Model v3.0 - Skills Eliminated, Capability-Driven Discovery
+
+This release introduces Model v3.0, a significant simplification that eliminates Skills as runtime entities. All discovery now goes through the capability-index.yaml, and execution uses two generic flows.
+
+#### Breaking Changes
+
+**Skills Eliminated**
+- `skills/` directory removed entirely
+- `skill-index.yaml` removed
+- All skill logic moved to enriched Features in capability-index.yaml
+- Authoring guide `SKILL.md` removed
+
+**Discovery Path Changed**
+```
+# Before (v2.x): Dual discovery paths
+prompt → skill-index → skill → required_capabilities → modules
+prompt → capability-index → capability → modules
+
+# After (v3.0): Single discovery path
+prompt → capability-index → features → implementations → modules
+```
+
+**Flows Renamed**
+- `GENERATE.md` → `flow-generate.md`
+- `ADD.md` → `flow-transform.md`
+- MIGRATE, REFACTOR, REMOVE marked as TBD
+
+#### Model Changes
+
+**New Model Document**
+- `ENABLEMENT-MODEL-v2.0.md` → `ENABLEMENT-MODEL-v3.0.md`
+
+**Entity Hierarchy Changed**
+```
+v2.x: Skill → Capability → Feature → Module
+v3.0: Capability → Feature → Implementation → Module
+```
+
+**capability-index.yaml v2.1**
+- Features now include: `config`, `input_spec`, `implementations`, `default`
+- Multi-implementation support per feature (by stack/pattern)
+- Stack detection rules added
+- Organizational defaults defined
+
+#### Capability Changes
+
+**New Capabilities**
+- `architecture` (structural) - `architecture.md` created
+- `distributed-transactions` - `distributed_transactions.md` created
+
+**Updated Capability Index**
+```yaml
+# New structure for features
+features:
+  domain-api:
+    keywords: [...]
+    requires: [architecture.hexagonal-light]
+    config: {hateoas: true}
+    input_spec: {serviceName: {...}}
+    implementations:
+      - id: java-spring
+        module: mod-code-019
+        stack: java-spring
+    default: java-spring
+```
+
+#### Module Changes
+
+All 10 modules updated with `stack` in frontmatter:
+```yaml
+implements:
+  stack: java-spring      # NEW
+  pattern: annotation     # NEW (for resilience modules)
+  capability: resilience
+  feature: circuit-breaker
+```
+
+#### Flow Changes
+
+**New Flows**
+- `runtime/flows/code/flow-generate.md` - Project generation with phase planning
+- `runtime/flows/code/flow-transform.md` - Code transformation
+
+**Phase-Based Execution**
+```
+Phase 1: STRUCTURAL     (architecture, api-architecture)
+Phase 2: IMPLEMENTATION (persistence, integration)
+Phase 3: CROSS-CUTTING  (resilience, distributed-transactions)
+```
+
+#### Documentation Updates
+
+**Updated**
+- `README.md` - v3.0 structure and concepts
+- `GETTING-STARTED.md` - Updated paths
+- `_sidebar.md` - Removed skills section, added capabilities
+- `CONSUMER-PROMPT.md` - Complete rewrite for v3.0
+- `AUTHOR-PROMPT.md` - Removed skill references
+- `model/standards/authoring/README.md` - Removed SKILL.md reference
+- `model/standards/authoring/CAPABILITY.md` - v3.0 feature attributes
+- `model/standards/authoring/FLOW.md` - v3.0 flow types
+- `runtime/discovery/discovery-guidance.md` - Single path discovery
+
+**Removed**
+- `model/standards/authoring/SKILL.md`
+- `runtime/discovery/skill-index.yaml`
+- `runtime/flows/code/GENERATE.md`
+- `runtime/flows/code/ADD.md`
+- `skills/` directory (all contents)
+
+#### Migration Guide
+
+**For Consumers**
+- Use capability keywords instead of skill names
+- Flow is automatically selected based on context
+- Stack is auto-detected or uses default
+
+**For Authors**
+- Define features in capability-index.yaml (not skills)
+- Each feature must reference a module
+- Use CAPABILITY.md authoring guide
+
+---
+
 ## [2.5.0] - 2025-01-15
 
 ### 🎯 Major: Model v2.0 - Capability-Based Architecture

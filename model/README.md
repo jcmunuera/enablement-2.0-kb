@@ -171,7 +171,7 @@ implements:
 | Directory | Content |
 |-----------|---------|
 | `/knowledge/` | ADRs, ERIs (pure knowledge) |
-| `/skills/` | Executable skills |
+| `/modules/` | Executable skills |
 | `/modules/` | Reusable templates |
 | `/runtime/` | Discovery, flows, validators |
 

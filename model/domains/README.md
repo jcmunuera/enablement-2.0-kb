@@ -105,7 +105,7 @@ This guidance enables **interpretive discovery** - the agent reads these descrip
 | ERI | `eri-{domain}-XXX` in name | `knowledge/ERIs/` |
 | Capability | Located in domain folder | `model/domains/{domain}/capabilities/` |
 | Module | `mod-{domain}-XXX` in name | `modules/` |
-| Skill | `skill-{domain}-XXX` in name | `skills/` |
+| Skill | `skill-{domain}-XXX` in name | `modules/` |
 | Flow | Located in runtime | `runtime/flows/{domain}/` |
 
 ---

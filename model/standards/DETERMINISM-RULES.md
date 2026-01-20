@@ -684,7 +684,7 @@ public CustomerResponse getCustomer(UUID id) { ... }
 
 - `model/standards/authoring/MODULE.md` - Module authoring guide
 - `model/standards/ASSET-STANDARDS-v1.4.md` - Asset standards
-- `runtime/flows/code/GENERATE.md` - Generation flow with variant selection
+- `runtime/flows/code/flow-generate.md` - Generation flow with variant selection
 - `runtime/schemas/manifest.schema.json` - Manifest JSON Schema (v1.1)
 
 ---

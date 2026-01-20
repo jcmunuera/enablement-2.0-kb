@@ -50,5 +50,5 @@ Tier-3 validation for the Timeout pattern (TimeLimiter) implementation using Res
 
 ```bash
 # In skill's validate.sh
-source "$KNOWLEDGE_BASE/skills/modules/mod-code-003-timeout-java-resilience4j/validation/timeout-check.sh" "$TARGET_DIR"
+source "$KNOWLEDGE_BASE/modules/mod-code-003-timeout-java-resilience4j/validation/timeout-check.sh" "$TARGET_DIR"
 ```

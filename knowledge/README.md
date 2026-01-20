@@ -60,5 +60,5 @@ ADR (Strategic Decision)
 ## Related
 
 - Model definition: `/model/`
-- Executable skills: `/skills/`
+- Modules: `/modules/`
 - Reusable modules: `/modules/`

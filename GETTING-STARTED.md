@@ -105,15 +105,15 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 │                                                                   │
 │                                    ↓                              │
 │                                                                   │
-│                          skill-code-001                           │
-│                   "Add Circuit Breaker to Service"                │
-│                     (Automated Execution)                         │
+│                    capability-index.yaml                          │
+│                 resilience.circuit-breaker                        │
+│                    (Feature Definition)                           │
 │                                                                   │
 │                                    ↓                              │
 │                                                                   │
 │                    ┌─────────────────────┐                        │
-│                    │   GENERATE.md       │                        │
-│                    │ (Holistic Execution)│                        │
+│                    │  flow-generate.md   │                        │
+│                    │ (Phase Execution)   │                        │
 │                    └─────────────────────┘                        │
 │                                    ↓                              │
 │                                                                   │
@@ -127,7 +127,7 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
 ## Engineer - Creating Assets
 
 **Time:** 2-4 hours  
-**Goal:** Learn to author ADRs, ERIs, Modules, and Skills
+**Goal:** Learn to author ADRs, ERIs, Modules, and Capabilities
 
 ### Prerequisites
 
@@ -149,34 +149,33 @@ Enablement 2.0 is an AI-powered SDLC automation platform that:
    - Working code examples with documentation
 
 4. **[model/standards/authoring/MODULE.md](model/standards/authoring/MODULE.md)** (30 min)
-   - Module role by skill type (knowledge for GENERATE, transformation for ADD)
+   - Module role in code generation
    - Template Catalog structure
    - Variables and placeholders
 
-5. **[model/standards/authoring/SKILL.md](model/standards/authoring/SKILL.md)** (45 min)
-   - **OVERVIEW.md is critical for discovery** - how to write it
-   - Skill specification structure
-   - Execution flow reference
-   - Validation orchestration
+5. **[model/standards/authoring/CAPABILITY.md](model/standards/authoring/CAPABILITY.md)** (30 min)
+   - How to define capability features
+   - Feature attributes (keywords, config, input_spec)
+   - Implementation mappings to modules
 
-6. **[runtime/flows/code/GENERATE.md](runtime/flows/code/GENERATE.md)** (15 min)
-   - Holistic execution model
-   - Modules as knowledge, not steps
+6. **[runtime/flows/code/flow-generate.md](runtime/flows/code/flow-generate.md)** (15 min)
+   - Phase-based execution model
+   - Modules loaded per phase
    - Validation after generation
 
-### Practice: Creating a New Skill
+### Practice: Creating a New Capability Feature
 
 After completing the reading:
 
-1. Start by examining existing skills:
-   - `skills/skill-code-001-add-circuit-breaker-java-resilience4j/`
-   - `skills/skill-code-020-generate-microservice-java-spring/`
+1. Start by examining existing modules:
+   - `modules/mod-code-001-circuit-breaker-java-resilience4j/`
+   - `modules/mod-code-015-hexagonal-base-java-spring/`
 
 2. Pay special attention to:
-   - `SKILL.md` - Complete specification
-   - `OVERVIEW.md` - Discovery metadata (critical!)
+   - `MODULE.md` - Complete specification with templates
+   - `implements` section in frontmatter
 
-3. Use the validation checklist in `authoring/SKILL.md` before submitting
+3. Add feature to `runtime/discovery/capability-index.yaml`
 
 ### Key Takeaways
 
@@ -197,41 +196,41 @@ After completing the reading:
 1. **[README.md](README.md)** (3 min)
    - Quick overview
 
-2. **[skills/README.md](skills/README.md)** (5 min)
-   - Current inventory of available skills
+2. **[runtime/discovery/capability-index.yaml](runtime/discovery/capability-index.yaml)** (5 min)
+   - Current inventory of available capabilities and features
 
-3. **Choose a Skill and read its documentation:**
+3. **Choose a capability and understand its features:**
 
    **To add Circuit Breaker to existing service:**
-   - `skills/skill-code-001-add-circuit-breaker-java-resilience4j/OVERVIEW.md`
+   - Feature: `resilience.circuit-breaker`
+   - Module: `mod-code-001-circuit-breaker-java-resilience4j`
 
-   **To generate a new microservice:**
-   - `skills/skill-code-020-generate-microservice-java-spring/OVERVIEW.md`
+   **To generate a new Domain API:**
+   - Feature: `api-architecture.domain-api`
+   - Requires: `architecture.hexagonal-light`
 
 4. **Understand input format:**
-   - Review the skill's `SKILL.md` for input schema
+   - Review the feature's `input_spec` in capability-index.yaml
 
-### Quick Start: Generate a Microservice
+### Quick Start: Generate a Domain API
 
 ```bash
-# 1. Navigate to the skill
-cd skills/skill-code-020-generate-microservice-java-spring
+# 1. Review capability-index.yaml for available features
+cat runtime/discovery/capability-index.yaml
 
-# 2. Read the OVERVIEW (quick reference)
-cat OVERVIEW.md
+# 2. Understand what the feature requires
+# Example: domain-api requires hexagonal-light
 
-# 3. Review full specification
-cat SKILL.md
+# 3. Prepare your prompt with required input
+# "Generate Domain API for Customer with persistence via System API"
 
-# 4. Create your generation request following the schema
-
-# 5. Execute (via your AI integration)
+# 4. Execute (via AI agent)
 ```
 
 ### Key Takeaways
 
-- Each Skill has OVERVIEW.md for quick reference, SKILL.md for full details
-- Input schemas define what parameters you need
+- All discovery goes through capability-index.yaml
+- Features define keywords, config, input_spec, and implementations
 - Generated code includes `.enablement/manifest.json` for traceability
 
 ---
@@ -261,7 +260,9 @@ enablement-2.0/
 │   │
 │   ├── domains/                    ← Domain definitions
 │   │   ├── README.md
-│   │   ├── code/DOMAIN.md          ← CODE domain (active)
+│   │   ├── code/
+│   │   │   ├── DOMAIN.md           ← CODE domain (active)
+│   │   │   └── capabilities/       ← Capability documentation
 │   │   ├── design/DOMAIN.md        ← DESIGN domain (planned)
 │   │   ├── qa/DOMAIN.md            ← QA domain (planned)
 │   │   └── governance/DOMAIN.md    ← GOVERNANCE domain (planned)
@@ -272,21 +273,15 @@ enablement-2.0/
 │       │   ├── ADR.md
 │       │   ├── ERI.md
 │       │   ├── MODULE.md
-│       │   ├── SKILL.md            ← ⭐ Critical for skills
+│       │   ├── CAPABILITY.md       ← ⭐ Feature definitions
+│       │   ├── FLOW.md
 │       │   └── VALIDATOR.md
 │       ├── validation/             ← Validation standards
 │       └── traceability/           ← Traceability standards
 │
-├── skills/                         ← EXECUTABLE SKILLS
-│   ├── README.md                   ← Skills inventory
-│   └── skill-{domain}-{NNN}-{type}-{target}/
-│       ├── OVERVIEW.md             ← ⭐ Discovery metadata
-│       ├── SKILL.md                ← Full specification
-│       └── validation/
-│
-├── modules/                        ← REUSABLE KNOWLEDGE
+├── modules/                        ← REUSABLE TEMPLATES
 │   ├── README.md                   ← Modules inventory
-│   └── mod-{domain}-{NNN}-{pattern}/
+│   └── mod-code-{NNN}-{pattern}/
 │       ├── MODULE.md               ← Templates & constraints
 │       ├── templates/              ← Code templates
 │       └── validation/             ← Tier-3 validators
@@ -294,13 +289,12 @@ enablement-2.0/
 ├── runtime/                        ← RUNTIME ORCHESTRATION
 │   ├── README.md
 │   ├── discovery/
-│   │   ├── discovery-guidance.md   ← ⭐ Interpretive discovery
-│   │   └── execution-framework.md
+│   │   ├── capability-index.yaml   ← ⭐ Single source of truth
+│   │   └── discovery-guidance.md
 │   ├── flows/
 │   │   └── code/
-│   │       ├── GENERATE.md         ← ⭐ Holistic execution
-│   │       ├── ADD.md
-│   │       └── ...
+│   │       ├── flow-generate.md    ← ⭐ Project generation
+│   │       └── flow-transform.md   ← Code transformation
 │   └── validators/
 │       ├── tier-1-universal/
 │       └── tier-2-technology/
@@ -315,7 +309,7 @@ enablement-2.0/
 
 ### Q: Where do I start if I just want to generate code?
 
-Go to [Engineer - Using Capabilities](#engineer-using-skills) path. You can be productive in 30 minutes.
+Go to [Engineer - Using Capabilities](#engineer-using-capabilities) path. You can be productive in 30 minutes.
 
 ### Q: I want to add a new pattern (e.g., Bulkhead). What do I need?
 
@@ -323,22 +317,27 @@ Follow the [Engineer - Creating Assets](#engineer-creating-assets) path. You'll 
 1. ADR (if new strategic decision)
 2. ERI (reference implementation)
 3. Module (templates)
-4. Skill (automation)
+4. Capability Feature (in capability-index.yaml)
 
 ### Q: What's the difference between ERI and Module?
 
 - **ERI** = Working reference code with documentation. It's a complete, runnable example.
-- **Module** = Templates abstracted from ERI. For GENERATE skills, modules are knowledge to consult. For ADD skills, they're more directly applied.
+- **Module** = Templates abstracted from ERI. Modules are loaded per phase during generation.
 
-### Q: What is "holistic execution"?
+### Q: What is "phase-based execution"?
 
-For GENERATE skills, the agent doesn't process modules one by one. Instead, it consults ALL applicable modules as knowledge and generates the complete output in one pass, considering all features together. This produces more coherent code.
+For flow-generate, features are grouped into phases by nature:
+1. **STRUCTURAL**: architecture, api-architecture (project structure)
+2. **IMPLEMENTATION**: persistence, integration (adapters)
+3. **CROSS-CUTTING**: resilience, etc. (annotations)
+
+Modules are loaded per phase to manage context size and ensure coherent output.
 
 ### Q: How does discovery work?
 
-Discovery is **interpretive**, not rule-based. The agent reads DOMAIN.md files and skill OVERVIEW.md files to understand what each skill does. It matches user intent semantically based on **output type** (code, diagram, report) and **action** (generate, analyze, design).
+Discovery goes through `capability-index.yaml`. The agent matches user prompt keywords against feature keywords, resolves dependencies, validates compatibility, and determines which modules to load.
 
-### Q: How do I know which validators apply to my skill?
+### Q: How do I know which validators apply?
 
 See `model/standards/validation/README.md`. The validation tier depends on:
 - Tier 1: Always (universal checks)

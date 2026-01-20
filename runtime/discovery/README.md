@@ -1,15 +1,15 @@
-# Discovery and Orchestration
+# Discovery
 
-**Version:** 2.0  
-**Last Updated:** 2025-12-17
+**Version:** 3.0  
+**Last Updated:** 2026-01-20
 
 ---
 
 ## Purpose
 
-This folder contains the **discovery guidance and orchestration framework** that govern how the Enablement 2.0 system processes user requests, from natural language prompts to generated code.
+This folder contains the **discovery system** that maps user prompts to capabilities, features, and modules.
 
-> **REVISED in v2.0:** Discovery is now **interpretive**, not rule-based. The agent uses semantic understanding to identify domain and skill, not keyword matching.
+> **v3.0:** All discovery goes through a **single path** via `capability-index.yaml`. Skills have been eliminated.
 
 ---
 
@@ -17,94 +17,162 @@ This folder contains the **discovery guidance and orchestration framework** that
 
 | Document | Purpose |
 |----------|---------|
-| `discovery-guidance.md` | **Interpretive** guidance for domain and skill identification |
+| `capability-index.yaml` | **Single source of truth** for capabilities, features, implementations |
+| `discovery-guidance.md` | Step-by-step discovery algorithm |
 | `execution-framework.md` | Generic execution framework |
-| `prompt-template.md` | Template for users to provide complete information |
+| `prompt-template.md` | Template for user prompts |
 
 ---
 
-## Flow Overview
+## Discovery Flow (v3.0)
 
 ```
-User Prompt
+User Prompt + Context
      │
      ▼
 ┌─────────────────────────────────────────┐
-│ DISCOVERY (Interpretive)                │
+│ STEP 1: STACK RESOLUTION                │
 │                                         │
-│ Semantic interpretation of intent       │
-│ Read DOMAIN.md → Identify domain        │
-│ Read OVERVIEW.md → Select skill         │
+│ Priority:                               │
+│   1. Explicit in prompt                 │
+│   2. Detected from existing code        │
+│   3. Organizational default             │
 │                                         │
-│ See: discovery-guidance.md              │
+│ Source: capability-index.yaml#defaults  │
 └─────────────────────────────────────────┘
      │
      ▼
 ┌─────────────────────────────────────────┐
-│ EXECUTION (By Skill Type)               │
+│ STEP 2: FEATURE MATCHING                │
 │                                         │
-│ GENERATE: Holistic (modules as knowledge)│
-│ ADD: Atomic (specific transformation)   │
-│ ANALYZE: Evaluation (output is report)  │
+│ Match prompt keywords against           │
+│ feature keywords in capability-index    │
 │                                         │
-│ See: runtime/flows/{domain}/{TYPE}.md   │
+│ Source: capability-index.yaml#features  │
 └─────────────────────────────────────────┘
      │
      ▼
 ┌─────────────────────────────────────────┐
-│ VALIDATION (Sequential)                 │
+│ STEP 3: RESOLVE DEPENDENCIES            │
 │                                         │
-│ Tier-1 → Tier-2 → Tier-3 (per module)   │
-│                                         │
-│ See: runtime/validators/                │
+│ For each feature, check `requires`      │
+│ and auto-add missing dependencies       │
 └─────────────────────────────────────────┘
      │
      ▼
 ┌─────────────────────────────────────────┐
-│ TRACEABILITY                            │
+│ STEP 4: VALIDATE COMPATIBILITY          │
 │                                         │
-│ .enablement/manifest.json               │
-│ Records all decisions                   │
+│ Check `incompatible_with` rules         │
+│ Error if conflicts detected             │
+└─────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────┐
+│ STEP 5: RESOLVE IMPLEMENTATIONS         │
+│                                         │
+│ For each feature, find implementation   │
+│ matching resolved stack → module        │
+└─────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────┐
+│ STEP 6: SELECT FLOW                     │
+│                                         │
+│ No existing code → flow-generate        │
+│ Existing code    → flow-transform       │
+└─────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────┐
+│ OUTPUT: Discovery Result                │
+│                                         │
+│ - flow: flow-generate | flow-transform  │
+│ - stack: java-spring                    │
+│ - features: [...]                       │
+│ - modules: [...]                        │
+│ - config: {...}                         │
+│ - input_spec: {...}                     │
 └─────────────────────────────────────────┘
 ```
 
 ---
 
-## Key Concepts (v2.0)
+## Key Concepts (v3.0)
 
-### Interpretive Discovery
+### Single Discovery Path
 
-Discovery is **semantic interpretation**, not pattern matching:
+All discovery goes through `capability-index.yaml`:
 
-| Old (v1.x) | New (v2.0) |
-|------------|------------|
-| IF "genera" AND "microservicio" THEN CODE | Agent interprets: output is code → CODE |
-| IF "genera" AND "diagrama" THEN DESIGN | Agent interprets: output is diagram → DESIGN |
-| Keyword matching | Semantic understanding |
-| Rigid rules | Flexible interpretation with clarification |
+| v2.x | v3.0 |
+|------|------|
+| skill-index.yaml + capability-index.yaml | capability-index.yaml only |
+| Skills as runtime entities | Skills eliminated |
+| Dual discovery paths | Single discovery path |
 
-### Holistic Execution (for GENERATE)
+### Enriched Features
 
-GENERATE skills work holistically:
+Features now include:
+- `keywords` - For matching user prompts
+- `requires` - Dependencies auto-added
+- `incompatible_with` - Mutually exclusive features
+- `config` - Feature-specific configuration
+- `input_spec` - Required user input schema
+- `implementations` - Per-stack module mappings
 
-| Old (v1.x) | New (v2.0) |
-|------------|------------|
-| Process modules sequentially | Consult all modules as knowledge |
-| Generate base, then add features | Generate complete output in one pass |
-| Modules are steps | Modules are knowledge sources |
+### Multi-Implementation Support
 
-### Multi-Domain Operations
+Features can have multiple implementations:
 
-Requests can span multiple domains:
-
+```yaml
+timeout:
+  implementations:
+    - id: java-spring-annotation
+      module: mod-003-timeout
+      stack: java-spring
+      pattern: annotation
+    
+    - id: java-spring-client
+      module: mod-003b-timeout-restclient
+      stack: java-spring
+      pattern: client-config
+  
+  default: java-spring-annotation
 ```
-"Analiza la calidad y corrige los problemas"
-  │
-  ▼
-[QA/ANALYZE] → Analysis report
-  │
-  ▼
-[CODE/REFACTOR] → Modified code (using report as context)
+
+---
+
+## capability-index.yaml Structure
+
+```yaml
+version: "2.1"
+domain: code
+
+defaults:
+  stack: java-spring
+  patterns:
+    timeout: annotation
+
+stacks:
+  java-spring:
+    detection:
+      - file: pom.xml
+        contains: "spring-boot-starter"
+
+capabilities:
+  resilience:
+    type: compositional
+    transformable: true
+    
+    features:
+      circuit-breaker:
+        keywords: [circuit breaker, cortocircuito]
+        implementations:
+          - id: java-spring-resilience4j
+            module: mod-code-001
+            stack: java-spring
+            pattern: annotation
+        default: java-spring-resilience4j
 ```
 
 ---
@@ -112,65 +180,29 @@ Requests can span multiple domains:
 ## Relationship to Other Components
 
 ```
-runtime/discovery/      ← You are here (discovery guidance)
+runtime/discovery/      ← You are here
     │
-    │ interprets
+    │ capability-index.yaml
     ▼
-model/domains/          ← Domain definitions with Discovery Guidance
+┌─────────────────┐
+│ features        │ → keywords, requires, config, input_spec
+│ implementations │ → stack, pattern, module
+└─────────────────┘
     │
-    │ identifies
+    │ resolves to
     ▼
-skills/                 ← Executable skills
+modules/                ← Reusable templates
     │
-    ├── OVERVIEW.md     ← Discovery metadata (critical!)
-    ├── SKILL.md        ← Full specification
-    │
-    │ consults (for GENERATE)
-    ▼
-modules/                ← Reusable knowledge
-    │
-    ├── MODULE.md       ← Templates & constraints
+    ├── MODULE.md       ← Templates & rules
     └── templates/      ← Code patterns
     │
-    │ executes
+    │ executes via
     ▼
-runtime/flows/          ← Execution flows by domain/type
+runtime/flows/          ← Execution flows
     │
-    └── code/GENERATE.md ← Holistic execution
+    ├── flow-generate.md
+    └── flow-transform.md
 ```
-
----
-
-## Key Principles
-
-### 1. Interpretive Discovery
-
-The agent understands semantic context:
-- **Output type** determines domain (code → CODE, diagram → DESIGN)
-- **Action intent** refines skill selection
-- **OVERVIEW.md** is the key document for matching
-
-### 2. Holistic Generation
-
-For GENERATE skills:
-- Modules are knowledge to consult, not steps to execute
-- All features generated together in one coherent pass
-- Validation is sequential AFTER generation
-
-### 3. Traceability
-
-Every decision is recorded:
-- Which domain and why
-- Which skill and why
-- Which modules were consulted
-- Validation results
-
-### 4. Graceful Ambiguity Handling
-
-When uncertain:
-- Ask for clarification (don't guess)
-- Detect out-of-scope requests
-- Support multi-domain decomposition
 
 ---
 
@@ -178,16 +210,15 @@ When uncertain:
 
 | Document | Read When |
 |----------|-----------|
-| `discovery-guidance.md` | Understanding how discovery works |
-| `execution-framework.md` | Understanding execution lifecycle |
-| `model/domains/*/DOMAIN.md` | Understanding domain scope |
-| `skills/*/OVERVIEW.md` | Understanding skill purpose |
-| `runtime/flows/code/GENERATE.md` | Understanding holistic execution |
+| `capability-index.yaml` | Understanding available capabilities |
+| `discovery-guidance.md` | Understanding discovery algorithm |
+| `model/CONSUMER-PROMPT.md` | Consumer agent system prompt |
+| `runtime/flows/code/flow-generate.md` | Understanding generation flow |
 
 ---
 
 ## Related
 
-- [ENABLEMENT-MODEL-v2.0.md](../../model/ENABLEMENT-MODEL-v2.0.md) - Complete model
+- [ENABLEMENT-MODEL-v3.0.md](../../model/ENABLEMENT-MODEL-v3.0.md) - Complete model
 - [CONSUMER-PROMPT.md](../../model/CONSUMER-PROMPT.md) - Consumer agent system prompt
 - [runtime/flows/](../flows/) - Execution flows

@@ -50,5 +50,5 @@ Tier-3 validation for the Retry pattern implementation using Resilience4j.
 
 ```bash
 # In skill's validate.sh
-source "$KNOWLEDGE_BASE/skills/modules/mod-code-002-retry-java-resilience4j/validation/retry-check.sh" "$TARGET_DIR"
+source "$KNOWLEDGE_BASE/modules/mod-code-002-retry-java-resilience4j/validation/retry-check.sh" "$TARGET_DIR"
 ```

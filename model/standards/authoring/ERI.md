@@ -372,8 +372,8 @@ Requirements that implementations MUST satisfy:
 ## Related Documentation
 
 - **ADR:** [adr-XXX-{topic}](../../ADRs/adr-XXX-{topic}/) - Strategic decision
-- **Module:** [mod-XXX-...](../../skills/modules/mod-XXX-.../) - Derived module
-- **Skill:** [skill-{domain}-XXX-...](../../skills/skill-{domain}-XXX-.../) - Automation
+- **Module:** [mod-XXX-...](../../../modules/mod-XXX-.../) - Derived module
+- **Capability:** See `runtime/discovery/capability-index.yaml` for feature definition
 
 ---
 
