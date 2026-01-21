@@ -299,3 +299,33 @@ domain-api:
 ---
 
 **Última actualización:** 2026-01-21
+
+---
+
+## 2026-01-21 (Sesión: Actualización Authoring Guides)
+
+### DEC-010: Actualizar Authoring Guides a v3.0.1 {#dec-010}
+
+**Fecha:** 2026-01-21  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+Las guías de authoring estaban desactualizadas:
+- CAPABILITY.md usaba tipos `structural/compositional` (obsoletos)
+- MODULE.md referenciaba Skills (eliminados)
+- TAGS.md hablaba de "Skill Tags" (ya no existen)
+
+**Decisión:** Actualizar todos los documentos de authoring para reflejar modelo v3.0.1
+
+**Cambios aplicados:**
+
+| Documento | Versión | Cambios |
+|-----------|---------|---------|
+| CAPABILITY.md | 3.0 → 3.1 | Nueva taxonomía, phase_group, cardinality, default_feature, is_default |
+| MODULE.md | 2.1 → 3.0 | Eliminar refs a Skills, actualizar diagrama, flow-based roles |
+| TAGS.md | 1.1 → 2.0 | Deprecation notice, redirect a keywords en capability-index |
+| README.md | 3.0 → 3.1 | Actualizar tabla de versiones, nueva taxonomía |
+
+**Implicación:**
+- Los autores ahora tienen guías coherentes con capability-index v2.2
+- Nuevas capabilities deben seguir taxonomía foundational/layered/cross-cutting

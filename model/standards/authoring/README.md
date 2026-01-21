@@ -1,8 +1,8 @@
 # Authoring Standards
 
-**Version:** 3.0  
-**Last Updated:** 2026-01-20  
-**Model Version:** 3.0
+**Version:** 3.1  
+**Last Updated:** 2026-01-21  
+**Model Version:** 3.0.1
 
 ---
 
@@ -19,22 +19,27 @@ This directory contains **authoring guides** for creating assets in the Enableme
 
 ---
 
-## What's New in v3.0
+## What's New in v3.1
 
-> **Key change:** Skills eliminated as runtime entities
+> **Key change:** Capability taxonomy updated to foundational/layered/cross-cutting
 
 | Change | Impact |
 |--------|--------|
-| **Skills Eliminated** | SKILL.md guide removed, logic moved to CAPABILITY.md |
-| **Features Enriched** | CAPABILITY.md updated with config, input_spec, implementations |
-| **Flows Simplified** | FLOW.md updated for flow-generate and flow-transform |
-| **Single Discovery** | All discovery through capability-index.yaml |
+| **New Taxonomy** | CAPABILITY.md updated with foundational/layered/cross-cutting types |
+| **phase_group** | New required attribute for automatic phase assignment |
+| **default_feature** | Capability-level default when no specific feature matched |
+| **requires Simplified** | Points to capability (not feature), uses default_feature |
 
 ### Entity Model Change
 
 ```
 v2.x: Skill → Capability → Feature → Module
 v3.0:         Capability → Feature → Implementation → Module
+
+Capability Types (v2.2):
+  - foundational: Base architecture (exactly-one, not transformable)
+  - layered: Adds on foundational (multiple, transformable)
+  - cross-cutting: Decorators (multiple, transformable, no foundational required)
 ```
 
 ---
@@ -47,11 +52,11 @@ v3.0:         Capability → Feature → Implementation → Module
 |------------|-------|---------|-------------|
 | ADR | [ADR.md](./ADR.md) | 1.0 | Architecture Decision Records |
 | ERI | [ERI.md](./ERI.md) | 1.2 | Enterprise Reference Implementations |
-| Module | [MODULE.md](./MODULE.md) | **2.0** | Reusable code templates ⭐ |
-| **Capability** | [CAPABILITY.md](./CAPABILITY.md) | **3.0** | **Feature definitions with implementations** ⭐ |
+| Module | [MODULE.md](./MODULE.md) | **3.0** | Reusable code templates ⭐ |
+| **Capability** | [CAPABILITY.md](./CAPABILITY.md) | **3.1** | **Feature definitions with implementations** ⭐ |
 | Validator | [VALIDATOR.md](./VALIDATOR.md) | 1.0 | Artifact validation components |
 | Flow | [FLOW.md](./FLOW.md) | **3.0** | Execution flows (generate/transform) ⭐ |
-| Tags | [TAGS.md](./TAGS.md) | 1.1 | Discovery keywords |
+| Tags | [TAGS.md](./TAGS.md) | 2.0 | Discovery keywords (deprecated, see CAPABILITY.md) |
 
 ### Removed in v3.0
 
@@ -193,4 +198,4 @@ Rules for deterministic code generation:
 
 ---
 
-**Last Updated:** 2026-01-20
+**Last Updated:** 2026-01-21
