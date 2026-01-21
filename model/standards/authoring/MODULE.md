@@ -1,19 +1,20 @@
 # Authoring Guide: MODULE
 
-**Version:** 2.1  
-**Last Updated:** 2026-01-19  
+**Version:** 3.0  
+**Last Updated:** 2026-01-21  
 **Asset Type:** Module  
-**Model Version:** 2.0
+**Model Version:** 3.0.1
 
 ---
 
-## What's New in v2.0
+## What's New in v3.0
 
 | Change | Description |
 |--------|-------------|
-| **Capability.Feature Reference** | Modules must declare which capability.feature they implement |
-| **No Direct Skill Reference** | Modules are discovered via capabilities, not referenced by skills |
+| **Skills Eliminated** | Modules are discovered via capabilities only |
+| **Stack Declaration** | `stack` in frontmatter required for filtering |
 | **1:1 Feature Mapping** | Each module implements exactly ONE feature |
+| **Phase-Based Execution** | Modules loaded per phase, not all at once |
 
 ---
 
@@ -21,22 +22,22 @@
 
 Modules are **implementation units** that contain the knowledge for generating or transforming code. They are the "how" that implements capability features.
 
-### Module in the Model v2.0
+### Module in the Model v3.0
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           MODEL v2.0 RELATIONSHIPS                           │
+│                           MODEL v3.0 RELATIONSHIPS                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Skill ──────► Capability ──────► Feature ──────► Module                    │
-│                                      │              │                        │
-│                                      │              │                        │
-│                                      └──────────────┘                        │
-│                                           1:1                                │
+│  Capability ──────► Feature ──────► Implementation ──────► Module           │
+│                        │                   │                   │             │
+│                        │                   │                   │             │
+│                        └───────────────────┴───────────────────┘             │
+│                                      1:1:1                                   │
 │                                                                              │
 │  The module declares which capability.feature it implements                 │
-│  The capability-index.yaml maps feature → module                            │
-│  Skills never reference modules directly                                    │
+│  The capability-index.yaml maps feature → implementation → module           │
+│  Discovery resolves capability → feature → module (via stack)               │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -157,27 +158,29 @@ fi
 
 ---
 
-## Module Role by Skill Type
+## Module Role by Flow
 
-| Skill Type | Module Role | How Used |
-|------------|-------------|----------|
-| **Generation** | Knowledge source | Agent consults templates as guidance |
-| **Transformation** | Applied directly | Templates applied to existing code |
+| Flow | Module Role | How Used |
+|------|-------------|----------|
+| **flow-generate** | Knowledge source | Agent consults templates as guidance |
+| **flow-transform** | Applied directly | Templates applied to existing code |
 
-### For Generation Skills
+### For flow-generate
 
 1. Discovery resolves capabilities → features → modules
-2. Agent reads MODULE.md and templates
-3. Agent generates ALL code in ONE pass
-4. Templates are GUIDANCE, not executed sequentially
-5. Tier-3 validation runs AFTER generation
+2. Modules grouped by `phase_group` (structural → implementation → cross-cutting)
+3. Agent reads MODULE.md and templates for current phase
+4. Agent generates code in ONE pass per phase
+5. Templates are GUIDANCE, not executed sequentially
+6. Tier-3 validation runs AFTER generation
 
-### For Transformation Skills
+### For flow-transform
 
 1. Discovery identifies target capability → features → modules
 2. Templates applied more directly to existing code
-3. More deterministic transformation
-4. Tier-3 validation verifies changes
+3. Cross-cutting capabilities can apply without foundational
+4. More deterministic transformation
+5. Tier-3 validation verifies changes
 
 ---
 
@@ -533,9 +536,10 @@ resilience:
 
 - `runtime/discovery/capability-index.yaml` - Feature→Module mapping
 - `authoring/CAPABILITY.md` - How capabilities define features
-- `authoring/SKILL.md` - How skills use capabilities
-- `ENABLEMENT-MODEL-v2.0.md` - Core model documentation
+- `model/ENABLEMENT-MODEL-v3.0.md` - Core model documentation
+- `runtime/flows/code/flow-generate.md` - Generation flow
+- `runtime/flows/code/flow-transform.md` - Transformation flow
 
 ---
 
-**Last Updated:** 2025-01-15
+**Last Updated:** 2026-01-21
