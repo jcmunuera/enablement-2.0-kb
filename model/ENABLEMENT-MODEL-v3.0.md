@@ -123,26 +123,104 @@ v3.0:          Capability → Feature → Implementation → Module
 
 A Capability is a **conceptual grouping of related features**. It represents a technical concern (architecture, persistence, resilience, etc.).
 
-#### Capability Types
+#### Capability Types (v2.2)
 
-| Type | Description | Transformable | Example |
-|------|-------------|---------------|---------|
-| **Structural** | Core architecture, defines code structure | No | architecture |
-| **Compositional** | Additive features, can be layered | Yes | resilience, persistence |
+| Type | Description | Cardinality | Required for Generate | Transformable |
+|------|-------------|-------------|----------------------|---------------|
+| **foundational** | Base architecture, defines project structure | exactly-one | YES | NO |
+| **layered** | Adds layers on top of foundational | multiple | NO | YES |
+| **cross-cutting** | Decorators on existing code | multiple | NO | YES |
+
+**Type Behaviors:**
+
+- **FOUNDATIONAL:** Exactly one required for `flow-generate`. Cannot be added later. All layered capabilities require a foundational.
+- **LAYERED:** Requires foundational to exist (auto-added if missing). Phase determined by `phase_group`.
+- **CROSS-CUTTING:** Does NOT require foundational. Can apply to existing projects via `flow-transform`.
+
+#### Phase Groups (v2.2)
+
+| Phase Group | Phase | Description | Capabilities |
+|-------------|-------|-------------|--------------|
+| `structural` | 1 | Project structure, adapters IN | architecture, api-architecture |
+| `implementation` | 2 | External connections, adapters OUT | integration, persistence |
+| `cross-cutting` | 3+ | Decorators, annotations | resilience, distributed-transactions |
+
+#### Capability Attributes (v2.2)
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `description` | Yes | Human-readable description |
+| `type` | Yes | foundational, layered, or cross-cutting |
+| `phase_group` | Yes | structural, implementation, or cross-cutting |
+| `cardinality` | Yes | exactly-one or multiple |
+| `transformable` | Yes | Whether this can be added to existing code |
+| `documentation` | No | Path to capability documentation |
+| `keywords` | **v2.2** | Keywords at capability level for generic matches |
+| `default_feature` | **v2.2** | Feature to select when capability matches but no specific feature |
 
 #### Capability Definition
 
 ```yaml
 # In capability-index.yaml
 capabilities:
+  architecture:
+    description: "Foundational architectural patterns"
+    type: foundational
+    phase_group: structural
+    cardinality: exactly-one
+    transformable: false
+    
+    keywords:
+      - microservicio
+      - microservice
+      - service
+      - application
+    
+    default_feature: hexagonal-light
+    
+    features:
+      hexagonal-light:
+        is_default: true
+        # ...feature definition
+  
+  api-architecture:
+    description: "API types according to Fusion model"
+    type: layered
+    phase_group: structural
+    cardinality: multiple
+    transformable: true
+    
+    keywords:
+      - API
+      - REST
+    
+    default_feature: standard  # NOT domain-api
+    
+    features:
+      standard:
+        is_default: true
+        requires:
+          - architecture  # Points to capability, not specific feature
+        # ...feature definition
+      domain-api:
+        requires:
+          - architecture
+        # ...feature definition
+  
   resilience:
     description: "Fault tolerance and resilience patterns"
-    type: compositional
+    type: cross-cutting
+    phase_group: cross-cutting
+    cardinality: multiple
     transformable: true
+    
     keywords:
       - resilience
       - fault tolerance
-      - stability patterns
+    
+    # NO default_feature - user must specify which pattern
+    # NO requires - can apply to existing code
+    
     features:
       circuit-breaker:
         # ...feature definition
@@ -156,12 +234,12 @@ Each capability has a documentation file in `model/domains/code/capabilities/`:
 
 ```
 model/domains/code/capabilities/
-├── architecture.md          # Structural patterns
-├── api_architecture.md      # API types (Domain, System, etc.)
-├── integration.md           # External system integration
-├── persistence.md           # Data persistence
-├── resilience.md            # Fault tolerance
-└── distributed_transactions.md
+├── architecture.md              # Foundational: base patterns
+├── api_architecture.md          # Layered: API types (standard, Domain, System, etc.)
+├── integration.md               # Layered: External system integration
+├── persistence.md               # Layered: Data persistence
+├── resilience.md                # Cross-cutting: Fault tolerance
+└── distributed_transactions.md  # Cross-cutting: SAGA patterns
 ```
 
 ---

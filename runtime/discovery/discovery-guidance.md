@@ -12,6 +12,118 @@ There is **no separate skill discovery**. All logic previously in skills is now 
 
 ---
 
+## Capability Types (v2.2)
+
+### Type Definitions
+
+| Type | Description | Cardinality | Required for Generate | Transformable |
+|------|-------------|-------------|----------------------|---------------|
+| **foundational** | Base architecture, defines project structure | exactly-one | YES | NO |
+| **layered** | Adds layers on top of foundational | multiple | NO | YES |
+| **cross-cutting** | Decorators on existing code | multiple | NO | YES |
+
+### Type Behaviors
+
+**FOUNDATIONAL:**
+- Exactly ONE required for `flow-generate`
+- Cannot be added via transformation (must be set at creation)
+- All `layered` capabilities implicitly require a foundational
+- Example: `architecture`
+
+**LAYERED:**
+- Requires foundational to exist (auto-added if missing)
+- Can be added via `flow-transform`
+- Phase determined by `phase_group` attribute
+- Examples: `api-architecture`, `persistence`, `integration`
+
+**CROSS-CUTTING:**
+- Does NOT require foundational (can apply to existing projects)
+- Can be added via `flow-transform`
+- Decorates existing code (annotations, config)
+- Examples: `resilience`, `distributed-transactions`
+
+### Phase Groups
+
+| Phase Group | Phase | Description |
+|-------------|-------|-------------|
+| `structural` | 1 | Project structure, adapters IN (controllers) |
+| `implementation` | 2 | External connections, adapters OUT (clients, repositories) |
+| `cross-cutting` | 3+ | Decorators, annotations |
+
+---
+
+## Discovery Rules (v2.2)
+
+### Rule 1: Keyword Matching Priority
+
+```
+feature.keywords > capability.keywords > stack.keywords
+```
+
+When matching keywords from prompt:
+1. First check feature-level keywords (most specific)
+2. If no feature match, check capability-level keywords
+3. Stack keywords only affect stack resolution
+
+### Rule 2: Default Feature Resolution
+
+```python
+if capability_matched and not feature_matched:
+    if capability.default_feature:
+        use(capability.default_feature)
+    else:
+        ask_user("Which feature of {capability}?")
+```
+
+### Rule 3: Dependency Resolution
+
+```python
+for feature in matched_features:
+    for required in feature.requires:
+        if required is capability_name:
+            # Add default_feature of that capability
+            add(required_capability.default_feature)
+        else:
+            # Add specific feature
+            add(required)
+```
+
+### Rule 4: Foundational Guarantee (flow-generate only)
+
+```python
+if flow == "flow-generate":
+    foundational_count = count(features where type == "foundational")
+    
+    if foundational_count == 0:
+        # Auto-add default foundational
+        add("architecture.hexagonal-light")
+    elif foundational_count > 1:
+        raise Error("Only one foundational allowed")
+```
+
+### Rule 5: Incompatibility Check
+
+```python
+for feature in all_features:
+    for incompatible in feature.incompatible_with:
+        if incompatible in all_features:
+            raise Error(f"{feature} incompatible with {incompatible}")
+```
+
+### Rule 6: Phase Assignment
+
+```python
+def assign_phases(features):
+    phase_1 = [f for f in features if f.capability.phase_group == "structural"]
+    phase_2 = [f for f in features if f.capability.phase_group == "implementation"]
+    phase_3 = [f for f in features if f.capability.phase_group == "cross-cutting"]
+    
+    # Order within phase by requires (dependencies first)
+    return [sort_by_requires(p) for p in [phase_1, phase_2, phase_3]]
+```
+
+---
+
 ## Discovery Flow
 
 ### Step 1: Stack Resolution
@@ -62,44 +174,88 @@ def resolve_stack(prompt: str, existing_code: dict) -> str:
 
 ---
 
-### Step 2: Feature Matching
+### Step 2: Feature Matching (v2.2 Algorithm)
 
-Match user prompt against feature keywords to identify required features.
+Match user prompt against keywords to identify required features.
 
-**Sources of features:**
-1. **Direct mention:** User explicitly requests a feature
-2. **Inference:** Context implies a feature is needed
-3. **Requirements:** Other features require this feature
+**Matching Priority (v2.2):**
+1. **Exact feature keyword match** (highest priority)
+2. **Capability keyword match + default_feature**
+3. **Stack keyword match** (for stack resolution only)
 
-**Matching algorithm:**
+**NEW v2.2: Default Feature Resolution**
+
+When a capability matches but no specific feature is identified:
+- If `default_feature` is defined → Use that feature automatically
+- If no `default_feature` → Ask user for clarification
+
+**Algorithm (v2.2):**
 ```python
 def match_features(prompt: str, context: dict) -> List[Feature]:
     matched = []
+    prompt_lower = prompt.lower()
     
-    for capability in capability_index.capabilities.values():
-        # Check capability-level keywords
-        for keyword in capability.get('keywords', []):
-            if keyword.lower() in prompt.lower():
-                # Capability mentioned but not specific feature
-                # May need to ask user which feature
-                pass
+    for cap_id, capability in capability_index.capabilities.items():
+        feature_matched = False
         
-        # Check feature-level keywords
+        # First: Check feature-level keywords (highest priority)
         for feature_id, feature in capability.features.items():
-            for keyword in feature.keywords:
-                if keyword.lower() in prompt.lower():
-                    matched.append(f"{capability.id}.{feature_id}")
+            for keyword in feature.get('keywords', []):
+                if keyword.lower() in prompt_lower:
+                    matched.append(f"{cap_id}.{feature_id}")
+                    feature_matched = True
+                    break
+            if feature_matched:
+                break
+        
+        # Second: Check capability-level keywords
+        if not feature_matched:
+            for keyword in capability.get('keywords', []):
+                if keyword.lower() in prompt_lower:
+                    # Capability matched but not specific feature
+                    if 'default_feature' in capability:
+                        # Use default
+                        matched.append(f"{cap_id}.{capability['default_feature']}")
+                    else:
+                        # No default - need to ask user
+                        raise AmbiguousFeatureError(
+                            f"Capability '{cap_id}' matched but no specific feature. "
+                            f"Options: {list(capability.features.keys())}"
+                        )
+                    break
     
     return matched
 ```
 
-**Examples:**
-| Prompt | Matched Features |
-|--------|------------------|
-| "API de dominio para Customer" | `api-architecture.domain-api` |
-| "con persistencia en System API" | `persistence.systemapi` |
-| "añade circuit breaker" | `resilience.circuit-breaker` |
-| "resilience" (generic) | Ask: "Which resilience patterns?" |
+**v2.2 Matching Rules:**
+
+| Rule | Description | Example |
+|------|-------------|---------|
+| 1 | Feature keywords take priority over capability keywords | "Domain API" → `api-architecture.domain-api` (not default) |
+| 2 | Capability keyword + default_feature = automatic selection | "API" → `api-architecture.domain-api` (via default) |
+| 3 | Capability keyword without default_feature = ask user | "resilience" → Ask: "Which pattern?" |
+| 4 | Multiple capability matches are valid | "microservicio con API" → both match |
+| 5 | Dependencies are auto-added from requires | `domain-api` auto-adds `hexagonal-light` |
+| 6 | Incompatibilities block execution | `jpa` + `systemapi` = error |
+
+**v2.2 Test Cases:**
+
+| # | Prompt | Expected Features | Reason |
+|---|--------|-------------------|--------|
+| 1 | "Genera un microservicio" | `architecture.hexagonal-light` | "microservicio" → architecture (capability) → default: hexagonal-light |
+| 2 | "Genera una API" | `architecture.hexagonal-light`, `api-architecture.domain-api` | "API" → api-architecture (capability) → default: domain-api → requires: hexagonal-light |
+| 3 | "Domain API con circuit breaker" | `architecture.hexagonal-light`, `api-architecture.domain-api`, `resilience.circuit-breaker` | Explicit feature matches + dependency |
+| 4 | "JPA y System API" | ERROR: incompatible | `persistence.jpa` ↔ `persistence.systemapi` |
+| 5 | "Añade retry" | `resilience.retry` | Direct feature keyword match |
+
+**Examples with v2.2 behavior:**
+
+| Prompt | v2.1 Result | v2.2 Result |
+|--------|-------------|-------------|
+| "microservicio" | No match ❌ | `architecture.hexagonal-light` ✅ |
+| "API" | Ask user ❓ | `api-architecture.domain-api` ✅ |
+| "hexagonal" | `architecture.hexagonal-light` | `architecture.hexagonal-light` (unchanged) |
+| "resilience" | Ask user ❓ | Ask user ❓ (no default_feature) |
 
 ---
 
@@ -306,9 +462,13 @@ When the prompt is ambiguous, ask clarifying questions:
 | Situation | Action |
 |-----------|--------|
 | "Add resilience" (no specific pattern) | Ask: "Which patterns? circuit-breaker, retry, timeout?" |
-| "API" (no type specified) | Ask: "What type of API? Domain, System, Experience?" |
+| "API" (no type specified) | Use `api-architecture.standard` (default) |
+| "Domain API" / "System API" / "BFF" | Use specific feature (explicit match) |
+| "persistence" (no type specified) | Ask: "Which persistence? JPA or System API?" |
 | Multiple stacks possible | Ask: "Which technology? Spring, Quarkus?" |
 | Feature has no implementation for stack | Error: "X not available for Y stack" |
+
+**Note (v2.2):** Capabilities with `default_feature` no longer ask for clarification. Only capabilities without default (like `resilience`, `persistence`) require user input.
 
 ---
 
@@ -340,3 +500,147 @@ prompt → capability-index → features → implementations → modules
 | skill.type (generation/transformation) | Determined by context (existing code?) |
 | skill keywords | feature keywords |
 | skill-index.yaml | **Eliminated** |
+
+---
+
+## Test Cases (v2.2 Validation)
+
+### Test Case 1: Microservicio Básico
+
+```
+Prompt: "Genera un microservicio"
+
+Expected Discovery:
+  - "microservicio" → architecture.keywords → architecture capability
+  - architecture.default_feature → hexagonal-light
+  - NO api-architecture (not mentioned)
+
+Result:
+  flow: flow-generate
+  features: [architecture.hexagonal-light]
+  phases:
+    Phase 1: architecture.hexagonal-light
+```
+
+### Test Case 2: API Genérica
+
+```
+Prompt: "Genera una API REST"
+
+Expected Discovery:
+  - "API REST" → api-architecture.keywords → api-architecture capability
+  - api-architecture.default_feature → standard
+  - standard.requires → architecture → auto-add hexagonal-light
+
+Result:
+  flow: flow-generate
+  features: [architecture.hexagonal-light, api-architecture.standard]
+  phases:
+    Phase 1: architecture.hexagonal-light, api-architecture.standard
+```
+
+### Test Case 3: Domain API Explícita
+
+```
+Prompt: "Genera una Domain API para Customer"
+
+Expected Discovery:
+  - "Domain API" → api-architecture.domain-api.keywords → domain-api feature
+  - domain-api.requires → architecture → auto-add hexagonal-light
+
+Result:
+  flow: flow-generate
+  features: [architecture.hexagonal-light, api-architecture.domain-api]
+  phases:
+    Phase 1: architecture.hexagonal-light, api-architecture.domain-api
+  config: {hateoas: true, compensation_available: true}
+```
+
+### Test Case 4: API con Persistencia System API
+
+```
+Prompt: "Genera una API con persistencia via System API"
+
+Expected Discovery:
+  - "API" → api-architecture.standard (default)
+  - "System API" in persistence context → persistence.systemapi
+  - systemapi.requires → integration.api-rest → auto-add
+  - standard.requires → architecture → auto-add hexagonal-light
+
+Result:
+  flow: flow-generate
+  features: [architecture.hexagonal-light, api-architecture.standard, 
+             integration.api-rest, persistence.systemapi]
+  phases:
+    Phase 1: architecture.hexagonal-light, api-architecture.standard
+    Phase 2: integration.api-rest, persistence.systemapi
+```
+
+### Test Case 5: Transformación (Sin Foundational)
+
+```
+Prompt: "Añade circuit breaker al servicio"
+Context: Existing code detected
+
+Expected Discovery:
+  - Existing code → flow-transform
+  - "circuit breaker" → resilience.circuit-breaker.keywords
+  - NO foundational required (flow-transform)
+
+Result:
+  flow: flow-transform
+  features: [resilience.circuit-breaker]
+  phases:
+    Phase 3: resilience.circuit-breaker
+```
+
+### Test Case 6: Incompatibilidad
+
+```
+Prompt: "API con JPA y System API"
+
+Expected Discovery:
+  - "JPA" → persistence.jpa
+  - "System API" → persistence.systemapi
+  - Check incompatibility: jpa.incompatible_with contains systemapi
+
+Result:
+  ERROR: persistence.jpa is incompatible with persistence.systemapi
+```
+
+---
+
+## Summary: Discovery Algorithm v2.2
+
+```python
+def discover(prompt: str, context: dict) -> DiscoveryResult:
+    # 1. Determine flow
+    flow = "flow-transform" if context.has_existing_code else "flow-generate"
+    
+    # 2. Resolve stack
+    stack = resolve_stack(prompt, context)
+    
+    # 3. Match features (Rule 1)
+    matched = match_keywords(prompt)
+    
+    # 4. Apply default features (Rule 2)
+    matched = apply_defaults(matched)
+    
+    # 5. Resolve dependencies (Rule 3)
+    all_features = resolve_dependencies(matched)
+    
+    # 6. Foundational guarantee for generate (Rule 4)
+    if flow == "flow-generate":
+        all_features = ensure_foundational(all_features)
+    
+    # 7. Validate compatibility (Rule 5)
+    validate_incompatible(all_features)
+    
+    # 8. Assign phases (Rule 6)
+    phases = assign_phases(all_features)
+    
+    # 9. Resolve modules
+    modules = resolve_modules(all_features, stack)
+    
+    return DiscoveryResult(flow, stack, all_features, phases, modules)
+```

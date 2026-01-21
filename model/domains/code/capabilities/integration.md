@@ -1,8 +1,8 @@
 # Capability: Integration
 
 **Capability ID:** integration  
-**Version:** 1.0  
-**Date:** 2025-12-01  
+**Version:** 1.2  
+**Date:** 2026-01-21  
 **Status:** Active  
 
 ---
@@ -10,6 +10,38 @@
 ## Overview
 
 The Integration capability enables services to communicate with other services via different protocols and patterns. It provides standardized approaches for API-based integration (request/response) and event-driven integration (pub/sub).
+
+---
+
+## Type
+
+- **Type:** Layered
+- **Phase Group:** implementation
+- **Cardinality:** multiple
+- **Transformable:** Yes
+- **Requires:** architecture (foundational)
+
+---
+
+## Discovery (v2.2)
+
+### Capability-Level Keywords
+
+```yaml
+keywords:
+  - integration
+  - integración
+  - external API
+  - API externa
+```
+
+### No Default Feature (User Must Specify)
+
+The integration capability currently only has `api-rest`, but future features (gRPC, Kafka) will be added. When multiple options exist, user must specify.
+
+**Example:**
+- "integración REST" → `integration.api-rest`
+- "consumir API" → `integration.api-rest`
 
 ---
 

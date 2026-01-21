@@ -1,14 +1,116 @@
-# Feature: API Architecture
+# Capability: API Architecture
 
-**Feature ID:** api_architecture  
-**Version:** 1.0  
+**Capability ID:** api_architecture  
+**Version:** 2.0  
 **Based on:** ADR-001, ADR-009
 
 ---
 
 ## Overview
 
-Defines the architectural patterns for API design and service structure. This feature encompasses the 4-layer API model and Hexagonal Light architecture.
+Defines the architectural patterns for API design and service structure. This capability encompasses the Fusion 4-layer API model (Domain, System, Experience, Composable) plus a standard API option for general use.
+
+---
+
+## Type
+
+- **Type:** Layered
+- **Phase Group:** structural
+- **Cardinality:** multiple
+- **Transformable:** Yes
+- **Requires:** architecture (foundational)
+
+---
+
+## Discovery (v2.2)
+
+### Capability-Level Keywords
+
+The api-architecture capability can be matched by generic terms:
+
+```yaml
+keywords:
+  - API
+  - REST
+  - REST API
+  - Fusion
+  - endpoint
+  - exponer
+  - expose
+```
+
+### Default Feature: standard
+
+When user says just "API" without specifying a Fusion type, `standard` is selected:
+
+```yaml
+default_feature: standard
+```
+
+**Standard vs Domain API:**
+
+| Aspect | standard | domain-api |
+|--------|----------|------------|
+| **Use case** | Generic REST API | Business capability as product |
+| **HATEOAS** | No | Yes |
+| **Transactional** | No | Yes |
+| **Idempotent** | No requirement | Required |
+| **Compensation** | No | Available |
+| **Constraints** | None | Cannot call other Domain APIs |
+
+**Examples:**
+- "Genera una API" → `api-architecture.standard` (via default)
+- "Genera una API REST" → `api-architecture.standard` (via default)
+- "Domain API" → `api-architecture.domain-api` (explicit)
+- "Fusion Domain API" → `api-architecture.domain-api` (explicit)
+- "System API" → `api-architecture.system-api` (explicit)
+- "BFF" → `api-architecture.experience-api` (explicit)
+
+---
+
+## Features
+
+### standard (default)
+
+Standard REST API without Fusion model semantics. Use when:
+- Building internal services
+- No need for HATEOAS
+- No transactional requirements
+- Not exposing as a product API
+
+**Config:**
+```yaml
+hateoas: false
+compensation_available: false
+```
+
+### domain-api
+
+Domain API following Fusion model. Exposes business capabilities as a product. Use when:
+- Building a product API
+- Need HATEOAS for discoverability
+- Transactional operations
+- May participate in SAGAs
+
+**Config:**
+```yaml
+hateoas: true
+compensation_available: true
+transactional: true
+idempotent: true
+```
+
+### system-api
+
+System API - wrapper over legacy systems (mainframe, CICS).
+
+### experience-api
+
+Experience API (BFF) - Backend for Frontend for UI channels.
+
+### composable-api
+
+Composable API - multi-domain orchestration layer.
 
 ---
 

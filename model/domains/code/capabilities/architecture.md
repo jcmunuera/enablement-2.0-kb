@@ -2,17 +2,48 @@
 
 ## Overview
 
-The Architecture capability defines foundational architectural patterns that establish the code structure for all generated applications. This is a **structural capability** - it must be present in every generation and cannot be the target of transformation.
+The Architecture capability defines foundational architectural patterns that establish the code structure for all generated applications. This is a **foundational capability** - exactly one is required for every generation and cannot be added via transformation.
 
 ## Type
 
-- **Type:** Structural
+- **Type:** Foundational
+- **Phase Group:** structural
+- **Cardinality:** exactly-one
 - **Transformable:** No
 - **Required:** Yes (for all code generation)
 
+## Discovery (v2.2)
+
+### Capability-Level Keywords
+
+The architecture capability can be matched by generic terms at the capability level:
+
+```yaml
+keywords:
+  - microservicio
+  - microservice
+  - servicio
+  - service
+  - aplicación
+  - application
+  - backend
+  - proyecto
+  - project
+```
+
+### Default Feature
+
+When a capability-level keyword matches but no specific feature is mentioned, the default feature is used:
+
+```yaml
+default_feature: hexagonal-light
+```
+
+**Example:** "Genera un microservicio" → `architecture.hexagonal-light` (via default)
+
 ## Features
 
-### hexagonal-light
+### hexagonal-light (default)
 
 **Description:** Hexagonal Light architecture implementing the Ports and Adapters pattern with three main layers:
 - **Domain Layer:** Pure business logic (POJOs, no framework dependencies)
