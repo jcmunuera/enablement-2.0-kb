@@ -6,9 +6,35 @@ The Distributed Transactions capability provides patterns for maintaining data c
 
 ## Type
 
-- **Type:** Compositional
+- **Type:** Cross-cutting
+- **Phase Group:** cross-cutting
+- **Cardinality:** multiple
 - **Transformable:** Yes
 - **Required:** No (opt-in for Domain APIs)
+- **Requires Foundational:** No (can apply to existing code via flow-transform)
+
+**Note:** Cross-cutting capabilities are decorators that add compensation methods to existing application services. They do not require a foundational capability and can be added via `flow-transform`.
+
+## Discovery (v2.2)
+
+### Capability-Level Keywords
+
+```yaml
+keywords:
+  - saga
+  - distributed transaction
+  - transacción distribuida
+  - eventual consistency
+  - consistencia eventual
+```
+
+### No Default Feature (User Must Specify)
+
+Currently only `saga-compensation` is available, but future patterns (saga-orchestration, saga-choreography) will be added. When the user mentions "saga" or "distributed transaction", clarify which pattern.
+
+**Example:**
+- "añade SAGA" → `distributed-transactions.saga-compensation` (currently the only option)
+- "compensación" → `distributed-transactions.saga-compensation`
 
 ## Features
 

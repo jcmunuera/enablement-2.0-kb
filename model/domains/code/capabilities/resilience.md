@@ -1,7 +1,7 @@
-# Feature: Resilience
+# Capability: Resilience
 
-**Feature ID:** resilience  
-**Version:** 1.0  
+**Capability ID:** resilience  
+**Version:** 1.2  
 **Based on:** ADR-004
 
 ---
@@ -9,6 +9,55 @@
 ## Overview
 
 Provides resilience patterns for fault tolerance in microservices. Includes circuit breaker, retry, timeout, bulkhead, and rate limiting patterns.
+
+---
+
+## Type
+
+- **Type:** Cross-cutting
+- **Phase Group:** cross-cutting
+- **Cardinality:** multiple
+- **Transformable:** Yes
+- **Requires Foundational:** No (can apply to existing code via flow-transform)
+
+**Note:** Cross-cutting capabilities are decorators that add annotations and configuration to existing code. They do not require a foundational capability and can be added via `flow-transform`.
+
+---
+
+## Discovery (v2.2)
+
+### Capability-Level Keywords
+
+```yaml
+keywords:
+  - resilience
+  - resiliencia
+  - fault tolerance
+  - tolerancia a fallos
+  - stability patterns
+  - patrones de estabilidad
+```
+
+### No Default Feature (User Must Specify)
+
+**Important:** This capability has NO `default_feature` because the user must explicitly choose which resilience pattern(s) to apply.
+
+**Example:**
+- "añade resilience" → Ask: "Which resilience patterns? circuit-breaker, retry, timeout, rate-limiter?"
+- "circuit breaker" → `resilience.circuit-breaker`
+- "retry con timeout" → `resilience.retry`, `resilience.timeout`
+
+### Multiple Patterns Supported
+
+Unlike persistence (mutually exclusive), multiple resilience patterns can be combined:
+
+```yaml
+# Valid combination
+features:
+  - resilience.circuit-breaker
+  - resilience.retry
+  - resilience.timeout
+```
 
 ---
 

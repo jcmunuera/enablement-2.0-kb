@@ -1,7 +1,7 @@
-# Feature: Persistence
+# Capability: Persistence
 
-**Feature ID:** persistence  
-**Version:** 1.0  
+**Capability ID:** persistence  
+**Version:** 1.2  
 **Based on:** ADR-011
 
 ---
@@ -11,6 +11,54 @@
 Provides persistence patterns for data access in microservices. Supports both local database access (JPA) and delegation to System APIs for System of Record (SoR) access.
 
 **Key Decision:** Domain APIs in this organization typically do NOT implement direct database persistence. Instead, they delegate to System APIs that wrap mainframe transactions (Z/OS, CICS, MQ).
+
+---
+
+## Type
+
+- **Type:** Layered
+- **Phase Group:** implementation
+- **Cardinality:** multiple
+- **Transformable:** Yes
+- **Requires:** architecture (foundational)
+
+---
+
+## Discovery (v2.2)
+
+### Capability-Level Keywords
+
+```yaml
+keywords:
+  - persistence
+  - persistencia
+  - data
+  - datos
+  - storage
+  - database
+  - base de datos
+```
+
+### No Default Feature
+
+**Important:** This capability has NO `default_feature` because `jpa` and `systemapi` are mutually exclusive. The user MUST specify which persistence strategy to use.
+
+**Example:** 
+- "con persistencia" → Ask: "Which persistence strategy? JPA or System API?"
+- "persistencia JPA" → `persistence.jpa`
+- "persistencia via System API" → `persistence.systemapi`
+
+### Incompatibility
+
+```yaml
+persistence.jpa:
+  incompatible_with:
+    - persistence.systemapi
+
+persistence.systemapi:
+  incompatible_with:
+    - persistence.jpa
+```
 
 ---
 

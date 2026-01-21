@@ -1,23 +1,78 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# CAPABILITY INDEX v2.1
+# CAPABILITY INDEX v2.2
 # ═══════════════════════════════════════════════════════════════════════════════
 # 
 # Single source of truth for capability → feature → implementation → module
 # 
-# Changes from v2.0:
-#   - Skills eliminated (logic moved to features)
-#   - Features enriched with config, input_spec, implementations
-#   - Stack detection and defaults added
-#   - Multi-implementation support per feature
+# Changes from v2.1:
+#   - New capability types: foundational, layered, cross-cutting
+#   - Added phase_group for automatic phase assignment
+#   - Added cardinality (exactly-one, multiple)
+#   - Added default_feature for capability-level matches
+#   - Feature requires now points to capability (not specific feature)
+#   - New feature: api-architecture.standard as default
 #
-# Hierarchy:
-#   Capability → Feature → Implementation → Module
+# ═══════════════════════════════════════════════════════════════════════════════
+# CAPABILITY TYPES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# type: foundational | layered | cross-cutting
+#
+#   FOUNDATIONAL:
+#     - Defines base architecture (exactly one required for flow-generate)
+#     - Cannot be transformed (must be set at project creation)
+#     - Example: architecture
+#
+#   LAYERED:
+#     - Adds architectural layers on top of foundational
+#     - Requires foundational to exist
+#     - Can be added via transformation
+#     - Examples: api-architecture, persistence, integration
+#
+#   CROSS-CUTTING:
+#     - Decorators that apply to existing code
+#     - Does NOT require foundational (can apply to existing projects)
+#     - Examples: resilience, distributed-transactions
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE GROUPS
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# phase_group determines execution phase:
+#
+#   structural     → Phase 1 (project structure, adapters IN)
+#   implementation → Phase 2 (connect to external systems, adapters OUT)
+#   cross-cutting  → Phase 3+ (decorators, annotations)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# DISCOVERY RULES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Rule 1: Keyword matching priority
+#   feature.keywords > capability.keywords
+#
+# Rule 2: Default feature resolution
+#   If capability matched but no feature → use default_feature
+#   If no default_feature → ask user to choose
+#
+# Rule 3: Dependency resolution
+#   requires: [capability] → auto-add capability.default_feature if not present
+#
+# Rule 4: Foundational guarantee (flow-generate only)
+#   Exactly ONE foundational required
+#   If missing → auto-add architecture.hexagonal-light
+#
+# Rule 5: Incompatibility check
+#   Check incompatible_with before finalizing
+#
+# Rule 6: Phase assignment
+#   Group features by phase_group attribute
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
-version: "2.1"
+version: "2.2"
 domain: code
-last_updated: "2026-01-20"
+last_updated: "2026-01-21"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ORGANIZATIONAL DEFAULTS
@@ -73,17 +128,34 @@ stacks:
 capabilities:
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # ARCHITECTURE (structural)
+  # ARCHITECTURE (foundational)
+  # Base architecture - exactly one required for flow-generate
   # ─────────────────────────────────────────────────────────────────────────────
   architecture:
     description: "Foundational architectural patterns that define code structure"
-    type: structural
+    type: foundational
+    phase_group: structural
+    cardinality: exactly-one
     transformable: false
     documentation: "model/domains/code/capabilities/architecture.md"
+    
+    keywords:
+      - microservicio
+      - microservice
+      - servicio
+      - service
+      - aplicación
+      - application
+      - backend
+      - proyecto
+      - project
+    
+    default_feature: hexagonal-light
     
     features:
       hexagonal-light:
         description: "Hexagonal Light architecture with domain, application, infrastructure layers"
+        is_default: true
         keywords:
           - hexagonal
           - hexagonal architecture
@@ -97,54 +169,107 @@ capabilities:
           - id: java-spring
             module: mod-code-015-hexagonal-base-java-spring
             stack: java-spring
-          # Future:
-          # - id: java-quarkus
-          #   module: mod-code-015-hexagonal-base-java-quarkus
-          #   stack: java-quarkus
-          # - id: nodejs
-          #   module: mod-code-015-hexagonal-base-nodejs
-          #   stack: nodejs
         
         default: java-spring
 
       # Future feature:
       # hexagonal-full:
-      #   description: "Full Hexagonal architecture with additional layers"
-      #   implementations:
-      #     - id: java-spring
-      #       module: mod-code-xxx
+      #   description: "Full Hexagonal architecture with CQRS/ES"
+      #   is_default: false
+      #   keywords: [hexagonal full, CQRS, event sourcing]
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # API-ARCHITECTURE (compositional)
-  # Replaces: skill-021 api-rest + api-exposure capability
+  # API-ARCHITECTURE (layered)
+  # Defines how the service exposes its capabilities
   # ─────────────────────────────────────────────────────────────────────────────
   api-architecture:
     description: "API types according to Fusion 4-layer model"
-    type: compositional
+    type: layered
+    phase_group: structural
+    cardinality: multiple
     transformable: true
     documentation: "model/domains/code/capabilities/api_architecture.md"
+    
     keywords:
       - API
       - REST
+      - REST API
       - Fusion
       - endpoint
+      - exponer
+      - expose
+    
+    # Default when user says just "API" without specifying type
+    default_feature: standard
     
     features:
+      # Standard API (default) - when user doesn't specify type from Fusion model
+      standard:
+        description: "Standard REST API - default when no specific Fusion type requested"
+        is_default: true
+        keywords:
+          - API estándar
+          - standard API
+          - REST básico
+          - basic REST
+        
+        requires:
+          - architecture  # Points to capability, resolver uses default_feature
+        
+        config:
+          hateoas: false
+          compensation_available: false
+        
+        input_spec:
+          serviceName:
+            type: string
+            required: true
+            pattern: "^[a-z][a-z0-9-]*$"
+            description: "Service name in kebab-case"
+            example: "product-api"
+          basePackage:
+            type: string
+            required: true
+            pattern: "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"
+            description: "Java base package"
+            example: "com.company.product"
+          entities:
+            type: array
+            required: true
+            description: "Domain entities to generate"
+        
+        implementations:
+          - id: java-spring
+            module: mod-code-019-api-public-exposure-java-spring
+            stack: java-spring
+        
+        default: java-spring
+
+      # Fusion Domain API - exposes business capabilities as product
       domain-api:
-        description: "Domain API - exposes business capabilities"
+        description: "Domain API - exposes business capabilities (Fusion model)"
+        is_default: false
         keywords:
           - Domain API
           - API de dominio
           - Fusion Domain
           - business API
           - capacidades de negocio
+          - API de negocio
+          - producto API
         
         requires:
-          - architecture.hexagonal-light
+          - architecture  # Points to capability
         
         config:
           hateoas: true
           compensation_available: true
+          transactional: true
+          idempotent: true
+        
+        constraints:
+          - "Must not call other Domain APIs directly"
+          - "Should call System APIs for backend integration"
         
         input_spec:
           serviceName:
@@ -178,16 +303,18 @@ capabilities:
 
       system-api:
         description: "System API - wrapper over legacy systems"
+        is_default: false
         keywords:
           - System API
           - API de sistema
+          - Fusion System
           - wrapper
           - mainframe
           - legacy
           - CICS
         
         requires:
-          - architecture.hexagonal-light
+          - architecture  # Points to capability
         
         config:
           hateoas: false
@@ -214,8 +341,10 @@ capabilities:
 
       experience-api:
         description: "Experience API - BFF for UI channels"
+        is_default: false
         keywords:
           - Experience API
+          - Fusion Experience
           - BFF
           - Backend for Frontend
           - mobile
@@ -223,7 +352,7 @@ capabilities:
           - canal
         
         requires:
-          - architecture.hexagonal-light
+          - architecture  # Points to capability
         
         config:
           hateoas: true
@@ -253,14 +382,16 @@ capabilities:
 
       composable-api:
         description: "Composable API - multi-domain orchestration"
+        is_default: false
         keywords:
           - Composable API
+          - Fusion Composable
           - orchestration
           - orquestación
           - multi-domain
         
         requires:
-          - architecture.hexagonal-light
+          - architecture  # Points to capability
         
         config:
           hateoas: false
@@ -285,23 +416,30 @@ capabilities:
         default: java-spring
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # INTEGRATION (compositional)
-  # Normalized from KB: integration capability with sub-features
+  # INTEGRATION (layered)
+  # Patterns for integrating with external systems (adapters OUT)
   # ─────────────────────────────────────────────────────────────────────────────
   integration:
     description: "Patterns for integrating with external systems"
-    type: compositional
+    type: layered
+    phase_group: implementation
+    cardinality: multiple
     transformable: true
     documentation: "model/domains/code/capabilities/integration.md"
+    
     keywords:
       - integration
       - integración
       - external API
       - API externa
+      - consumir API
+    
+    default_feature: api-rest
     
     features:
       api-rest:
         description: "Synchronous REST integration with RestClient"
+        is_default: true
         keywords:
           - REST client
           - HTTP client
@@ -310,16 +448,14 @@ capabilities:
           - API client
           - consumir API
         
+        requires:
+          - architecture  # Points to capability
+        
         implementations:
           - id: java-spring-restclient
             module: mod-code-018-api-integration-rest-java-spring
             stack: java-spring
             description: "Spring RestClient (synchronous)"
-          # Future:
-          # - id: java-spring-webclient
-          #   module: mod-code-018b-api-integration-webclient-java-spring
-          #   stack: java-spring
-          #   description: "Spring WebClient (reactive)"
         
         default: java-spring-restclient
 
@@ -327,25 +463,22 @@ capabilities:
       # api-grpc:
       #   description: "gRPC integration"
       #   keywords: [gRPC, protobuf, RPC]
-      #   implementations:
-      #     - id: java-spring
-      #       module: mod-code-xxx
-      #
       # event-kafka:
       #   description: "Kafka event integration"
       #   keywords: [Kafka, events, event-driven]
-      #   implementations:
-      #     - id: java-spring
-      #       module: mod-code-xxx
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # PERSISTENCE (compositional)
+  # PERSISTENCE (layered)
+  # Data persistence strategies (adapters OUT)
   # ─────────────────────────────────────────────────────────────────────────────
   persistence:
     description: "Data persistence strategies"
-    type: compositional
+    type: layered
+    phase_group: implementation
+    cardinality: multiple
     transformable: true
     documentation: "model/domains/code/capabilities/persistence.md"
+    
     keywords:
       - persistence
       - persistencia
@@ -355,9 +488,12 @@ capabilities:
       - database
       - base de datos
     
+    # NO default_feature - user must choose between jpa and systemapi
+    
     features:
       jpa:
         description: "JPA/Hibernate persistence with relational database"
+        is_default: false
         keywords:
           - JPA
           - Hibernate
@@ -367,6 +503,9 @@ capabilities:
           - ORM
           - entity
           - repository
+        
+        requires:
+          - architecture  # Points to capability
         
         incompatible_with:
           - persistence.systemapi
@@ -380,6 +519,7 @@ capabilities:
 
       systemapi:
         description: "Persistence delegated to System API (legacy backend)"
+        is_default: false
         keywords:
           - System API
           - backend
@@ -389,7 +529,8 @@ capabilities:
           - host
         
         requires:
-          - integration.api-rest
+          - architecture  # Points to capability
+          - integration.api-rest  # Specific dependency
         
         incompatible_with:
           - persistence.jpa
@@ -402,13 +543,17 @@ capabilities:
         default: java-spring
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # RESILIENCE (compositional)
+  # RESILIENCE (cross-cutting)
+  # Decorators for fault tolerance - apply to existing code
   # ─────────────────────────────────────────────────────────────────────────────
   resilience:
     description: "Fault tolerance and resilience patterns"
-    type: compositional
+    type: cross-cutting
+    phase_group: cross-cutting
+    cardinality: multiple
     transformable: true
     documentation: "model/domains/code/capabilities/resilience.md"
+    
     keywords:
       - resilience
       - resiliencia
@@ -417,14 +562,20 @@ capabilities:
       - stability patterns
       - patrones de estabilidad
     
+    # NO default_feature - user must specify which patterns
+    # NO requires foundational - can apply to existing code (flow-transform)
+    
     features:
       circuit-breaker:
         description: "Circuit Breaker to prevent cascade failures"
+        is_default: false
         keywords:
           - circuit breaker
           - cortocircuito
           - breaker
           - fail fast
+        
+        # NO requires - can apply to any existing adapter
         
         implementations:
           - id: java-spring-resilience4j
@@ -436,6 +587,7 @@ capabilities:
 
       retry:
         description: "Retry with exponential backoff"
+        is_default: false
         keywords:
           - retry
           - reintento
@@ -452,6 +604,7 @@ capabilities:
 
       timeout:
         description: "Timeout to limit wait times"
+        is_default: false
         keywords:
           - timeout
           - tiempo límite
@@ -464,17 +617,12 @@ capabilities:
             stack: java-spring
             pattern: annotation
             description: "@TimeLimiter from Resilience4j"
-          # Future alternative:
-          # - id: java-spring-client-config
-          #   module: mod-code-003b-timeout-restclient
-          #   stack: java-spring
-          #   pattern: client-config
-          #   description: "Timeout configured in RestClient"
         
         default: java-spring-annotation
 
       rate-limiter:
         description: "Rate Limiter to control request throughput"
+        is_default: false
         keywords:
           - rate limit
           - rate limiter
@@ -491,13 +639,17 @@ capabilities:
         default: java-spring-resilience4j
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # DISTRIBUTED-TRANSACTIONS (compositional)
+  # DISTRIBUTED-TRANSACTIONS (cross-cutting)
+  # Patterns for handling distributed transactions
   # ─────────────────────────────────────────────────────────────────────────────
   distributed-transactions:
     description: "Patterns for handling distributed transactions"
-    type: compositional
+    type: cross-cutting
+    phase_group: cross-cutting
+    cardinality: multiple
     transformable: true
     documentation: "model/domains/code/capabilities/distributed_transactions.md"
+    
     keywords:
       - saga
       - distributed transaction
@@ -505,9 +657,13 @@ capabilities:
       - eventual consistency
       - consistencia eventual
     
+    # NO default_feature - user must specify
+    # NO requires foundational - can apply to existing code
+    
     features:
       saga-compensation:
         description: "SAGA pattern with compensation for rollback"
+        is_default: false
         keywords:
           - compensation
           - compensación
