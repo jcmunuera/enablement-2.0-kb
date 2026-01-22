@@ -398,3 +398,58 @@ requires_config:
 - Test Case 6 ("JPA y System API") ahora es válido (híbrido)
 - Test Case 7 ("Domain API con compensación") válido
 - Test Case 8 ("API REST con compensación") error (compensation_available=false)
+
+### DEC-013: Idempotencia como capability, implies y config_rules {#dec-013}
+
+**Fecha:** 2026-01-22  
+**Estado:** ✅ Implementado (modelo) / 🟡 Pendiente (ADR/ERI/Module)
+
+**Contexto:**  
+Análisis de config flags `transactional` e `idempotent` en domain-api reveló:
+1. Los flags eran fijos pero no está claro si se generaba código para ellos
+2. Vincular flags a features específicas (saga-compensation) no escala si añadimos más patterns (2PC)
+3. ¿Idempotencia es dependiente de transaccionalidad o puede existir independiente?
+
+**Decisiones AUTHOR:**
+
+**A) Idempotencia como capability independiente:**
+- Tiene sentido API idempotente sin transaccionalidad (pagos, reservas)
+- Transaccionalidad SÍ implica idempotencia (no se puede hacer retry sin idempotencia)
+- Nueva capability `idempotency` con feature `idempotency-key`
+- **Status: planned** - Pendiente ADR-014, ERI-016, mod-021
+
+**B) Nuevo atributo `implies` (nivel capability):**
+- Dependencias automáticas entre capabilities
+- `distributed-transactions` → implies → `idempotency`
+- Diferente de `requires`: implies auto-añade, requires valida
+
+**C) Nueva sección `config_rules` (nivel top):**
+- Flags calculados por **capability**, no por feature
+- Future-proof: si añadimos `two-phase-commit`, automáticamente activa `transactional=true`
+- Reglas definidas:
+  - `transactional`: activated_by distributed-transactions
+  - `idempotent`: activated_by idempotency OR distributed-transactions
+
+**D) Nuevas reglas de discovery:**
+- Rule 8: Resolve Implications
+- Rule 9: Calculate Config Flags
+
+**Cambios aplicados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| capability-index.yaml | v2.3 → v2.4, nueva capability idempotency (planned), implies, config_rules |
+| discovery-guidance.md | v3.1 → v3.2, Rule 8, Rule 9, algoritmo actualizado |
+| CAPABILITY.md (authoring) | v3.2 → v3.3, documentar implies y config_rules |
+| CAPABILITY-BACKLOG.md | Nuevo documento de tracking de pendientes |
+
+**Pendiente para completar:**
+- [ ] ADR-014-idempotency
+- [ ] ERI-016-idempotency-java-spring  
+- [ ] mod-code-021-idempotency-key-java-spring
+
+**Implicación:**
+- Caso 3 ("Domain API"): config_flags = {transactional: false, idempotent: false}
+- Caso 7 ("Domain API con compensación"): implies añade idempotency pero sin módulo aún
+- Caso 9 ("Domain API idempotente"): capability matched pero WARNING: no implementation
+- Model version: 3.0.3

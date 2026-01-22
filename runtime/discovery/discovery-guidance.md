@@ -1,4 +1,4 @@
-# Discovery Guidance v3.1
+# Discovery Guidance v3.2
 
 ## Overview
 
@@ -12,7 +12,7 @@ There is **no separate skill discovery**. All logic previously in skills is now 
 
 ---
 
-## Capability Types (v2.3)
+## Capability Types (v2.4)
 
 ### Type Definitions
 
@@ -52,7 +52,7 @@ There is **no separate skill discovery**. All logic previously in skills is now 
 
 ---
 
-## Discovery Rules (v2.3)
+## Discovery Rules (v2.4)
 
 ### Rule 1: Keyword Matching Priority
 
@@ -169,6 +169,96 @@ saga-compensation:
 | system-api | false | ❌ No |
 | experience-api | false | ❌ No |
 | composable-api | false | ❌ No |
+
+### Rule 8: Resolve Implications (NEW in v2.4)
+
+Capabilities can imply other capabilities as automatic dependencies.
+
+```python
+def resolve_implications(all_features, capability_index):
+    added = True
+    while added:
+        added = False
+        selected_caps = {f.split('.')[0] for f in all_features}
+        
+        for cap_id in selected_caps:
+            capability = capability_index['capabilities'].get(cap_id)
+            if capability and 'implies' in capability:
+                for implication in capability['implies']:
+                    implied_cap = implication['capability']
+                    implied_feature = implication.get('default_feature')
+                    
+                    # Check if implied capability is already selected
+                    if implied_cap not in selected_caps:
+                        # Add the implied capability's default feature
+                        feature_to_add = f"{implied_cap}.{implied_feature}"
+                        all_features.append(feature_to_add)
+                        added = True
+    
+    return all_features
+```
+
+**Example:** `distributed-transactions` implies `idempotency`:
+
+```yaml
+distributed-transactions:
+  implies:
+    - capability: idempotency
+      default_feature: idempotency-key
+      reason: "Transactional operations require idempotency for safe retries"
+```
+
+| Scenario | Implication |
+|----------|-------------|
+| User selects `saga-compensation` | Auto-add `idempotency.idempotency-key` |
+| User selects future `two-phase-commit` | Auto-add `idempotency.idempotency-key` |
+
+### Rule 9: Calculate Config Flags (NEW in v2.4)
+
+Config flags are calculated based on **selected capabilities** (not features) for future-proofing.
+
+```python
+def calculate_config_flags(all_features, config_rules):
+    flags = {}
+    selected_caps = {f.split('.')[0] for f in all_features}
+    
+    for flag_name, rule in config_rules.items():
+        for activator in rule['activated_by']:
+            if activator['capability'] in selected_caps:
+                flags[flag_name] = True
+                break
+        else:
+            flags[flag_name] = False
+    
+    return flags
+```
+
+**Config Rules (from capability-index.yaml):**
+
+```yaml
+config_rules:
+  transactional:
+    activated_by:
+      - capability: distributed-transactions
+    description: "API implements transactional patterns"
+  
+  idempotent:
+    activated_by:
+      - capability: idempotency
+      - capability: distributed-transactions  # Dependency
+    description: "API operations are idempotent"
+```
+
+| Selected Capabilities | transactional | idempotent |
+|-----------------------|---------------|------------|
+| (none) | false | false |
+| idempotency | false | true |
+| distributed-transactions | true | true |
+| both | true | true |
+
+**Why by capability, not feature?**
+
+If we add `two-phase-commit` to `distributed-transactions`, it automatically activates `transactional=true` without code changes.
 
 ---
 
@@ -555,7 +645,7 @@ prompt → capability-index → features → implementations → modules
 
 ---
 
-## Test Cases (v2.3 Validation)
+## Test Cases (v2.4 Validation)
 
 ### Test Case 1: Microservicio Básico
 
@@ -683,15 +773,24 @@ Expected Discovery:
   - Rule 7: saga-compensation.requires_config → check compensation_available
     - domain-api.config.compensation_available = true ✓
   - domain-api.requires → architecture → auto-add hexagonal-light
+  - Rule 8: distributed-transactions.implies → auto-add idempotency.idempotency-key
+  - Rule 9: config_flags calculated from selected capabilities
 
 Result:
   flow: flow-generate
   features: [architecture.hexagonal-light, api-architecture.domain-api,
-             distributed-transactions.saga-compensation]
+             distributed-transactions.saga-compensation,
+             idempotency.idempotency-key]  # Added by Rule 8
   phases:
     Phase 1: architecture.hexagonal-light, api-architecture.domain-api
-    Phase 3: distributed-transactions.saga-compensation
-  config: {hateoas: true, compensation_available: true}
+    Phase 3: distributed-transactions.saga-compensation, idempotency.idempotency-key
+  static_config: {hateoas: true, compensation_available: true}  # From domain-api
+  config_flags: {transactional: true, idempotent: true}  # Calculated by Rule 9
+  modules:
+    - mod-code-015-hexagonal-base-java-spring
+    - mod-code-019-api-public-exposure-java-spring
+    - mod-code-020-compensation-java-spring
+    # Note: idempotency.idempotency-key has no module yet (status: planned)
 ```
 
 ### Test Case 8: API Estándar con Compensación (error)
@@ -711,9 +810,36 @@ Result:
   Suggestion: "Use 'Domain API' instead of 'API REST' for compensation support"
 ```
 
+### Test Case 9: Idempotencia independiente (PLANNED - no module yet)
+
+```
+Prompt: "Genera una Domain API idempotente"
+
+Expected Discovery:
+  - "Domain API" → api-architecture.domain-api
+  - "idempotente" → idempotency.keywords → idempotency capability
+  - idempotency.default_feature → idempotency-key
+  - domain-api.requires → architecture → auto-add hexagonal-light
+  - Rule 9: config_flags from idempotency (no distributed-transactions)
+
+Result:
+  flow: flow-generate
+  features: [architecture.hexagonal-light, api-architecture.domain-api,
+             idempotency.idempotency-key]
+  phases:
+    Phase 1: architecture.hexagonal-light, api-architecture.domain-api
+    Phase 3: idempotency.idempotency-key
+  static_config: {hateoas: true, compensation_available: true}
+  config_flags: {transactional: false, idempotent: true}
+  modules:
+    - mod-code-015-hexagonal-base-java-spring
+    - mod-code-019-api-public-exposure-java-spring
+    # WARNING: idempotency.idempotency-key is PLANNED (no implementation)
+    # Agent should inform user that idempotency module is pending
+```
 ---
 
-## Summary: Discovery Algorithm v2.3
+## Summary: Discovery Algorithm v2.4
 
 ```python
 def discover(prompt: str, context: dict) -> DiscoveryResult:
@@ -739,14 +865,20 @@ def discover(prompt: str, context: dict) -> DiscoveryResult:
     # 7. Validate compatibility (Rule 5)
     validate_incompatible(all_features)
     
-    # 8. Validate config prerequisites (Rule 7) - NEW in v2.3
+    # 8. Validate config prerequisites (Rule 7)
     validate_config_prerequisites(all_features)
     
-    # 9. Assign phases (Rule 6)
+    # 9. Resolve implications (Rule 8) - NEW in v2.4
+    all_features = resolve_implications(all_features)
+    
+    # 10. Calculate config flags (Rule 9) - NEW in v2.4
+    config_flags = calculate_config_flags(all_features, config_rules)
+    
+    # 11. Assign phases (Rule 6)
     phases = assign_phases(all_features)
     
-    # 10. Resolve modules
+    # 12. Resolve modules
     modules = resolve_modules(all_features, stack)
     
-    return DiscoveryResult(flow, stack, all_features, phases, modules)
+    return DiscoveryResult(flow, stack, all_features, phases, modules, config_flags)
 ```
