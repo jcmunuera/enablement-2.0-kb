@@ -522,3 +522,84 @@ Lo correcto:
 | ACCIÓN (calculada) | `transactional`, `idempotent` | Define QUÉ se está generando |
 
 **Model version:** 3.0.4
+
+### DEC-015: Roles de transacción distribuida y custom-api {#dec-015}
+
+**Fecha:** 2026-01-22  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+TC22 ("API REST con SAGA") reveló que un flag único `supports_distributed_transactions` mezclaba dos conceptos:
+- PARTICIPAR en una transacción (implementar Compensation)
+- GESTIONAR/ORQUESTAR una transacción (ser el coordinator/manager)
+
+Además, la rigidez de los API types Fusion no permite casos edge donde el usuario necesita configuración custom.
+
+**Análisis:**
+
+```
+Antes (un flag):
+  supports_distributed_transactions: true/false
+  
+  Problema: Composable API orquesta SAGA pero no participa
+            ¿Qué valor debería tener?
+
+Después (dos roles):
+  distributed_transactions:
+    participant: true/false    # ¿Puede implementar Compensation?
+    manager: true/false        # ¿Puede orquestar transacciones?
+```
+
+**Decisiones:**
+
+1. **Separar en dos roles:**
+   - `participant`: Puede implementar Compensation interface
+   - `manager`: Puede orquestar transacciones (SAGA coordinator)
+
+2. **Actualizar API Types:**
+
+| API Type | participant | manager | Descripción |
+|----------|:-----------:|:-------:|-------------|
+| standard | false | false | API básica opinionada |
+| domain-api | **true** | false | Participa en transacciones |
+| system-api | false | false | Wrapper backend |
+| experience-api | false | false | BFF, delega |
+| composable-api | false | **true** | Orquesta transacciones |
+| **custom-api** | ⚙️ | ⚙️ | **Configurable** (nuevo) |
+
+3. **Añadir custom-api:**
+   - Escape hatch para casos que no encajan en Fusion
+   - Configurable via input_spec
+   - WARNING: "Bypasses Fusion architectural guardrails"
+
+4. **Actualizar requires_config de saga-compensation:**
+   - `config_key: distributed_transactions.participant`
+   - Ahora domain-api Y custom-api (si participant=true) pueden usar SAGA
+
+5. **Futuro saga-orchestration:**
+   - Requerirá `distributed_transactions.manager = true`
+   - Para Composable API o custom-api con manager=true
+
+**Cambios aplicados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| capability-index.yaml | v2.5 → v2.6, nuevos roles, custom-api, updated requires_config |
+| discovery-guidance.md | v3.3 → v3.4, nueva tabla de roles |
+| CAPABILITY.md | v3.4 → v3.5, documentar nueva estructura |
+| FLOW.md | Actualizar ejemplo |
+
+**Implicación semántica:**
+
+```
+"Genera una API REST con SAGA"
+  → Matchea standard (participant=false)
+  → ERROR R7: "Use Domain API or Custom API with participant=true"
+
+"Genera una Custom API con SAGA" + input { participant: true }
+  → Matchea custom-api
+  → participant=true (configurable) 
+  → R7 PASS ✅
+```
+
+**Model version:** 3.0.5

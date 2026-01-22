@@ -1,16 +1,23 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# CAPABILITY INDEX v2.5
+# CAPABILITY INDEX v2.6
 # ═══════════════════════════════════════════════════════════════════════════════
 # 
 # Single source of truth for capability → feature → implementation → module
 # 
+# Changes from v2.5:
+#   - Split supports_distributed_transactions into two roles:
+#     - distributed_transactions.participant (can implement Compensation)
+#     - distributed_transactions.manager (can orchestrate transactions)
+#   - Updated Composable API: manager=true (can orchestrate SAGA)
+#   - New API type: custom-api (configurable escape hatch)
+#   - Updated saga-compensation.requires_config to check participant role
+#
 # Changes from v2.4:
 #   - Renamed: compensation_available → supports_distributed_transactions
-#     (more accurate: Domain API supports ANY distributed transaction pattern, not just SAGA)
+#     (more accurate: Domain API supports ANY distributed transaction pattern)
 #   - Removed static flags from domain-api.config: transactional, idempotent
 #     (these are now CALCULATED by config_rules based on selected capabilities)
-#   - Semantic clarification: supports_distributed_transactions is a CAPACITY,
-#     transactional/idempotent are ACTIONS (calculated when features selected)
+#   - Semantic clarification: capacity flags are STATIC, action flags are CALCULATED
 #
 # Changes from v2.3:
 #   - New capability: idempotency (cross-cutting, independent of transactions)
@@ -22,7 +29,7 @@
 # Changes from v2.2:
 #   - Removed incompatible_with between persistence.jpa and persistence.systemapi
 #     (hybrid scenarios are valid: some entities via JPA, others via System API)
-#   - Added requires_config to saga-compensation (requires supports_distributed_transactions=true)
+#   - Added requires_config to saga-compensation
 #   - Added Rule 7: Config Prerequisite Validation
 #
 # Changes from v2.1:
@@ -91,7 +98,7 @@
 #
 # Rule 7: Config prerequisite validation
 #   Check requires_config constraints
-#   Example: saga-compensation requires supports_distributed_transactions=true in API
+#   Example: saga-compensation requires distributed_transactions.participant=true
 #
 # Rule 8: Resolve implications
 #   Check implies at capability level
@@ -103,7 +110,7 @@
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
-version: "2.5"
+version: "2.6"
 domain: code
 last_updated: "2026-01-22"
 
@@ -251,7 +258,9 @@ capabilities:
         
         config:
           hateoas: false
-          supports_distributed_transactions: false
+          distributed_transactions:
+            participant: false    # Cannot implement Compensation
+            manager: false        # Cannot orchestrate transactions
         
         input_spec:
           serviceName:
@@ -296,7 +305,9 @@ capabilities:
         
         config:
           hateoas: true
-          supports_distributed_transactions: true
+          distributed_transactions:
+            participant: true     # CAN implement Compensation interface
+            manager: false        # Cannot orchestrate (Composable does that)
           # NOTE: transactional and idempotent are CALCULATED by config_rules
           # based on selected features, not static values here
         
@@ -351,7 +362,9 @@ capabilities:
         
         config:
           hateoas: false
-          supports_distributed_transactions: false
+          distributed_transactions:
+            participant: false    # Backend handles its own consistency
+            manager: false        # Cannot orchestrate transactions
         
         input_spec:
           serviceName:
@@ -389,7 +402,9 @@ capabilities:
         
         config:
           hateoas: true
-          supports_distributed_transactions: false
+          distributed_transactions:
+            participant: false    # BFF transforms data, delegates transactions
+            manager: false        # Cannot orchestrate (Composable does that)
         
         input_spec:
           serviceName:
@@ -428,7 +443,9 @@ capabilities:
         
         config:
           hateoas: false
-          supports_distributed_transactions: false
+          distributed_transactions:
+            participant: false    # Does NOT implement Compensation
+            manager: true         # CAN orchestrate SAGA (transaction manager)
         
         input_spec:
           serviceName:
@@ -440,6 +457,69 @@ capabilities:
           orchestration:
             type: object
             description: "Orchestration definition"
+        
+        implementations:
+          - id: java-spring
+            module: mod-code-019-api-public-exposure-java-spring
+            stack: java-spring
+        
+        default: java-spring
+
+      # Custom API - escape hatch for non-Fusion scenarios
+      custom-api:
+        description: "Custom API - configurable escape hatch (bypasses Fusion guardrails)"
+        is_default: false
+        keywords:
+          - Custom API
+          - API personalizada
+          - API a medida
+          - custom
+        
+        requires:
+          - architecture  # Points to capability
+        
+        config:
+          # Defaults - can be overridden via input_spec
+          hateoas: false
+          distributed_transactions:
+            participant: false    # Default: no, but configurable
+            manager: false        # Default: no, but configurable
+        
+        # WARNING displayed to user
+        warnings:
+          - "Custom API bypasses Fusion architectural guardrails"
+          - "Consider using a Fusion API type (Domain, System, Experience, Composable) if possible"
+        
+        input_spec:
+          serviceName:
+            type: string
+            required: true
+            pattern: "^[a-z][a-z0-9-]*$"
+          basePackage:
+            type: string
+            required: true
+          # Configurable capabilities
+          hateoas:
+            type: boolean
+            required: false
+            default: false
+            description: "Enable HATEOAS links in responses"
+          distributed_transactions_participant:
+            type: boolean
+            required: false
+            default: false
+            description: "Enable if this API participates in distributed transactions (implements Compensation)"
+          distributed_transactions_manager:
+            type: boolean
+            required: false
+            default: false
+            description: "Enable if this API orchestrates distributed transactions (SAGA manager)"
+        
+        # Config is computed from input_spec at runtime
+        config_from_input:
+          distributed_transactions.participant: distributed_transactions_participant
+          distributed_transactions.manager: distributed_transactions_manager
+          hateoas: hateoas
         
         implementations:
           - id: java-spring
@@ -709,12 +789,12 @@ capabilities:
           - rollback
           - undo
         
-        # Config prerequisite: only APIs that support distributed transactions
+        # Config prerequisite: only APIs that can PARTICIPATE in distributed transactions
         requires_config:
           - capability: api-architecture
-            config_key: supports_distributed_transactions
+            config_key: distributed_transactions.participant
             value: true
-            error_message: "SAGA compensation requires an API type that supports distributed transactions (e.g., domain-api)"
+            error_message: "SAGA compensation requires an API that can participate in distributed transactions (e.g., domain-api, or custom-api with participant=true)"
         
         implementations:
           - id: java-spring
@@ -727,6 +807,17 @@ capabilities:
       # two-phase-commit:
       #   description: "2PC for strict consistency"
       #   keywords: [2PC, two-phase, XA]
+      #   requires_config:
+      #     - config_key: distributed_transactions.participant
+      #       value: true
+      #
+      # saga-orchestration:
+      #   description: "SAGA orchestrator/manager role"
+      #   keywords: [saga orchestrator, saga manager, transaction coordinator]
+      #   requires_config:
+      #     - config_key: distributed_transactions.manager
+      #       value: true
+      #   NOTE: For Composable APIs that coordinate SAGA transactions
 
   # ─────────────────────────────────────────────────────────────────────────────
   # IDEMPOTENCY (cross-cutting) - PLANNED

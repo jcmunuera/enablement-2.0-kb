@@ -1,4 +1,4 @@
-# Discovery Guidance v3.3
+# Discovery Guidance v3.4
 
 ## Overview
 
@@ -12,7 +12,7 @@ There is **no separate skill discovery**. All logic previously in skills is now 
 
 ---
 
-## Capability Types (v2.5)
+## Capability Types (v2.6)
 
 ### Type Definitions
 
@@ -52,7 +52,7 @@ There is **no separate skill discovery**. All logic previously in skills is now 
 
 ---
 
-## Discovery Rules (v2.5)
+## Discovery Rules (v2.6)
 
 ### Rule 1: Keyword Matching Priority
 
@@ -150,25 +150,33 @@ def validate_config_prerequisites(all_features, capability_index):
                     raise ConfigPrerequisiteError(prereq['error_message'])
 ```
 
-**Example:** `saga-compensation` requires `supports_distributed_transactions=true` in the selected API type:
+**Example:** `saga-compensation` requires `distributed_transactions.participant=true` in the selected API type:
 
 ```yaml
 # In capability-index.yaml
 saga-compensation:
   requires_config:
     - capability: api-architecture
-      config_key: supports_distributed_transactions
+      config_key: distributed_transactions.participant
       value: true
-      error_message: "Compensation requires an API type that supports it (e.g., domain-api)"
+      error_message: "SAGA compensation requires an API that can participate in distributed transactions"
 ```
 
-| API Type | supports_distributed_transactions | Can use saga-compensation? |
-|----------|------------------------|---------------------------|
-| standard | false | ❌ No |
-| domain-api | true | ✅ Yes |
-| system-api | false | ❌ No |
-| experience-api | false | ❌ No |
-| composable-api | false | ❌ No |
+### Distributed Transaction Roles (v2.6)
+
+| Role | Description | Who |
+|------|-------------|-----|
+| **participant** | Implements Compensation interface, rollback own operations | Domain API, Custom API (if enabled) |
+| **manager** | Orchestrates SAGA flow, calls participants | Composable API, Custom API (if enabled) |
+
+| API Type | participant | manager | Can use saga-compensation? | Can orchestrate SAGA? |
+|----------|:-----------:|:-------:|:--------------------------:|:---------------------:|
+| standard | false | false | ❌ No | ❌ No |
+| domain-api | true | false | ✅ Yes | ❌ No |
+| system-api | false | false | ❌ No | ❌ No |
+| experience-api | false | false | ❌ No | ❌ No |
+| composable-api | false | true | ❌ No | ✅ Yes |
+| custom-api | ⚙️ configurable | ⚙️ configurable | If participant=true | If manager=true |
 
 ### Rule 8: Resolve Implications (NEW in v2.4)
 
@@ -374,7 +382,7 @@ def match_features(prompt: str, context: dict) -> List[Feature]:
 | 3 | Capability keyword without default_feature = ask user | "resilience" → Ask: "Which pattern?" |
 | 4 | Multiple capability matches are valid | "microservicio con API" → both match |
 | 5 | Dependencies are auto-added from requires | `domain-api` auto-adds `hexagonal-light` |
-| 6 | Config prerequisites validated | `saga-compensation` requires `supports_distributed_transactions=true` |
+| 6 | Config prerequisites validated | `saga-compensation` requires `distributed_transactions.participant=true` |
 
 **v2.3 Test Cases:**
 
@@ -385,8 +393,8 @@ def match_features(prompt: str, context: dict) -> List[Feature]:
 | 3 | "Domain API con circuit breaker" | `architecture.hexagonal-light`, `api-architecture.domain-api`, `resilience.circuit-breaker` | Explicit feature matches + dependency |
 | 4 | "JPA y System API" | Both persistence features (hybrid) | v2.3: No longer incompatible |
 | 5 | "Añade retry" | `resilience.retry` | Direct feature keyword match |
-| 6 | "Domain API con compensación" | `domain-api` + `saga-compensation` | Rule 7: supports_distributed_transactions=true ✓ |
-| 7 | "API con compensación" | ERROR | Rule 7: standard.supports_distributed_transactions=false |
+| 6 | "Domain API con compensación" | `domain-api` + `saga-compensation` | Rule 7: distributed_transactions.participant=true ✓ |
+| 7 | "API con compensación" | ERROR | Rule 7: standard.distributed_transactions.participant=false |
 
 **Examples with v2.3 behavior:**
 
@@ -581,7 +589,7 @@ Step 6: Determine Flow
 
 Step 7: Extract Config
   - hateoas: true (from domain-api)
-  - supports_distributed_transactions: true (from domain-api)
+  - distributed_transactions.participant: true (from domain-api)
 
 Output:
   flow: flow-generate
@@ -591,7 +599,7 @@ Output:
              resilience.circuit-breaker]
   modules: [mod-code-015, mod-code-019, mod-code-018, 
             mod-code-017, mod-code-001]
-  config: {hateoas: true, supports_distributed_transactions: true}
+  config: {hateoas: true, distributed_transactions.participant: true}
   input_spec: {serviceName: {...}, basePackage: {...}, entities: {...}}
 ```
 
@@ -645,7 +653,7 @@ prompt → capability-index → features → implementations → modules
 
 ---
 
-## Test Cases (v2.5 Validation)
+## Test Cases (v2.6 Validation)
 
 ### Test Case 1: Microservicio Básico
 
@@ -695,7 +703,7 @@ Result:
   features: [architecture.hexagonal-light, api-architecture.domain-api]
   phases:
     Phase 1: architecture.hexagonal-light, api-architecture.domain-api
-  config: {hateoas: true, supports_distributed_transactions: true}
+  config: {hateoas: true, distributed_transactions.participant: true}
 ```
 
 ### Test Case 4: API con Persistencia System API
@@ -770,8 +778,8 @@ Prompt: "Genera una Domain API con compensación"
 Expected Discovery:
   - "Domain API" → api-architecture.domain-api
   - "compensación" → distributed-transactions.saga-compensation
-  - Rule 7: saga-compensation.requires_config → check supports_distributed_transactions
-    - domain-api.config.supports_distributed_transactions = true ✓
+  - Rule 7: saga-compensation.requires_config → check distributed_transactions.participant
+    - domain-api.config.distributed_transactions.participant = true ✓
   - domain-api.requires → architecture → auto-add hexagonal-light
   - Rule 8: distributed-transactions.implies → auto-add idempotency.idempotency-key
   - Rule 9: config_flags calculated from selected capabilities
@@ -784,7 +792,7 @@ Result:
   phases:
     Phase 1: architecture.hexagonal-light, api-architecture.domain-api
     Phase 3: distributed-transactions.saga-compensation, idempotency.idempotency-key
-  static_config: {hateoas: true, supports_distributed_transactions: true}  # From domain-api
+  static_config: {hateoas: true, distributed_transactions.participant: true}  # From domain-api
   config_flags: {transactional: true, idempotent: true}  # Calculated by Rule 9
   modules:
     - mod-code-015-hexagonal-base-java-spring
@@ -801,8 +809,8 @@ Prompt: "Genera una API REST con compensación"
 Expected Discovery:
   - "API REST" → api-architecture.standard (default)
   - "compensación" → distributed-transactions.saga-compensation
-  - Rule 7: saga-compensation.requires_config → check supports_distributed_transactions
-    - standard.config.supports_distributed_transactions = false ❌
+  - Rule 7: saga-compensation.requires_config → check distributed_transactions.participant
+    - standard.config.distributed_transactions.participant = false ❌
 
 Result:
   ERROR: ConfigPrerequisiteError
@@ -829,7 +837,7 @@ Result:
   phases:
     Phase 1: architecture.hexagonal-light, api-architecture.domain-api
     Phase 3: idempotency.idempotency-key
-  static_config: {hateoas: true, supports_distributed_transactions: true}
+  static_config: {hateoas: true, distributed_transactions.participant: true}
   config_flags: {transactional: false, idempotent: true}
   modules:
     - mod-code-015-hexagonal-base-java-spring
@@ -839,7 +847,7 @@ Result:
 ```
 ---
 
-## Summary: Discovery Algorithm v2.5
+## Summary: Discovery Algorithm v2.6
 
 ```python
 def discover(prompt: str, context: dict) -> DiscoveryResult:

@@ -1,18 +1,26 @@
 # Authoring Guide: CAPABILITY
 
-**Version:** 3.4  
+**Version:** 3.5  
 **Last Updated:** 2026-01-22  
 **Asset Type:** Capability  
-**Model Version:** 3.0.4  
-**capability-index Version:** 2.5
+**Model Version:** 3.0.5  
+**capability-index Version:** 2.6
 
 ---
+
+## What's New in v3.5
+
+| Change | Description |
+|--------|-------------|
+| **distributed_transactions roles** | Split into `participant` and `manager` roles |
+| **Composable API** | Now has `manager: true` (can orchestrate SAGA) |
+| **custom-api** | New API type - configurable escape hatch |
 
 ## What's New in v3.4
 
 | Change | Description |
 |--------|-------------|
-| **supports_distributed_transactions** | Renamed from `compensation_available` (semantic clarification) |
+| **supports_distributed_transactions** | Renamed from `compensation_available` (now split into roles in v3.5) |
 | **Removed static flags** | `transactional` and `idempotent` removed from domain-api.config (now calculated) |
 
 ## What's New in v3.3
@@ -283,7 +291,9 @@ capabilities:
         
         config:
           hateoas: false
-          supports_distributed_transactions: false
+          distributed_transactions:
+            participant: false
+            manager: false
         
         implementations:
           - id: java-spring
@@ -305,9 +315,10 @@ capabilities:
         
         config:
           hateoas: true
-          supports_distributed_transactions: true
-          transactional: true
-          idempotent: true
+          distributed_transactions:
+            participant: true      # CAN implement Compensation
+            manager: false         # Cannot orchestrate
+          # NOTE: transactional/idempotent are CALCULATED by config_rules
         
         implementations:
           - id: java-spring
@@ -681,9 +692,9 @@ Config prerequisite validation. Ensures a required config value exists in anothe
 ```yaml
 requires_config:
   - capability: api-architecture
-    config_key: supports_distributed_transactions
+    config_key: distributed_transactions.participant
     value: true
-    error_message: "Compensation requires an API type that supports it (e.g., domain-api)"
+    error_message: "SAGA compensation requires an API that can participate in distributed transactions"
 ```
 
 **Fields:**
@@ -691,13 +702,13 @@ requires_config:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `capability` | Yes | Target capability to check |
-| `config_key` | Yes | Config key to validate |
+| `config_key` | Yes | Config key to validate (supports dot notation for nested) |
 | `value` | Yes | Expected value |
 | `error_message` | Yes | Error message if validation fails |
 
 **Use case:** Features that only work with certain API types or configurations.
 
-**Example:** `saga-compensation` requires `supports_distributed_transactions=true`, which only `domain-api` has.
+**Example:** `saga-compensation` requires `distributed_transactions.participant=true`, which only `domain-api` and `custom-api` (if configured) have.
 
 ### implies (Optional, Capability-level, NEW in v2.4)
 
@@ -770,7 +781,9 @@ Feature-specific configuration passed to module:
 ```yaml
 config:
   hateoas: true
-  supports_distributed_transactions: true
+  distributed_transactions:
+    participant: true
+    manager: false
   max_retries: 3
 ```
 
