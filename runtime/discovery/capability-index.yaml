@@ -1,9 +1,16 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# CAPABILITY INDEX v2.3
+# CAPABILITY INDEX v2.4
 # ═══════════════════════════════════════════════════════════════════════════════
 # 
 # Single source of truth for capability → feature → implementation → module
 # 
+# Changes from v2.3:
+#   - New capability: idempotency (cross-cutting, independent of transactions)
+#   - New attribute: implies (automatic dependencies between capabilities)
+#   - New section: config_rules (flag activation by capability, not feature)
+#   - Added Rule 8: Resolve Implications
+#   - Added Rule 9: Calculate Config Flags
+#
 # Changes from v2.2:
 #   - Removed incompatible_with between persistence.jpa and persistence.systemapi
 #     (hybrid scenarios are valid: some entities via JPA, others via System API)
@@ -78,9 +85,17 @@
 #   Check requires_config constraints
 #   Example: saga-compensation requires compensation_available=true in API
 #
+# Rule 8: Resolve implications
+#   Check implies at capability level
+#   Example: distributed-transactions implies idempotency
+#
+# Rule 9: Calculate config flags
+#   Apply config_rules based on selected capabilities
+#   Example: distributed-transactions → transactional=true, idempotent=true
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 
-version: "2.3"
+version: "2.4"
 domain: code
 last_updated: "2026-01-22"
 
@@ -669,6 +684,12 @@ capabilities:
     # NO default_feature - user must specify
     # NO requires foundational - can apply to existing code
     
+    # Implication: transactional operations require idempotency
+    implies:
+      - capability: idempotency
+        default_feature: idempotency-key
+        reason: "Transactional operations require idempotency for safe retries"
+    
     features:
       saga-compensation:
         description: "SAGA pattern with compensation for rollback"
@@ -693,6 +714,87 @@ capabilities:
             stack: java-spring
         
         default: java-spring
+
+      # Future features:
+      # two-phase-commit:
+      #   description: "2PC for strict consistency"
+      #   keywords: [2PC, two-phase, XA]
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # IDEMPOTENCY (cross-cutting) - PLANNED
+  # Patterns for ensuring operations are safely retryable
+  # ─────────────────────────────────────────────────────────────────────────────
+  idempotency:
+    description: "Patterns for ensuring operations are safely retryable"
+    status: planned  # ADR, ERI, and modules pending
+    type: cross-cutting
+    phase_group: cross-cutting
+    cardinality: multiple
+    transformable: true
+    documentation: "model/domains/code/capabilities/idempotency.md"  # TODO: create
+    
+    keywords:
+      - idempotent
+      - idempotencia
+      - idempotency
+      - retry safe
+      - duplicate prevention
+      - prevención de duplicados
+    
+    # Default feature when capability matched
+    default_feature: idempotency-key
+    
+    # NO requires foundational - can apply to existing code
+    
+    features:
+      idempotency-key:
+        description: "Idempotency via client-provided key (X-Idempotency-Key header)"
+        is_default: true
+        keywords:
+          - idempotency key
+          - clave de idempotencia
+          - X-Idempotency-Key
+          - client key
+        
+        # PLANNED: No implementations yet
+        # Pending: ADR-014-idempotency, ERI-016-idempotency, mod-code-021
+        implementations: []
+        
+        # default: java-spring  # Uncomment when implemented
+
+      # Future features:
+      # natural-idempotency:
+      #   description: "Idempotency via natural keys (PUT, DELETE)"
+      #   keywords: [natural key, PUT idempotent]
+      # conditional-update:
+      #   description: "Idempotency via ETags/versioning"
+      #   keywords: [ETag, conditional, optimistic locking]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONFIG RULES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Rules for calculating config flags based on selected capabilities.
+# Flags are activated by CAPABILITY (not specific feature) for future-proofing.
+#
+# Example: If we add two-phase-commit to distributed-transactions,
+#          it automatically activates transactional=true without code changes.
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+config_rules:
+  # Transactional flag: activated when any distributed-transactions feature is selected
+  transactional:
+    activated_by:
+      - capability: distributed-transactions
+    description: "API implements transactional patterns (SAGA, 2PC, etc.)"
+  
+  # Idempotent flag: activated by idempotency OR as dependency of transactional
+  idempotent:
+    activated_by:
+      - capability: idempotency
+      - capability: distributed-transactions  # Dependency: transactional → idempotent
+    description: "API operations are idempotent (safe to retry)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FUTURE CAPABILITIES (Placeholders)
@@ -729,7 +831,7 @@ capabilities:
 # MODULE SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-# Current modules (java-spring):
+# Current modules (java-spring) - ALL IMPLEMENTED:
 #   mod-code-001-circuit-breaker-java-resilience4j
 #   mod-code-002-retry-java-resilience4j
 #   mod-code-003-timeout-java-resilience4j
@@ -740,5 +842,28 @@ capabilities:
 #   mod-code-018-api-integration-rest-java-spring
 #   mod-code-019-api-public-exposure-java-spring
 #   mod-code-020-compensation-java-spring
+#
+# PLANNED modules (pending ADR/ERI/implementation):
+#   mod-code-021-idempotency-key-java-spring  # idempotency capability
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# PLANNED CAPABILITIES & FEATURES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# CAPABILITIES (status: planned):
+#   - idempotency                    # ADR-014, ERI-016, mod-021 pending
+#
+# FEATURES (commented as Future):
+#   - architecture.hexagonal-full    # CQRS/ES variant
+#   - integration.api-grpc           # gRPC integration
+#   - integration.event-kafka        # Kafka events
+#   - distributed-transactions.two-phase-commit  # 2PC pattern
+#   - idempotency.natural-idempotency           # PUT/DELETE natural keys
+#   - idempotency.conditional-update            # ETag/versioning
+#
+# CAPABILITIES (commented, not yet defined):
+#   - caching (redis, local)
+#   - security (oauth2, api-key)
+#   - observability (metrics, tracing)
 #
 # ═══════════════════════════════════════════════════════════════════════════════

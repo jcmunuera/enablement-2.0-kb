@@ -1,12 +1,20 @@
 # Authoring Guide: CAPABILITY
 
-**Version:** 3.2  
+**Version:** 3.3  
 **Last Updated:** 2026-01-22  
 **Asset Type:** Capability  
-**Model Version:** 3.0.2  
-**capability-index Version:** 2.3
+**Model Version:** 3.0.3  
+**capability-index Version:** 2.4
 
 ---
+
+## What's New in v3.3
+
+| Change | Description |
+|--------|-------------|
+| **implies** | New capability-level attribute for automatic dependencies |
+| **config_rules** | New top-level section for flag activation by capability |
+| **idempotency** | New cross-cutting capability (independent of transactions) |
 
 ## What's New in v3.2
 
@@ -82,7 +90,7 @@ Example: `api-architecture` is type `layered` but phase_group `structural` (exec
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       CAPABILITY HIERARCHY (v2.3)                            │
+│                       CAPABILITY HIERARCHY (v2.4)                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  CAPABILITY                                                                 │
@@ -93,13 +101,14 @@ Example: `api-architecture` is type `layered` but phase_group `structural` (exec
 │      ├── transformable: true | false                                        │
 │      ├── keywords: [...]                                                    │
 │      ├── default_feature: feature_name (optional)                           │
+│      ├── implies: [{capability, default_feature, reason}]            NEW    │
 │      │                                                                      │
 │      └── FEATURES                                                           │
 │              │                                                              │
 │              ├── is_default: true | false                                   │
 │              ├── keywords: [...]                                            │
 │              ├── requires: [capability | capability.feature]                │
-│              ├── requires_config: [{capability, config_key, value}]  NEW    │
+│              ├── requires_config: [{capability, config_key, value}]         │
 │              ├── incompatible_with: [other.features]                        │
 │              ├── config: { key: value }                                     │
 │              ├── input_spec: { field: schema }                              │
@@ -112,6 +121,13 @@ Example: `api-architecture` is type `layered` but phase_group `structural` (exec
 │                      └── module: mod-code-xxx                               │
 │                                                                              │
 │              └── default: implementation-id                                 │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  CONFIG_RULES (top-level section)                                    NEW    │
+│      │                                                                      │
+│      └── flag_name:                                                         │
+│              ├── activated_by: [{capability}]                               │
+│              └── description: "..."                                         │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -675,6 +691,70 @@ requires_config:
 **Use case:** Features that only work with certain API types or configurations.
 
 **Example:** `saga-compensation` requires `compensation_available=true`, which only `domain-api` has.
+
+### implies (Optional, Capability-level, NEW in v2.4)
+
+Automatic dependencies between capabilities. When a capability is selected, implied capabilities are auto-added.
+
+```yaml
+# At capability level (not feature level)
+distributed-transactions:
+  implies:
+    - capability: idempotency
+      default_feature: idempotency-key
+      reason: "Transactional operations require idempotency for safe retries"
+```
+
+**Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `capability` | Yes | Capability to auto-add |
+| `default_feature` | Yes | Feature to add from implied capability |
+| `reason` | Yes | Documentation of why this implication exists |
+
+**Difference from `requires`:**
+
+| Attribute | Level | Behavior |
+|-----------|-------|----------|
+| `requires` | Feature | Must be present, error if missing |
+| `implies` | Capability | Auto-added if not present |
+
+**Use case:** Capabilities that logically depend on others. Example: transactionality implies idempotency.
+
+---
+
+## Config Rules (Top-level Section, NEW in v2.4)
+
+Config flags are calculated based on **selected capabilities** (not features).
+
+```yaml
+# Top-level section in capability-index.yaml
+config_rules:
+  transactional:
+    activated_by:
+      - capability: distributed-transactions
+    description: "API implements transactional patterns"
+  
+  idempotent:
+    activated_by:
+      - capability: idempotency
+      - capability: distributed-transactions  # Also activates (dependency)
+    description: "API operations are idempotent"
+```
+
+**Why by capability, not feature?**
+
+Future-proofing: If we add `two-phase-commit` to `distributed-transactions`, it automatically activates `transactional=true` without code changes.
+
+**Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `activated_by` | Yes | List of capabilities that activate this flag |
+| `description` | Yes | Documentation of what this flag means |
+
+---
 
 ### config (Optional)
 
