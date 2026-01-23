@@ -291,6 +291,72 @@ See `model/standards/authoring/VALIDATOR.md` for complete authoring guide.
 
 ---
 
+## Validation Runner: run-all.sh
+
+### Template Location
+
+`runtime/validators/run-all.sh.tpl`
+
+### Purpose
+
+The `run-all.sh` script is generated for each output package to orchestrate validation execution. It:
+- Iterates through all tier directories (tier1, tier2, tier3)
+- Executes each validation script
+- Captures results and generates a JSON report
+- Returns appropriate exit code
+
+### CRITICAL Requirements
+
+**DO NOT use `set -e`** - This causes the script to exit on the first validation failure, preventing subsequent validations from running.
+
+**Capture exit codes BEFORE conditionals:**
+```bash
+# CORRECT - capture exit code immediately
+output=$("$script" "$PROJECT_DIR" 2>&1)
+exit_code=$?
+
+if [[ $exit_code -eq 0 ]]; then
+    # handle pass
+fi
+
+# WRONG - exit code is lost after the conditional
+if "$script" "$PROJECT_DIR"; then
+    # ...
+else
+    exit_code=$?  # BUG: $? is now 1 from the 'if' itself
+fi
+```
+
+### Template Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{SERVICE_NAME}}` | Name of the generated service | `customer-api` |
+| `{{STACK}}` | Technology stack | `java-spring` |
+
+### Tier-3 Scripts: ALL Modules Required
+
+**CRITICAL:** When copying Tier-3 validation scripts, you MUST include scripts from ALL modules used in the generation, including:
+
+- **Phase 1 modules** (structural): e.g., `mod-015`, `mod-019`
+- **Phase 2 modules** (implementation): e.g., `mod-017`, `mod-018`
+- **Phase 3+ modules** (cross-cutting): e.g., `mod-001`, `mod-002`, `mod-003`
+
+Failure to include all modules results in incomplete validation coverage.
+
+### Module Validation Script Reference
+
+| Module | Script(s) | Phase |
+|--------|-----------|-------|
+| mod-code-015-hexagonal-base | `hexagonal-structure-check.sh` | 1 |
+| mod-code-017-persistence-systemapi | `systemapi-check.sh`, `config-check.sh` | 2 |
+| mod-code-019-api-public-exposure | `hateoas-check.sh`, `pagination-check.sh` | 1 |
+| mod-code-001-circuit-breaker | `circuit-breaker-check.sh` | 3 |
+| mod-code-002-retry | `retry-check.sh` | 3 |
+| mod-code-003-timeout | `timeout-check.sh` | 3 |
+
+---
+
 ## Related Documentation
 
 - `model/standards/authoring/SKILL.md` - Validation orchestration patterns

@@ -3,6 +3,7 @@
 # Universal validator - applies to ALL outputs from ALL domains
 #
 # Validates .enablement/manifest.json exists and contains required fields
+# Updated for Model v3.0 (skill removed, discovery-based)
 
 set -e
 
@@ -48,8 +49,9 @@ else
     exit 1
 fi
 
-# Check 4: Required top-level fields
-REQUIRED_FIELDS=("generation" "skill" "status")
+# Check 4: Required top-level fields (Model v3.0)
+# Note: "skill" removed in v3.0, replaced by discovery-based flow
+REQUIRED_FIELDS=("generation" "enablement" "status")
 for field in "${REQUIRED_FIELDS[@]}"; do
     if jq -e ".$field" "$MANIFEST" > /dev/null 2>&1; then
         pass "Required field '$field' present"
@@ -84,26 +86,36 @@ else
     warn "generation.timestamp is empty or missing"
 fi
 
-# Check 7: skill.id matches naming convention (warning only)
-SKILL_ID=$(jq -r '.skill.id // empty' "$MANIFEST")
-if [ -n "$SKILL_ID" ]; then
-    SKILL_REGEX='^skill-(code|design|qa|gov)-[0-9]{3}-'
-    if [[ "$SKILL_ID" =~ $SKILL_REGEX ]]; then
-        pass "skill.id follows naming convention"
-    else
-        warn "skill.id may not follow naming convention: $SKILL_ID"
-    fi
+# Check 7: enablement.version present (Model v3.0)
+ENABLEMENT_VERSION=$(jq -r '.enablement.version // empty' "$MANIFEST")
+if [ -n "$ENABLEMENT_VERSION" ]; then
+    pass "enablement.version present: $ENABLEMENT_VERSION"
 else
-    warn "skill.id is empty or missing"
+    warn "enablement.version is empty or missing"
 fi
 
-# Check 8: status.overall is valid value
+# Check 8: discovery block present (recommended for v3.0)
+if jq -e ".discovery" "$MANIFEST" > /dev/null 2>&1; then
+    pass "discovery block present"
+    
+    # Check discovery.stack
+    STACK=$(jq -r '.discovery.stack // empty' "$MANIFEST")
+    if [ -n "$STACK" ]; then
+        pass "discovery.stack: $STACK"
+    else
+        warn "discovery.stack is empty"
+    fi
+else
+    warn "discovery block missing (recommended for traceability)"
+fi
+
+# Check 9: status.overall is valid value
 STATUS=$(jq -r '.status.overall // empty' "$MANIFEST")
 if [ -n "$STATUS" ]; then
-    if [[ "$STATUS" =~ ^(SUCCESS|PARTIAL|FAILED)$ ]]; then
+    if [[ "$STATUS" =~ ^(SUCCESS|PARTIAL|FAILED|PENDING)$ ]]; then
         pass "status.overall is valid ($STATUS)"
     else
-        fail "status.overall must be SUCCESS, PARTIAL, or FAILED (got: $STATUS)"
+        fail "status.overall must be SUCCESS, PARTIAL, FAILED, or PENDING (got: $STATUS)"
     fi
 else
     fail "status.overall is missing"
