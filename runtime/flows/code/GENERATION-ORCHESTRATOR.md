@@ -180,6 +180,54 @@ def discovery_phase(ctx: PackageContext) -> DiscoveryResult:
 ### Objective
 Generate code in phases, tracking all decisions and files.
 
+### Module Variant Selection
+
+Some modules have **multiple implementation variants**. Before generating code, check each module's frontmatter for `variants:` configuration.
+
+**Variant Selection Rules:**
+
+```python
+def select_variant(module: Module, discovery: DiscoveryResult) -> str:
+    """
+    Select which variant of a module to use.
+    
+    CRITICAL: When no variant is specified, ALWAYS use the 'default' variant.
+    """
+    
+    if not module.has_variants:
+        return None  # Module has single implementation
+    
+    # Check if user explicitly requested a variant
+    requested = discovery.config.get(f"{module.feature}.variant")
+    if requested:
+        return requested
+    
+    # Check recommend_when conditions
+    for alt in module.alternatives:
+        for condition in alt.recommend_when:
+            if evaluate_condition(condition, discovery):
+                # Log recommendation but still use default unless explicit
+                log(f"Alternative '{alt.id}' matches condition, but using default")
+    
+    # ALWAYS return default when not explicitly specified
+    return module.default_variant.id
+```
+
+**Example: mod-003 (Timeout)**
+
+```yaml
+# Module frontmatter
+variants:
+  default:
+    id: client-timeout           # ← This is used unless explicitly overridden
+  alternatives:
+    - id: annotation-async       # ← Only used if explicitly requested
+```
+
+**In practice:**
+- If discovery.config has `resilience.timeout.variant = annotation-async` → use annotation-async
+- Otherwise → use `client-timeout` (DEFAULT)
+
 ### Steps
 
 ```python
@@ -208,11 +256,24 @@ def generation_phase(ctx: PackageContext, discovery: DiscoveryResult) -> Generat
         for module_id in phase.modules:
             module = load_module(module_id)
             
-            # Generate code using module templates
+            # CRITICAL: Select variant if module has multiple variants
+            variant_id = None
+            if module.has_variants:
+                variant_id = select_variant(module, discovery)
+                decisions.append({
+                    "timestamp": now_iso(),
+                    "decision": "SELECT_VARIANT",
+                    "module": module_id,
+                    "variant": variant_id,
+                    "reason": "default" if variant_id == module.default_variant.id else "explicit_config"
+                })
+            
+            # Generate code using module templates (for selected variant)
             files = module.generate(
                 context=ctx,
                 config=discovery.config,
-                existing_files=generated_files
+                existing_files=generated_files,
+                variant=variant_id  # Pass selected variant
             )
             
             for file_path, content in files.items():
@@ -293,6 +354,50 @@ def generation_phase(ctx: PackageContext, discovery: DiscoveryResult) -> Generat
 - `trace/modules-used.json`
 - `trace/decisions-log.jsonl`
 
+### Configuration Composition Strategy
+
+When multiple modules contribute to `application.yml`, use **YAML deep merge**, NOT multi-document (`---`):
+
+```python
+def compose_application_yml(base_config: Dict, module_configs: List[Dict]) -> str:
+    """
+    Merge multiple YAML configs into single document.
+    Later configs override earlier ones for same keys (deep merge).
+    
+    Args:
+        base_config: From mod-015 (spring, server, management, logging)
+        module_configs: From other modules (resilience4j, systemapi, etc.)
+    
+    Returns:
+        Single YAML document string
+    """
+    merged = copy.deepcopy(base_config)
+    for config in module_configs:
+        deep_merge(merged, config)
+    return yaml.dump(merged, default_flow_style=False, sort_keys=False)
+```
+
+**CRITICAL: Do NOT use multi-document YAML:**
+```yaml
+# ❌ FORBIDDEN - Causes parsing issues with Python/yq
+spring:
+  application:
+    name: my-api
+---                    # <- NEVER USE THIS
+resilience4j:
+  circuitbreaker: ...
+```
+
+```yaml
+# ✅ CORRECT - Single merged document
+spring:
+  application:
+    name: my-api
+
+resilience4j:
+  circuitbreaker: ...
+```
+
 ---
 
 ## Phase 4: TESTS
@@ -359,6 +464,7 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
     enablement_dir = f"{generation.project_dir}/.enablement"
     create_directory(enablement_dir)
     
+    # Model v3.0: No "skill" field - replaced by discovery-based flow
     manifest = {
         "generation": {
             "id": str(ctx.generation_id),
@@ -366,7 +472,7 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
             "run_id": ctx.run_id
         },
         "enablement": {
-            "version": "3.0.6",
+            "version": ctx.enablement_version,
             "domain": "code",
             "flow": "flow-generate"
         },
@@ -411,6 +517,15 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
 ### Objective
 Copy validation scripts and execute validations.
 
+### CRITICAL: Script Collection
+
+**IMPORTANT:** Tier-3 scripts must be collected from ALL modules used in the generation, including:
+- Phase 1 modules (structural)
+- Phase 2 modules (implementation)
+- Phase 3+ modules (cross-cutting, e.g., resilience)
+
+Failure to include all modules will result in incomplete validation coverage.
+
 ### Steps
 
 ```python
@@ -423,19 +538,29 @@ def validation_phase(ctx: PackageContext, generation: GenerationResult):
         copy_file(script, f"{validation_dir}/scripts/tier1/{basename(script)}")
     
     # 2. Copy Tier-2 scripts (Technology-specific)
-    stack = "java-spring"
+    stack = ctx.stack  # e.g., "java-spring"
     tier2_source = f"runtime/validators/tier-2-technology/code-projects/{stack}/"
     for script in glob(f"{tier2_source}/*.sh"):
         copy_file(script, f"{validation_dir}/scripts/tier2/{basename(script)}")
     
     # 3. Copy Tier-3 scripts (Module-specific)
+    # CRITICAL: Iterate over ALL modules from ALL phases
     for module_info in generation.modules_used:
-        module_dir = f"modules/{module_info['id']}/validation/"
-        for script in glob(f"{module_dir}/*.sh"):
-            copy_file(script, f"{validation_dir}/scripts/tier3/{basename(script)}")
+        module_id = module_info['id']
+        module_dir = f"modules/{module_id}/validation/"
+        
+        # Check if validation directory exists for this module
+        if exists(module_dir):
+            for script in glob(f"{module_dir}/*.sh"):
+                copy_file(script, f"{validation_dir}/scripts/tier3/{basename(script)}")
     
-    # 4. Generate run-all.sh
-    generate_run_all_sh(validation_dir, generation.modules_used)
+    # 4. Generate run-all.sh from template
+    # Template location: runtime/validators/run-all.sh.tpl
+    template = read_file("runtime/validators/run-all.sh.tpl")
+    run_all_content = template.replace("{{SERVICE_NAME}}", ctx.service_name)
+    run_all_content = run_all_content.replace("{{STACK}}", ctx.stack)
+    write_file(f"{validation_dir}/run-all.sh", run_all_content)
+    chmod_executable(f"{validation_dir}/run-all.sh")
     
     # 5. Execute validations
     result = execute_validations(validation_dir, generation.project_dir)
@@ -448,6 +573,27 @@ def validation_phase(ctx: PackageContext, generation: GenerationResult):
     
     return result
 ```
+
+### Module Validation Scripts Reference
+
+| Module | Validation Script | Validates |
+|--------|-------------------|-----------|
+| mod-code-015 | `hexagonal-structure-check.sh` | Package structure |
+| mod-code-017 | `systemapi-check.sh`, `config-check.sh` | System API adapter |
+| mod-code-019 | `hateoas-check.sh`, `pagination-check.sh` | API exposure |
+| mod-code-001 | `circuit-breaker-check.sh` | Circuit breaker annotations |
+| mod-code-002 | `retry-check.sh` | Retry annotations |
+| mod-code-003 | `timeout-check.sh` | Timeout annotations |
+
+### run-all.sh Template
+
+The `run-all.sh` script is generated from `runtime/validators/run-all.sh.tpl`.
+
+**Key requirements for run-all.sh:**
+- Must NOT use `set -e` (would stop on first failure)
+- Must capture exit codes correctly before conditional checks
+- Must iterate through all tier directories
+- Must generate JSON report
 
 ### Outputs
 - `validation/scripts/tier1/*.sh`

@@ -29,6 +29,8 @@ Este documento registra las decisiones de diseño importantes tomadas durante el
 - [DEC-019](#dec-019) - Formato manifest.json v3.0 (sin skills)
 - [DEC-020](#dec-020) - Schemas de Trazabilidad
 - [DEC-021](#dec-021) - Templates de Test en Módulos
+- [DEC-022](#dec-022) - Eliminar validación 'skill' en traceability-check
+- [DEC-023](#dec-023) - Selección de variante default en módulos
 
 ---
 
@@ -886,3 +888,93 @@ Los módulos generaban código de producción pero los tests eran ad-hoc o incom
 | Adapter IN (Controller) | @WebMvcTest | Spring Test + MockMvc |
 
 **Model version:** 3.0.7
+
+---
+
+### DEC-022: Eliminar validación 'skill' en traceability-check {#dec-022}
+
+**Fecha:** 2026-01-23  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+El validador `traceability-check.sh` seguía requiriendo el campo `skill` en manifest.json, a pesar de que DEC-001 y DEC-019 eliminaron skills del modelo v3.0.
+
+**Error detectado:**
+```
+FAIL: traceability-check - Missing required field: skill
+```
+
+**Análisis:**
+- `traceability-check.sh` línea 52: `REQUIRED_FIELDS=("generation" "skill" "status")`
+- Inconsistente con manifest.schema.json que ya usa `enablement` + `discovery`
+
+**Decisión:** Actualizar validador para alinearse con modelo v3.0
+
+**Cambios aplicados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `runtime/validators/tier-1-universal/traceability/traceability-check.sh` | `skill` → `enablement`, añadir validación de `enablement.version` y `discovery` |
+
+**Validación actualizada:**
+- Campo `enablement` requerido (reemplaza `skill`)
+- Campo `enablement.version` debe existir
+- Campo `discovery` recomendado (warning si ausente)
+- Eliminada validación de `skill.id` naming convention
+
+**Model version:** 3.0.8
+
+---
+
+### DEC-023: Selección de variante default en módulos {#dec-023}
+
+**Fecha:** 2026-01-23  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+El módulo `mod-code-003-timeout-java-resilience4j` tiene dos variantes:
+- `client-timeout` (default): Configuración HTTP client, métodos síncronos
+- `annotation-async` (alternativa): `@TimeLimiter`, requiere `CompletableFuture<T>`
+
+**Error detectado:**
+```
+FAIL: timeout-check - @TimeLimiter on synchronous methods (requires CompletableFuture)
+```
+
+**Análisis:**
+- MODULE.md frontmatter declaraba `default: client-timeout`
+- MODULE.md body solo documentaba `@TimeLimiter` (la alternativa)
+- GENERATION-ORCHESTRATOR.md no tenía lógica de selección de variantes
+- Resultado: Código generado usaba variante incorrecta
+
+**Decisión:** 
+1. Reestructurar MODULE.md: Variante DEFAULT primero y prominente
+2. Añadir lógica explícita de selección de variantes en orquestador
+3. Documentar "qué NO hacer" con ejemplos de uso incorrecto
+
+**Cambios aplicados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `modules/mod-code-003-timeout-java-resilience4j/MODULE.md` | Reestructurar: client-timeout (DEFAULT) primero, tabla de decisión, ejemplos incorrectos |
+| `runtime/flows/code/GENERATION-ORCHESTRATOR.md` | Añadir `select_variant()` function y lógica en generation loop |
+
+**Regla de selección:**
+```python
+def select_variant(module, discovery):
+    # Check explicit config
+    requested = discovery.config.get(f"{module.feature}.variant")
+    if requested:
+        return requested
+    # ALWAYS return default when not specified
+    return module.default_variant.id
+```
+
+**Implicación para mod-003:**
+
+| Config | Variante Seleccionada | Genera |
+|--------|----------------------|--------|
+| (ninguno) | client-timeout | `RestClientConfig.java` con timeouts HTTP |
+| `resilience.timeout.variant: annotation-async` | annotation-async | `@TimeLimiter` + `CompletableFuture<T>` |
+
+**Model version:** 3.0.8

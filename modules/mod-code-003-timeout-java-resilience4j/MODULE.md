@@ -55,17 +55,151 @@ implements:
 
 ## Overview
 
-Reusable template for implementing the Timeout pattern (TimeLimiter) using Resilience4j in Java/Spring Boot applications.
+Reusable template for implementing the Timeout pattern in Java/Spring Boot applications.
 
 **Source ERI:** [ERI-CODE-010](../../../ERIs/eri-code-010-timeout-java-resilience4j/ERI.md)
 
-**Important:** Methods with @TimeLimiter MUST return `CompletableFuture<T>`.
+---
+
+## ⚠️ CRITICAL: Two Implementation Variants
+
+This module supports **TWO** timeout strategies. **Read this section carefully before generating code.**
+
+| Variant | ID | When to Use | Requires |
+|---------|-----|-------------|----------|
+| **DEFAULT** | `client-timeout` | Synchronous services (most cases) | HTTP client config only |
+| Alternative | `annotation-async` | Async services with fallback needs | `CompletableFuture<T>` on ALL methods |
+
+### Decision Rule
+
+```
+IF service uses synchronous patterns (normal case):
+    → Use client-timeout (DEFAULT)
+    
+IF service ALREADY uses CompletableFuture everywhere AND needs timeout-specific fallbacks:
+    → Use annotation-async
+```
+
+**When no variant is explicitly specified, ALWAYS use `client-timeout`.**
 
 ---
 
-## Template: Application Service with Timeout
+## Variant 1: Client-level Timeout (DEFAULT - RECOMMENDED)
 
-### Basic Timeout
+This is the **default and recommended** approach. Timeout is configured at the HTTP client level.
+
+**Use this variant when:**
+- Service uses synchronous patterns (most services)
+- You want simple, predictable timeout behavior
+- You don't need timeout-specific fallback methods
+
+**Benefits:**
+- No code changes to service methods
+- Works with existing synchronous code
+- Timeout applies uniformly to all HTTP calls
+- Simpler to understand and maintain
+
+### Template: RestClientConfig.java
+
+```java
+// File: {basePackage}/infrastructure/config/RestClientConfig.java
+// @module mod-code-003-timeout-java-resilience4j
+// @variant client-timeout
+
+package {basePackage}.infrastructure.config;
+
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.util.Timeout;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+
+@Configuration
+public class RestClientConfig {
+    
+    @Value("${integration.timeout.connect:5s}")
+    private java.time.Duration connectTimeout;
+    
+    @Value("${integration.timeout.read:10s}")
+    private java.time.Duration readTimeout;
+    
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder()
+            .requestFactory(clientHttpRequestFactory());
+    }
+    
+    @Bean
+    public HttpComponentsClientHttpRequestFactory clientHttpRequestFactory() {
+        HttpComponentsClientHttpRequestFactory factory = 
+            new HttpComponentsClientHttpRequestFactory(httpClient());
+        return factory;
+    }
+    
+    @Bean
+    public CloseableHttpClient httpClient() {
+        RequestConfig requestConfig = RequestConfig.custom()
+            .setConnectTimeout(Timeout.of(connectTimeout))
+            .setResponseTimeout(Timeout.of(readTimeout))
+            .build();
+        
+        return HttpClients.custom()
+            .setDefaultRequestConfig(requestConfig)
+            .build();
+    }
+}
+```
+
+### Template: application.yml (merge)
+
+```yaml
+# Variant: client-timeout
+integration:
+  timeout:
+    connect: 5s       # Time to establish connection
+    read: 10s         # Time to read response
+```
+
+### What NOT to do with client-timeout
+
+When using client-timeout variant, **DO NOT**:
+
+```java
+// ❌ WRONG - @TimeLimiter requires CompletableFuture
+@TimeLimiter(name = "backend")
+public Optional<Customer> findById(CustomerId id) {  // Sync return type!
+    return repository.findById(id);
+}
+```
+
+The service methods remain **synchronous** with no resilience annotations for timeout:
+
+```java
+// ✅ CORRECT - client-timeout variant
+// Timeout handled at HTTP client level, no annotations needed
+public Optional<Customer> findById(CustomerId id) {
+    return repository.findById(id);
+}
+```
+
+---
+
+## Variant 2: Annotation-based Timeout (ALTERNATIVE - @TimeLimiter)
+
+Use this variant **ONLY** when the service already uses async patterns.
+
+**Use this variant when:**
+- Service ALREADY uses `CompletableFuture<T>` for all external calls
+- You need timeout-specific fallback behavior
+- Explicitly requested via `resilience.timeout.variant = annotation-async`
+
+**⚠️ REQUIREMENT:** Methods with `@TimeLimiter` MUST return `CompletableFuture<T>`.
+
+### Template: Application Service with @TimeLimiter
 
 ```java
 // File: {basePackage}/application/service/{Service}ApplicationService.java
