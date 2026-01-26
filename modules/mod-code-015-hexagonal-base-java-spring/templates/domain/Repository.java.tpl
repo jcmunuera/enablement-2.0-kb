@@ -1,6 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: Repository.java.tpl
-// Output: {{basePackage}}/domain/repository/{{Entity}}Repository.java
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/domain/repository/{{Entity}}Repository.java
 // Purpose: Repository port (interface in domain layer)
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES (must be in generation-context.json):
+//   - {{basePackage}}      : Java base package (e.g., com.bank.customer)
+//   - {{basePackagePath}}  : Package as path (e.g., com/bank/customer)
+//   - {{Entity}}           : Entity name PascalCase (e.g., Customer)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.domain.repository;
 

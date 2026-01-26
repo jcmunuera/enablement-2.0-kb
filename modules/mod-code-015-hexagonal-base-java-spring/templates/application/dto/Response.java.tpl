@@ -1,8 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: Response.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/application/dto/{{Entity}}Response.java
 // Purpose: Response DTO for {{Entity}}
-// VARIANT: record (DEFAULT - used when HATEOAS is disabled)
-// NOTE: If HATEOAS is enabled, use Response-hateoas.java.tpl instead
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{FieldName}} {{^last}} {{basePackage}} {{fieldName}} {{skillId}} {{skillVersion}} {{type}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.application.dto;
 

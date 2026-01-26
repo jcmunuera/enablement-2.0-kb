@@ -1,7 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: SystemApiMapper.java.tpl
+// Module: mod-code-017-persistence-systemapi
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/adapter/out/systemapi/mapper/{{Entity}}SystemApiMapper.java
 // Purpose: Maps between domain entities and System API DTOs
-// IMPORTANT: Code mapping (enum ↔ external codes) is done HERE, not in enums
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{EnumType}} {{FieldName}} {{StatusEnum}} {{^last}} {{basePackage}} {{code}} {{fieldName}} {{idField}} {{skillId}} {{skillVersion}} {{value}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.out.systemapi.mapper;
 

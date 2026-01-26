@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: RestController.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/adapter/rest/{{Entity}}Controller.java
 // Purpose: REST adapter (inbound)
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{basePackage}} {{entityPlural}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.rest;
 

@@ -1,6 +1,17 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: Entity.java.tpl
-// Output: {{basePackage}}/domain/model/{{Entity}}.java
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/domain/model/{{Entity}}.java
 // Purpose: Domain entity (pure POJO, NO framework annotations)
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES (must be in generation-context.json):
+//   - {{basePackage}}      : Java base package (e.g., com.bank.customer)
+//   - {{basePackagePath}}  : Package as path (e.g., com/bank/customer)
+//   - {{Entity}}           : Entity name PascalCase (e.g., Customer)
+//   - {{entityFields}}     : Array of {fieldName, fieldType, fieldNamePascal}
+//   - {{entityImports}}    : Array of additional imports (e.g., java.time.LocalDate)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.domain.model;
 

@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: application-integration.yml.tpl
+// Module: mod-code-018-api-integration-rest-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/.../application-integration.yml
+// Purpose: Template for application-integration.yml
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{apiName}} {{basePackage}} {{{BASE_URL_ENV}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 # Template: application-integration.yml.tpl
 # Output: src/main/resources/application.yml (merge)
 # Purpose: Integration configuration for REST APIs

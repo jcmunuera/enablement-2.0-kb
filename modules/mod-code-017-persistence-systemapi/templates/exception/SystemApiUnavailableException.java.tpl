@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: SystemApiUnavailableException.java.tpl
+// Module: mod-code-017-persistence-systemapi
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/adapter/out/systemapi/SystemApiUnavailableException.java
 // Purpose: Exception for System API unavailability (circuit breaker open)
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{basePackage}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.out.systemapi;
 

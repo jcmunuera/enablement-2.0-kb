@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: application-client-timeout.yml.tpl
+// Module: mod-code-003-timeout-java-resilience4j
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: Applied to existing adapter/service class
+// Purpose: Resilience pattern template
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{connectTimeout}} {{connectionRequestTimeout}} {{readTimeout}} {{skillId}} {{skillVersion}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 # Template: application-client-timeout.yml.tpl
 # Output: src/main/resources/application.yml (merge)
 # Purpose: Timeout configuration for client-level timeout

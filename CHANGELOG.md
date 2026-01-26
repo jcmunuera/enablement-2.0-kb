@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.10] - 2026-01-26
+
+### 📝 Updated: Template Headers for CONTEXT_RESOLUTION Support (DEC-026)
+
+Updated 33 critical templates for the Customer API PoC with standardized headers documenting required variables.
+
+#### Templates Updated by Module
+
+| Module | Count | Key Templates |
+|--------|-------|---------------|
+| mod-015 | 14 | Entity, Repository, ApplicationService, RestController, pom.xml |
+| mod-017 | 4 | SystemApiAdapter, SystemApiMapper |
+| mod-018 | 4 | restclient, restclient-config, IntegrationException |
+| mod-019 | 3 | EntityModelAssembler, PageResponse |
+| mod-001 | 3 | basic-fallback, application-circuitbreaker.yml |
+| mod-002 | 3 | basic-retry, application-retry.yml |
+| mod-003 | 2 | timeout-config (client-timeout variant) |
+
+#### Header Format
+```
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: {filename}
+// Module: {module-id}
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{var1}} {{var2}} ...
+// ═══════════════════════════════════════════════════════════════════════════════
+```
+
+#### Related
+- **DEC-026:** Template header standardization
+- **DEC-024:** CONTEXT_RESOLUTION phase (requires templates to declare variables)
+
+---
+
+## [3.0.9] - 2026-01-26
+
+### 🔧 Added: CONTEXT_RESOLUTION Phase for Deterministic Code Generation
+
+This release introduces the CONTEXT_RESOLUTION phase (DEC-024) and Anti-Improvisation rules (DEC-025) to enforce deterministic code generation.
+
+#### New Phase: CONTEXT_RESOLUTION
+
+**Problem:** During PoC validation, generated code didn't follow module templates. The agent "improvised" instead of applying templates mechanically.
+
+**Solution:** New phase between DISCOVERY and GENERATION that:
+- Parses ALL inputs (OpenAPI specs, mapping.json) to extract concrete values
+- Creates `generation-context.json` with ALL resolved variables
+- FAILS if any required variable cannot be resolved
+- Forces GENERATION phase to perform mechanical substitution only
+
+**Flow Change:**
+```
+INIT → DISCOVERY → CONTEXT_RESOLUTION → GENERATION → TESTS → ...
+                         │
+                         ▼
+              generation-context.json
+```
+
+#### Anti-Improvisation Rules (DEC-025)
+
+**🚫 PROHIBITED during GENERATION:**
+- Adding code not in template
+- Modifying template structure
+- "Improving" code with LLM knowledge
+- Filling gaps with invented implementations
+
+**✅ ALLOWED:**
+- Substituting {{variables}} with context values
+- Reporting missing information (but NOT inventing it)
+
+#### Files Changed
+
+| File | Change |
+|------|--------|
+| `GENERATION-ORCHESTRATOR.md` | v1.0 → v1.1, new CONTEXT_RESOLUTION phase, apply_template function |
+| `schemas/generation-context.schema.json` | NEW - Schema for generation-context.json |
+| `mod-018/.../restclient.java.tpl` | Added required variables header, fixed imports/naming |
+| `mod-019/.../EntityModelAssembler.java.tpl` | Added required variables header, simplified template |
+| `mod-019/.../hateoas-check.sh` | Now accepts both *ModelAssembler and *Assembler patterns |
+| `DECISION-LOG.md` | DEC-024, DEC-025 added |
+
+#### Related Decisions
+- **DEC-024:** Fase CONTEXT_RESOLUTION para Determinismo en Generación
+- **DEC-025:** Regla Anti-Improvisación en Generación de Código
+
+---
+
 ## [3.0.0] - 2026-01-20
 
 ### 🚀 Major: Model v3.0 - Skills Eliminated, Capability-Driven Discovery

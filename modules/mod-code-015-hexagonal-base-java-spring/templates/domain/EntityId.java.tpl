@@ -1,7 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: EntityId.java.tpl
-// Output: {{basePackage}}/domain/model/{{Entity}}Id.java
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/domain/model/{{Entity}}Id.java
 // Purpose: Value object for entity ID (type safety)
-// STRUCTURE: MUST be a record with UUID (per DETERMINISM-RULES.md)
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES (must be in generation-context.json):
+//   - {{basePackage}}      : Java base package (e.g., com.bank.customer)
+//   - {{basePackagePath}}  : Package as path (e.g., com/bank/customer)
+//   - {{Entity}}           : Entity name PascalCase (e.g., Customer)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.domain.model;
 

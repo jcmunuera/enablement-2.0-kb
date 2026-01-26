@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: application-systemapi.yml.tpl
+// Module: mod-code-017-persistence-systemapi
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/.../application-systemapi.yml
+// Purpose: Template for application-systemapi.yml
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{basePackage}} {{serviceName}} {{{SERVICE_NAME}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 # Template: application-systemapi.yml.tpl
 # Output: src/main/resources/application.yml (merge)
 # Purpose: System API configuration with resilience settings

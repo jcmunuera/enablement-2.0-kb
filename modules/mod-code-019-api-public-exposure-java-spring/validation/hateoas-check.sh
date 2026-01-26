@@ -2,6 +2,7 @@
 # hateoas-check.sh
 # Tier 3 validation for mod-code-019-api-public-exposure
 # Validates ERI constraint: hateoas-self-link, model-assembler-exists
+# Updated: 2026-01-26 - Accept both *ModelAssembler and *Assembler patterns
 
 SERVICE_DIR="${1:-.}"
 PACKAGE_PATH="${2:-}"
@@ -21,12 +22,12 @@ echo "=== HATEOAS Structure Check ==="
 echo "Service directory: $SERVICE_DIR"
 echo ""
 
-# Check 1: Find ModelAssembler classes
-ASSEMBLERS=$(find "$SERVICE_DIR" -name "*ModelAssembler.java" -type f 2>/dev/null)
-ASSEMBLER_COUNT=$(echo "$ASSEMBLERS" | grep -c "ModelAssembler" 2>/dev/null || echo "0")
+# Check 1: Find Assembler classes (both *ModelAssembler and *Assembler patterns)
+ASSEMBLERS=$(find "$SERVICE_DIR" -name "*Assembler.java" -type f 2>/dev/null | grep -v "Test")
+ASSEMBLER_COUNT=$(echo "$ASSEMBLERS" | grep -c "Assembler" 2>/dev/null || echo "0")
 
-if [ "$ASSEMBLER_COUNT" -gt 0 ]; then
-    pass "Found $ASSEMBLER_COUNT ModelAssembler class(es)"
+if [ -n "$ASSEMBLERS" ] && [ "$ASSEMBLER_COUNT" -gt 0 ]; then
+    pass "Found $ASSEMBLER_COUNT Assembler class(es)"
     
     # Check each assembler
     for ASSEMBLER in $ASSEMBLERS; do
@@ -34,11 +35,11 @@ if [ "$ASSEMBLER_COUNT" -gt 0 ]; then
         echo ""
         echo "--- Checking: $ASSEMBLER_NAME ---"
         
-        # Check 1a: Extends RepresentationModelAssemblerSupport
-        if grep -q "RepresentationModelAssemblerSupport" "$ASSEMBLER" 2>/dev/null; then
-            pass "$ASSEMBLER_NAME extends RepresentationModelAssemblerSupport"
+        # Check 1a: Extends RepresentationModelAssemblerSupport OR implements RepresentationModelAssembler
+        if grep -q "RepresentationModelAssemblerSupport\|RepresentationModelAssembler" "$ASSEMBLER" 2>/dev/null; then
+            pass "$ASSEMBLER_NAME uses HATEOAS assembler pattern"
         else
-            fail "$ASSEMBLER_NAME does not extend RepresentationModelAssemblerSupport"
+            fail "$ASSEMBLER_NAME does not use HATEOAS assembler pattern"
         fi
         
         # Check 1b: Has @Component annotation
@@ -56,27 +57,32 @@ if [ "$ASSEMBLER_COUNT" -gt 0 ]; then
         fi
         
         # Check 1d: Uses WebMvcLinkBuilder
-        if grep -q "WebMvcLinkBuilder" "$ASSEMBLER" 2>/dev/null || grep -q "linkTo" "$ASSEMBLER" 2>/dev/null; then
+        if grep -q "WebMvcLinkBuilder\|linkTo\|methodOn" "$ASSEMBLER" 2>/dev/null; then
             pass "$ASSEMBLER_NAME uses WebMvcLinkBuilder"
         else
             warn "$ASSEMBLER_NAME may not use WebMvcLinkBuilder"
         fi
     done
 else
-    fail "No ModelAssembler classes found"
+    fail "No Assembler classes found (expected *ModelAssembler.java or *Assembler.java in assembler/ directory)"
 fi
 
 # Check 2: Response DTOs extend RepresentationModel
 echo ""
 echo "--- Response DTO Check ---"
 
-RESPONSE_DTOS=$(find "$SERVICE_DIR" -name "*Response.java" -path "*/dto/*" -type f 2>/dev/null)
+RESPONSE_DTOS=$(find "$SERVICE_DIR" -name "*Response.java" \( -path "*/dto/*" -o -path "*/application/*" \) -type f 2>/dev/null)
 
 for DTO in $RESPONSE_DTOS; do
     DTO_NAME=$(basename "$DTO")
     
     # Skip PageResponse as it uses Links directly
     if [[ "$DTO_NAME" == "PageResponse.java" ]]; then
+        continue
+    fi
+    
+    # Skip external DTOs (from systemapi)
+    if echo "$DTO" | grep -q "systemapi"; then
         continue
     fi
     

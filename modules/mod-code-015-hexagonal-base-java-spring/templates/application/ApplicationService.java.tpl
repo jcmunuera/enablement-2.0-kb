@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: ApplicationService.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/application/service/{{Entity}}ApplicationService.java
 // Purpose: Application service (orchestration, transactions)
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{^last}} {{basePackage}} {{entity}} {{fieldNamePascal}} {{fieldName}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.application.service;
 
