@@ -12,6 +12,7 @@ Validators are reusable components that verify the correctness of generated cont
 
 | Tier | Name | Scope | Location |
 |------|------|-------|----------|
+| 0 | **Conformance** | Generation process validation | `validators/tier-0-conformance/` |
 | 1 | **Universal** | All domains, all outputs | `validators/tier-1-universal/` |
 | 2 | **Technology** | Specific tech stacks | `validators/tier-2-technology/` |
 | 3 | **Module** | Feature-specific constraints | `modules/{mod}/validation/` |
@@ -19,14 +20,14 @@ Validators are reusable components that verify the correctness of generated cont
 
 ---
 
-## Core Principle: SKILLs Orchestrate, MODULEs Validate
+## Core Principle: Tiered Validation
 
-Every SKILL has at least one associated MODULE. The MODULE contains the content templates AND the validation logic. The SKILL orchestrates validation by invoking:
+The validation system uses a tiered approach where each tier validates different aspects of the generated output. Validations are executed in order:
 
-1. **Tier-1 Universal** validators (always)
-2. **Tier-1 Domain** validators (if applicable)
-3. **Tier-2 Technology** validators (if applicable)
-4. **Tier-3 Module** validators (always - from associated modules)
+1. **Tier-0 Conformance** - Validates the generation process followed templates correctly (DEC-027)
+2. **Tier-1 Universal** - Validates structure, naming, traceability
+3. **Tier-2 Technology** - Validates compilation, syntax for specific tech stack
+4. **Tier-3 Module** - Validates feature-specific constraints from modules
 
 This pattern applies to **ALL domains** (CODE, DESIGN, QA, GOV).
 
@@ -84,6 +85,24 @@ validators/
 ---
 
 ## Tier Definitions
+
+### Tier-0 Conformance: Generation Process Validation
+
+**Applies to:** ALL generated code  
+**Location:** `validators/tier-0-conformance/`  
+**Purpose:** Ensure generated code follows templates correctly (DEC-024/DEC-025)
+
+This tier validates that the generation process produced code that conforms to the expected templates. It checks:
+- **Fingerprints:** Unique patterns that MUST appear if templates were followed
+- **Anti-improvisation:** Detects known incorrect patterns (e.g., wrong class inheritance)
+- **Naming conventions:** Verifies correct naming from templates
+
+**Scripts:**
+- `template-conformance-check.sh` - Validates template conformance for all modules
+
+**When it fails:** The generated code was "improvised" instead of following templates strictly. This indicates a DEC-024/DEC-025 violation.
+
+---
 
 ### Tier-1 Universal: Traceability
 

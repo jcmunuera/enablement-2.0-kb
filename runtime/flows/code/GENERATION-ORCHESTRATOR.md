@@ -67,6 +67,7 @@ def init_phase(prompt: str, specs: List[File], timestamp: str) -> PackageContext
     create_directory(f"{package_dir}/input")
     create_directory(f"{package_dir}/output")
     create_directory(f"{package_dir}/trace")
+    create_directory(f"{package_dir}/validation/scripts/tier0")
     create_directory(f"{package_dir}/validation/scripts/tier1")
     create_directory(f"{package_dir}/validation/scripts/tier2")
     create_directory(f"{package_dir}/validation/scripts/tier3")
@@ -796,6 +797,7 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
         "status": {
             "overall": "PENDING",  # Updated after validation
             "compilation": "PASS",
+            "tier0": "PENDING",
             "tier1": "PENDING",
             "tier2": "PENDING",
             "tier3": "PENDING"
@@ -899,6 +901,7 @@ The `run-all.sh` script is generated from `runtime/validators/run-all.sh.tpl`.
 - Must generate JSON report
 
 ### Outputs
+- `validation/scripts/tier0/*.sh`
 - `validation/scripts/tier1/*.sh`
 - `validation/scripts/tier2/*.sh`
 - `validation/scripts/tier3/*.sh`
