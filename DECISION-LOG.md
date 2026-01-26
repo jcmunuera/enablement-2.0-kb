@@ -978,3 +978,154 @@ def select_variant(module, discovery):
 | `resilience.timeout.variant: annotation-async` | annotation-async | `@TimeLimiter` + `CompletableFuture<T>` |
 
 **Model version:** 3.0.8
+
+---
+
+## DEC-024: Fase CONTEXT_RESOLUTION para Determinismo en Generación
+
+**Fecha:** 2026-01-26  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+Durante la simulación del PoC Customer API, se detectó que el código generado no seguía los templates definidos en los módulos. El agente "improvisó" implementaciones en lugar de aplicar los templates mecánicamente.
+
+**Problema detectado:**
+- `CustomerResponseAssembler.java` generado con `implements RepresentationModelAssembler` cuando el template define `extends RepresentationModelAssemblerSupport`
+- `PartiesSystemApiClient.java` sin propagación de `X-Correlation-ID` cuando el template lo incluye explícitamente
+- Naming incorrecto: `CustomerResponseAssembler` en lugar de `CustomerModelAssembler`
+
+**Root cause:**
+El flujo de generación no obligaba a:
+1. Parsear los inputs (specs, mapping.json) para extraer variables
+2. Usar los templates como única fuente de código
+3. Sustituir variables mecánicamente sin interpretación
+
+**Decisión:**  
+Añadir fase **CONTEXT_RESOLUTION** entre DISCOVERY y GENERATION:
+
+```
+INIT → DISCOVERY → CONTEXT_RESOLUTION → GENERATION → TESTS → ...
+                         │
+                         ▼
+              generation-context.json
+              (TODAS las variables resueltas)
+```
+
+**Principios:**
+1. **Fail-fast:** Si una variable no puede resolverse de los inputs, FALLAR antes de generar
+2. **Trazabilidad:** `generation-context.json` documenta TODAS las variables usadas
+3. **Determinismo:** El agente solo sustituye, no interpreta
+4. **Validación:** Scripts tier-1 verifican que el código cumple con templates
+
+**Cambios aplicados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `GENERATION-ORCHESTRATOR.md` | Nueva fase CONTEXT_RESOLUTION (Phase 2.5) |
+| `schemas/generation-context.schema.json` | Schema del nuevo artefacto |
+| `templates/*.tpl` | Documentar variables requeridas en header |
+
+**Model version:** 3.0.9
+
+---
+
+## DEC-025: Regla Anti-Improvisación en Generación de Código
+
+**Fecha:** 2026-01-26  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+Complemento a DEC-024. Define explícitamente qué está permitido y prohibido durante la fase de generación.
+
+**Decisión:**
+
+**🚫 PROHIBIDO durante GENERATION:**
+- Añadir código que no esté en el template
+- Modificar estructura del template (orden de métodos, imports extra)
+- "Mejorar" el código con conocimiento general del LLM
+- Rellenar "huecos" con implementaciones inventadas
+- Usar valores que no estén en `generation-context.json`
+
+**✅ PERMITIDO durante GENERATION:**
+- Sustituir `{{variables}}` con valores de `generation-context.json`
+- Reportar si falta información (pero NO inventarla)
+- Formateo básico (indentación consistente)
+
+**Regla de validación:**
+```python
+def validate_generated_code(file_path, template_path, context):
+    # 1. Verificar que tiene header @generated
+    assert has_generated_header(file_path)
+    
+    # 2. Verificar que la estructura coincide con template
+    template_structure = extract_structure(template_path)
+    generated_structure = extract_structure(file_path)
+    assert structures_match(template_structure, generated_structure)
+    
+    # 3. Verificar que no hay código extra
+    extra_code = find_extra_code(template_path, file_path, context)
+    assert len(extra_code) == 0, f"Código no autorizado: {extra_code}"
+```
+
+**Implicación:**
+Si un template tiene un "hueco" (comentario tipo `// TODO: add field mappings`), el agente debe:
+1. Buscar la información en `generation-context.json`
+2. Si existe → sustituir
+3. Si NO existe → FALLAR con mensaje claro, no improvisar
+
+**Model version:** 3.0.9
+
+---
+
+## DEC-026: Actualización de Headers en Templates Críticos para PoC
+
+**Fecha:** 2026-01-26  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+Como parte de DEC-024 (CONTEXT_RESOLUTION), los templates deben documentar explícitamente sus variables requeridas para que la fase de resolución de contexto pueda validar que todas las variables están disponibles antes de generar código.
+
+**Decisión:**  
+Actualizar todos los templates críticos para el PoC Customer API con un header estandarizado que incluye:
+- Identificación del template y módulo
+- Path de output esperado
+- Propósito del template
+- Lista de variables requeridas
+
+**Formato de Header Estandarizado:**
+```
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: {filename}
+// Module: {module-id}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/path/to/Output.java
+// Purpose: Brief description
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{var1}} {{var2}} {{var3}}
+// ═══════════════════════════════════════════════════════════════════════════════
+```
+
+**Templates Actualizados (33 total):**
+
+| Módulo | Templates | Cobertura |
+|--------|-----------|-----------|
+| mod-015 (hexagonal-base) | Entity, EntityId, Repository, NotFoundException, Enum, ApplicationService, CreateRequest, Response, RestController, pom.xml, application.yml, GlobalExceptionHandler, CorrelationIdFilter, Application | 14/22 |
+| mod-017 (persistence-systemapi) | SystemApiAdapter, SystemApiMapper, SystemApiUnavailableException, application-systemapi.yml | 4/11 |
+| mod-018 (integration-rest) | restclient, restclient-config, IntegrationException, application-integration.yml | 4/9 |
+| mod-019 (public-exposure) | EntityModelAssembler, PageResponse, FilterRequest | 3/6 |
+| mod-001 (circuit-breaker) | basic-fallback, application-circuitbreaker.yml, pom-circuitbreaker.xml | 3/7 |
+| mod-002 (retry) | basic-retry, application-retry.yml, pom-retry.xml | 3/6 |
+| mod-003 (timeout) | timeout-config, application-client-timeout.yml | 2/8 |
+
+**Templates Pendientes (36 restantes):**
+- Tests templates (no críticos para generación)
+- Variantes alternativas (feign, resttemplate)
+- Templates de casos no cubiertos por el PoC
+
+**Beneficios:**
+1. **Trazabilidad:** Cada archivo generado es rastreable a su template y módulo
+2. **Validación:** CONTEXT_RESOLUTION puede verificar que todas las variables están resueltas
+3. **Documentación:** Los templates son auto-documentados
+4. **Determinismo:** Elimina ambigüedad sobre qué variables necesita cada template
+
+**Model version:** 3.0.10

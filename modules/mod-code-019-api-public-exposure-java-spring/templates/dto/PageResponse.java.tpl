@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: PageResponse.java.tpl
+// Module: mod-code-019-api-public-exposure-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackagePath}}/adapter/in/rest/dto/PageResponse.java
 // Purpose: Standard pagination response per ADR-001
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{basePackagePath}} {{basePackage}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.in.rest.dto;
 

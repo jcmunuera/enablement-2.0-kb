@@ -1,22 +1,10 @@
-<!-- Template: pom-retry.xml.tpl -->
-<!-- Output: pom.xml (merge into dependencies section) -->
-<!-- Purpose: Resilience4j retry dependencies -->
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: pom-retry.xml.tpl
+// Module: mod-code-002-retry-java-resilience4j
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: Applied to existing adapter/service class
+// Purpose: Resilience pattern template
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: 
+// ═══════════════════════════════════════════════════════════════════════════════
 
-<!-- Resilience4j Spring Boot Starter -->
-<dependency>
-    <groupId>io.github.resilience4j</groupId>
-    <artifactId>resilience4j-spring-boot3</artifactId>
-    <version>2.1.0</version>
-</dependency>
-
-<!-- Spring Boot AOP (required for annotations) -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-aop</artifactId>
-</dependency>
-
-<!-- Actuator for metrics -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-actuator</artifactId>
-</dependency>

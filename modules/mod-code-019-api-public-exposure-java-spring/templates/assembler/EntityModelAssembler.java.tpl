@@ -1,11 +1,21 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: EntityModelAssembler.java.tpl
+// Module: mod-code-019-api-public-exposure-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackagePath}}/adapter/in/rest/assembler/{{entityName}}ModelAssembler.java
-// Purpose: Converts {{entityName}} to HATEOAS-enabled responses
+// Purpose: Converts {{entityName}} to HATEOAS-enabled responses per ADR-001
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES (must be in generation-context.json):
+//   - {{basePackage}}      : Java base package (e.g., com.bank.customer)
+//   - {{basePackagePath}}  : Package as path (e.g., com/bank/customer)
+//   - {{entityName}}       : Entity name PascalCase (e.g., Customer)
+//   - {{entityNameLower}}  : Entity name camelCase (e.g., customer)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.in.rest.assembler;
 
 import {{basePackage}}.adapter.in.rest.{{entityName}}Controller;
-import {{basePackage}}.adapter.in.rest.dto.{{entityName}}Response;
+import {{basePackage}}.application.dto.{{entityName}}Response;
 import {{basePackage}}.domain.model.{{entityName}};
 import org.springframework.hateoas.server.mvc.RepresentationModelAssemblerSupport;
 import org.springframework.stereotype.Component;
@@ -15,6 +25,10 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 /**
  * Assembler that converts {{entityName}} domain entities to {{entityName}}Response DTOs
  * with HATEOAS links per ADR-001.
+ * 
+ * @generated
+ * @module mod-code-019-api-public-exposure-java-spring
+ * @capability api-architecture.domain-api
  */
 @Component
 public class {{entityName}}ModelAssembler 
@@ -26,39 +40,18 @@ public class {{entityName}}ModelAssembler
     
     @Override
     public {{entityName}}Response toModel({{entityName}} entity) {
-        {{entityName}}Response response = mapToResponse(entity);
+        {{entityName}}Response response = {{entityName}}Response.fromDomain(entity);
         
         // Self link
         response.add(linkTo(methodOn({{entityName}}Controller.class)
-            .getById(entity.getId().toString(), null))
+            .getById(entity.getId().toString()))
             .withSelfRel());
         
         // Collection link
         response.add(linkTo(methodOn({{entityName}}Controller.class)
-            .list(null, null, null, null))
-            .withRel("collection"));
-        
-        // Add state-specific action links
-        addActionLinks(response, entity);
+            .getAll())
+            .withRel("{{entityNameLower}}s"));
         
         return response;
-    }
-    
-    private {{entityName}}Response mapToResponse({{entityName}} entity) {
-        // Map entity fields to response DTO
-        return new {{entityName}}Response(
-            entity.getId().toString()
-            // Add other field mappings here
-        );
-    }
-    
-    private void addActionLinks({{entityName}}Response response, {{entityName}} entity) {
-        // Add conditional action links based on entity state
-        // Example:
-        // if ("ACTIVE".equals(entity.getStatus().name())) {
-        //     response.add(linkTo(methodOn({{entityName}}Controller.class)
-        //         .deactivate(entity.getId().toString(), null))
-        //         .withRel("deactivate"));
-        // }
     }
 }

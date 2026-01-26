@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: Application.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/.../Application.java
+// Purpose: 
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{ServiceName}} {{basePackage}} {{serviceName}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 package {{basePackage}};
 
 import org.springframework.boot.SpringApplication;

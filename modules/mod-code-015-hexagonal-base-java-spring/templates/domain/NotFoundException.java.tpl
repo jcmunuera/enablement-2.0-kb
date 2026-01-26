@@ -1,6 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: NotFoundException.java.tpl
-// Output: {{basePackage}}/domain/exception/{{Entity}}NotFoundException.java
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/domain/exception/{{Entity}}NotFoundException.java
 // Purpose: Domain exception for entity not found
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES (must be in generation-context.json):
+//   - {{basePackage}}      : Java base package (e.g., com.bank.customer)
+//   - {{basePackagePath}}  : Package as path (e.g., com/bank/customer)
+//   - {{Entity}}           : Entity name PascalCase (e.g., Customer)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.domain.exception;
 

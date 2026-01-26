@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: CorrelationIdFilter.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/.../CorrelationIdFilter.java
+// Purpose: 
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{basePackage}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 package {{basePackage}}.infrastructure;
 
 import jakarta.servlet.FilterChain;

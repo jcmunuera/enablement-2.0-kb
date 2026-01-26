@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: IntegrationException.java.tpl
+// Module: mod-code-018-api-integration-rest-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/adapter/integration/exception/IntegrationException.java
 // Purpose: Exception for API integration failures
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{basePackage}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.integration.exception;
 

@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: CreateRequest.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/.../CreateRequest.java
+// Purpose: 
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{basePackage}} {{fieldName}} {{type}} {{validation.maxLength}} {{validation.pattern}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 package {{basePackage}}.application.dto;
 
 import jakarta.validation.constraints.*;

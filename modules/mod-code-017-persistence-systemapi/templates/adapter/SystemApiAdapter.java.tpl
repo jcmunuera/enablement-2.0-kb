@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: SystemApiAdapter.java.tpl
+// Module: mod-code-017-persistence-systemapi
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/adapter/out/systemapi/{{Entity}}SystemApiAdapter.java
 // Purpose: Adapter implementing repository port via System API calls
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{Entity}} {{basePackage}} {{entity}} {{serviceName}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.out.systemapi;
 

@@ -1,18 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: timeout-config.java.tpl
+// Module: mod-code-003-timeout-java-resilience4j
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/infrastructure/config/RestClientConfig.java
 // Purpose: Configure timeout at HTTP client level (DEFAULT variant)
-// Variant: client-timeout
-//
-// This is the RECOMMENDED approach for timeout handling:
-// - Simpler than @TimeLimiter (no CompletableFuture required)
-// - Works with synchronous code
-// - Configured at infrastructure level
-//
-// @generated {{skillId}} v{{skillVersion}}
-// @module mod-code-003-timeout-java-resilience4j
-// @variant client-timeout
-
-package {{basePackage}}.infrastructure.config;
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{basePackage}} {{skillId}} {{skillVersion}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;

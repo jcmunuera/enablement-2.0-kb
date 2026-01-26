@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: FilterRequest.java.tpl
+// Module: mod-code-019-api-public-exposure-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackagePath}}/adapter/in/rest/dto/{{entityName}}Filter.java
 // Purpose: Filter criteria for {{entityName}} queries
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{basePackagePath}} {{basePackage}} {{entityName}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.adapter.in.rest.dto;
 

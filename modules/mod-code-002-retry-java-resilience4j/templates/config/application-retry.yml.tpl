@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: application-retry.yml.tpl
+// Module: mod-code-002-retry-java-resilience4j
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: Applied to existing adapter/service class
+// Purpose: Resilience pattern template
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{BusinessException}} {{basePackage}} {{maxAttempts}} {{retryName}} {{waitDuration}} 
+// ═══════════════════════════════════════════════════════════════════════════════
+
 # Template: application-retry.yml.tpl
 # Output: src/main/resources/application.yml (merge)
 # Purpose: Resilience4j retry configuration

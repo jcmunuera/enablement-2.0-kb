@@ -1,7 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: restclient-config.java.tpl
+// Module: mod-code-018-api-integration-rest-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/infrastructure/config/RestClientConfig.java
 // Purpose: RestClient bean configuration with timeout support
-// Variant: restclient
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{api-name}} {{basePackage}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.infrastructure.config;
 

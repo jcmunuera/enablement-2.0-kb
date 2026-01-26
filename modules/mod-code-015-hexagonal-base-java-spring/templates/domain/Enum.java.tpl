@@ -1,8 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
 // Template: Enum.java.tpl
+// Module: mod-code-015-hexagonal-base-java-spring
+// ═══════════════════════════════════════════════════════════════════════════════
 // Output: {{basePackage}}/domain/model/{{EnumName}}.java
 // Purpose: Domain enum (pure Java enum, NO framework annotations)
-// STRUCTURE: Simple enum WITHOUT attributes (per DETERMINISM-RULES.md)
-// NOTE: Code mapping (e.g., to mainframe codes) belongs in Mapper class, NOT here
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES: {{EnumName}} {{^last}} {{basePackage}} {{skillId}} {{skillVersion}} {{value}} 
+// ═══════════════════════════════════════════════════════════════════════════════
 
 package {{basePackage}}.domain.model;
 
