@@ -37,6 +37,7 @@ TOTAL_FAILED=0
 TOTAL_SKIPPED=0
 
 # Results for JSON report
+declare -a TIER0_RESULTS
 declare -a TIER1_RESULTS
 declare -a TIER2_RESULTS
 declare -a TIER3_RESULTS
@@ -95,6 +96,19 @@ if [[ ! -d "$PROJECT_DIR" ]]; then
     echo -e "${RED}ERROR: Project directory not found: $PROJECT_DIR${NC}"
     exit 1
 fi
+
+# ─────────────────────────────────────────────────────────────────────
+# TIER 0: Conformance Validations (Generation Process)
+# ─────────────────────────────────────────────────────────────────────
+echo -e "${BLUE}▶ TIER 0: Conformance Validations (DEC-024/DEC-025)${NC}"
+if [[ -d "$SCRIPT_DIR/scripts/tier0" ]]; then
+    for script in "$SCRIPT_DIR/scripts/tier0/"*.sh; do
+        [[ -f "$script" ]] && run_validation "0" "$script"
+    done
+else
+    echo "  (no tier0 scripts found)"
+fi
+echo ""
 
 # ─────────────────────────────────────────────────────────────────────
 # TIER 1: Universal Validations

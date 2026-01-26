@@ -31,6 +31,10 @@ Este documento registra las decisiones de diseño importantes tomadas durante el
 - [DEC-021](#dec-021) - Templates de Test en Módulos
 - [DEC-022](#dec-022) - Eliminar validación 'skill' en traceability-check
 - [DEC-023](#dec-023) - Selección de variante default en módulos
+- [DEC-024](#dec-024) - CONTEXT_RESOLUTION: Resolución de variables antes de generación
+- [DEC-025](#dec-025) - No Improvisation Rule
+- [DEC-026](#dec-026) - Template Headers Estandarizados
+- [DEC-027](#dec-027) - Tier-0 Conformance Validation
 
 ---
 
