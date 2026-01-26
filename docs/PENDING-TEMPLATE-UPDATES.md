@@ -3,8 +3,73 @@
 **Fecha:** 2026-01-26  
 **Última actualización:** 2026-01-26 (v3.0.10)
 **Contexto:** DEC-024 (CONTEXT_RESOLUTION) requiere que todos los templates documenten sus variables requeridas
+**Decisiones relacionadas:** DEC-024, DEC-025, DEC-026
 
-## Estado Actual
+---
+
+## 1. Especificación de Modificaciones
+
+### ¿Qué hay que aplicar a CADA template?
+
+Cada template debe ser modificado para incluir:
+
+### 1.1 Header Estandarizado (OBLIGATORIO)
+
+```java
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template: {nombre-archivo.tpl}
+// Module: {mod-code-XXX-nombre-modulo}
+// Variant: {variante} (solo si el módulo tiene variantes)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Output: {{basePackagePath}}/path/to/OutputFile.java
+// Purpose: Descripción breve del propósito del template
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUIRED VARIABLES (must be in generation-context.json):
+//   - {{variable1}}      : Descripción de la variable
+//   - {{variable2}}      : Descripción de la variable
+//   - {{variableN}}      : Descripción de la variable
+// ═══════════════════════════════════════════════════════════════════════════════
+```
+
+**Reglas del header:**
+- Línea `Output:` debe usar variables para el path (ej: `{{basePackagePath}}/adapter/out/{{Entity}}Adapter.java`)
+- `REQUIRED VARIABLES` debe listar TODAS las variables `{{xxx}}` usadas en el template
+- Para archivos YAML/XML, usar comentario apropiado (`#` o `<!-- -->`)
+
+### 1.2 Anotaciones de Trazabilidad en Javadoc (OBLIGATORIO para .java)
+
+```java
+/**
+ * Descripción de la clase.
+ * 
+ * @generated
+ * @module mod-code-XXX-nombre-modulo
+ * @variant variante (solo si aplica)
+ * @capability capability.feature
+ */
+```
+
+### 1.3 Revisión Funcional (CASO POR CASO)
+
+Durante la revisión de cada template, verificar:
+
+| Aspecto | Qué verificar |
+|---------|---------------|
+| **Naming** | Nombres de clases siguen convención (`{{Entity}}ModelAssembler`, no `{{Entity}}ResponseAssembler`) |
+| **Imports** | Imports correctos y sin duplicados |
+| **Herencia** | Clases base correctas (ej: `extends RepresentationModelAssemblerSupport`, no `implements`) |
+| **X-Correlation-ID** | Clientes HTTP propagan `X-Correlation-ID` via MDC |
+| **X-Source-System** | Clientes HTTP incluyen header `X-Source-System` |
+| **Logging** | Uso de SLF4J con `LoggerFactory.getLogger()` |
+| **Anotaciones** | `@Component`, `@Service`, etc. correctamente aplicados |
+
+### 1.4 Ejemplo Completo de Template Actualizado
+
+Ver `/modules/mod-code-018-api-integration-rest-java-spring/templates/client/restclient.java.tpl` como referencia.
+
+---
+
+## 2. Estado Actual
 
 ### ✅ Templates Actualizados (33)
 
@@ -123,3 +188,85 @@
 **Pendiente (Baja):**
 - Templates de casos edge
 - DomainService (no usado en PoC)
+
+---
+
+## 3. Proceso de Actualización
+
+### Checklist por Template
+
+Para cada template pendiente:
+
+- [ ] Añadir header estandarizado con REQUIRED VARIABLES
+- [ ] Añadir anotaciones `@generated`, `@module`, `@capability` en Javadoc
+- [ ] Verificar naming sigue convenciones
+- [ ] Verificar imports correctos
+- [ ] Verificar herencia/implementación correcta
+- [ ] Si es cliente HTTP: verificar propagación X-Correlation-ID
+- [ ] Verificar que todas las variables `{{xxx}}` están listadas en REQUIRED VARIABLES
+
+### Cómo Actualizar
+
+1. Abrir template pendiente
+2. Copiar header de un template similar ya actualizado
+3. Ajustar: nombre archivo, módulo, output path, variables
+4. Revisar código del template y corregir si necesario
+5. Marcar como completado en este documento
+
+### Templates de Referencia (ya actualizados)
+
+| Tipo de Template | Referencia |
+|------------------|------------|
+| Entity/Domain class | `mod-015/.../Entity.java.tpl` |
+| REST Client | `mod-018/.../restclient.java.tpl` |
+| Assembler HATEOAS | `mod-019/.../EntityModelAssembler.java.tpl` |
+| Config YAML | `mod-015/.../application.yml.tpl` |
+| POM additions | `mod-001/.../pom-circuitbreaker.xml.tpl` |
+| Test class | (pendiente - definir patrón) |
+
+---
+
+## 4. Notas Importantes
+
+### Correcciones Funcionales Aplicadas (v3.0.10)
+
+| Template | Corrección | Motivo |
+|----------|------------|--------|
+| `restclient.java.tpl` | Añadido `addCorrelationHeaders()` | Propagar X-Correlation-ID per ERI-CODE-013 |
+| `restclient.java.tpl` | Header `X-Source-System` | Trazabilidad de origen |
+| `EntityModelAssembler.java.tpl` | Naming `{{entityName}}ModelAssembler` | Evitar confusión con Response |
+| `EntityModelAssembler.java.tpl` | `extends RepresentationModelAssemblerSupport` | Patrón correcto Spring HATEOAS |
+
+### Variables Comunes
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `{{basePackage}}` | Paquete Java base | `com.bank.customer` |
+| `{{basePackagePath}}` | Paquete como path | `com/bank/customer` |
+| `{{Entity}}` | Nombre entidad PascalCase | `Customer` |
+| `{{entity}}` | Nombre entidad camelCase | `customer` |
+| `{{entityName}}` | Alias de Entity | `Customer` |
+| `{{entityNameLower}}` | Alias de entity | `customer` |
+| `{{serviceName}}` | Nombre del servicio | `customer-api` |
+| `{{ApiName}}` | Nombre API integración | `Parties` |
+
+### Validación
+
+Después de actualizar un template, verificar:
+1. El template parsea correctamente (no hay `{{` sin cerrar)
+2. Todas las variables listadas en REQUIRED VARIABLES existen en el código
+3. No hay variables en el código que no estén en REQUIRED VARIABLES
+
+---
+
+## 5. Historial de Cambios
+
+| Fecha | Versión | Cambio |
+|-------|---------|--------|
+| 2026-01-26 | v3.0.10 | 33 templates actualizados (PoC Customer API) |
+| 2026-01-26 | v3.0.10 | Documento creado con tracking inicial |
+| 2026-01-26 | v3.0.10 | Añadida especificación completa de modificaciones |
+
+---
+
+**Próxima revisión:** Después de completar PoC Customer API, evaluar prioridad de templates restantes.
