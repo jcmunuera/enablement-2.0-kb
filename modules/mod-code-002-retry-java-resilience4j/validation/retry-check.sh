@@ -114,23 +114,26 @@ fi
 echo ""
 echo "--- Configuration Constraints ---"
 
-# Check 5: Retry configuration exists in application.yml
+# Check 5: Retry configuration exists in application.yml or profile-specific files
+# VB-002 FIX: Search in all application*.yml files
 info "Checking retry configuration exists..."
-if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
-    if grep -q "resilience4j:" "$TARGET_DIR/src/main/resources/application.yml" && \
-       grep -q "retry:" "$TARGET_DIR/src/main/resources/application.yml"; then
+RESOURCES_DIR="$TARGET_DIR/src/main/resources"
+if [ -d "$RESOURCES_DIR" ]; then
+    if grep -rq "resilience4j:" "$RESOURCES_DIR"/application*.yml 2>/dev/null && \
+       grep -rq "retry:" "$RESOURCES_DIR"/application*.yml 2>/dev/null; then
         success "Resilience4j retry configuration found"
     else
-        error "resilience4j.retry configuration not found in application.yml"
+        error "resilience4j.retry configuration not found in application*.yml files"
     fi
 else
-    error "application.yml not found"
+    error "src/main/resources directory not found"
 fi
 
 # Check 6: retryExceptions configured
+# VB-002 FIX: Search in all application*.yml files
 info "Checking retryExceptions configured..."
-if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
-    if grep -q "retryExceptions:" "$TARGET_DIR/src/main/resources/application.yml"; then
+if [ -d "$RESOURCES_DIR" ]; then
+    if grep -rq "retryExceptions:" "$RESOURCES_DIR"/application*.yml 2>/dev/null; then
         success "retryExceptions configured"
     else
         warning "retryExceptions not explicitly configured - SHOULD be defined"
@@ -138,9 +141,10 @@ if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
 fi
 
 # Check 7: ignoreExceptions configured
+# VB-002 FIX: Search in all application*.yml files
 info "Checking ignoreExceptions configured..."
-if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
-    if grep -q "ignoreExceptions:" "$TARGET_DIR/src/main/resources/application.yml"; then
+if [ -d "$RESOURCES_DIR" ]; then
+    if grep -rq "ignoreExceptions:" "$RESOURCES_DIR"/application*.yml 2>/dev/null; then
         success "ignoreExceptions configured"
     else
         warning "ignoreExceptions not configured - SHOULD include business exceptions"

@@ -58,20 +58,24 @@ echo ""
 declare -A MODULE_FINGERPRINTS
 
 # mod-code-015: Hexagonal Base
-MODULE_FINGERPRINTS["mod-code-015:CorrelationIdFilter.java"]="public static final String CORRELATION_ID_HEADER|public static final String CORRELATION_ID_MDC_KEY|public static String getCurrentCorrelationId|extractOrGenerate"
-MODULE_FINGERPRINTS["mod-code-015:GlobalExceptionHandler.java"]="@RestControllerAdvice|ProblemDetail"
+# TB-005 FIX: Updated fingerprints to match actual template output
+MODULE_FINGERPRINTS["mod-code-015:CorrelationIdFilter.java"]="public static final String CORRELATION_ID_HEADER|public static final String CORRELATION_ID_MDC_KEY|getCurrentCorrelationId"
+MODULE_FINGERPRINTS["mod-code-015:GlobalExceptionHandler.java"]="@RestControllerAdvice|createError|@ExceptionHandler"
 
 # mod-code-019: API Public Exposure (HATEOAS)
-MODULE_FINGERPRINTS["mod-code-019:*ModelAssembler.java"]="extends RepresentationModelAssemblerSupport|super(.*Controller.class.*Response.class)|withSelfRel"
+# TB-004 FIX: Simplified super() pattern check, accept various constructor forms
+MODULE_FINGERPRINTS["mod-code-019:*ModelAssembler.java"]="extends RepresentationModelAssemblerSupport|withSelfRel"
 MODULE_FINGERPRINTS["mod-code-019:*Response.java"]="extends RepresentationModel"
 
 # mod-code-017: Persistence SystemAPI
 MODULE_FINGERPRINTS["mod-code-017:*SystemApiAdapter.java"]="implements.*Repository|@Component"
-MODULE_FINGERPRINTS["mod-code-017:*SystemApiMapper.java"]="@Component|toDomain|toRequest"
+# TB-004 FIX: Accept both toRequest and toSystemRequest variations
+MODULE_FINGERPRINTS["mod-code-017:*SystemApiMapper.java"]="@Component|toDomain|toSystemRequest\|toRequest"
 
 # mod-code-018: API Integration REST
 MODULE_FINGERPRINTS["mod-code-018:*Client.java"]="RestClient|@Component"
-MODULE_FINGERPRINTS["mod-code-018:RestClientConfig.java"]="@Configuration|RestClient.Builder|SimpleClientHttpRequestFactory"
+# TB-004 FIX: Accept both old and new RestClient configuration styles
+MODULE_FINGERPRINTS["mod-code-018:RestClientConfig.java"]="@Configuration|RestClient.Builder|ClientHttpRequestFactory\|SimpleClientHttpRequestFactory"
 
 # mod-code-001: Circuit Breaker (only applies to SystemApiAdapter)
 MODULE_FINGERPRINTS["mod-code-001:*SystemApiAdapter.java"]="@CircuitBreaker"

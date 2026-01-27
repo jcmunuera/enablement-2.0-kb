@@ -28,7 +28,8 @@ for file in $CLIENT_FILES; do
     echo "Checking: $file"
     
     # ERROR: Correlation headers must be propagated
-    if ! grep -q "X-Correlation-ID\|x-correlation-id\|correlationId" "$file"; then
+    # VB-001 FIX: Also detect constant reference CORRELATION_ID_HEADER
+    if ! grep -qE "X-Correlation-ID|x-correlation-id|correlationId|CORRELATION_ID_HEADER" "$file"; then
         echo "  ❌ ERROR: Missing X-Correlation-ID header propagation"
         ERRORS=$((ERRORS + 1))
     else

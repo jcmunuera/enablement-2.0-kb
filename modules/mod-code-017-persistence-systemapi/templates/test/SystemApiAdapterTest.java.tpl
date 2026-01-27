@@ -134,4 +134,25 @@ class {{Entity}}SystemApiAdapterTest {
         // Then
         verify(client).deleteById(id);
     }
+    
+    // TTB-002 FIX: Added test for System API error response codes
+    @Test
+    void findById_WhenSystemReturnsError_ReturnsEmpty() {
+        // Given - System API returns response but with error code
+        String id = "123";
+        {{Entity}}Dto errorDto = {{Entity}}Dto.builder()
+            .id(id)
+            .sysRc("99")  // Error code
+            .sysMsg("Record not found")
+            .build();
+        
+        when(client.getById(id)).thenReturn(errorDto);
+        
+        // When
+        Optional<{{Entity}}> result = adapter.findById(id);
+        
+        // Then
+        assertThat(result).isEmpty();
+        verify(mapper, never()).toDomain(any());  // Should not map error response
+    }
 }
