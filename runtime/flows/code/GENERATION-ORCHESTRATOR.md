@@ -715,6 +715,63 @@ structural and implementation modules:
 | 2 (Implementation) | Persistence, Integration | **GENERATE** new files |
 | 3+ (Cross-cutting) | Resilience, Transactions | **TRANSFORM** existing files |
 
+#### Transform Descriptors
+
+Each cross-cutting module defines its transformation in a **transform descriptor** located at:
+`modules/{module-id}/transform/{transform-name}.yaml`
+
+| Module | Transform Descriptor | Type | Target |
+|--------|---------------------|------|--------|
+| mod-001 (circuit-breaker) | `circuit-breaker-transform.yaml` | annotation | *Adapter.java |
+| mod-002 (retry) | `retry-transform.yaml` | annotation | *Adapter.java |
+| mod-003 (timeout) | `timeout-config-transform.yaml` | modification | RestClientConfig.java |
+
+**Loading transform descriptors:**
+
+```python
+def load_cross_cutting_modules(discovery_result):
+    """
+    Load cross-cutting modules and their transform descriptors.
+    Sort by execution_order for correct application sequence.
+    """
+    cc_modules = []
+    
+    for module_id in discovery_result.modules:
+        module = load_module(module_id)
+        
+        # Check if module is cross-cutting (Phase 3)
+        if module.frontmatter.get("phase_group") == "cross-cutting":
+            # Load transform descriptor
+            transform_path = f"modules/{module_id}/transform/"
+            descriptor_file = module.frontmatter.get("transformation", {}).get("descriptor")
+            
+            if descriptor_file:
+                descriptor = load_yaml(f"{transform_path}/{descriptor_file}")
+                module.transform_descriptor = descriptor
+                module.execution_order = module.frontmatter.get("execution_order", 99)
+                cc_modules.append(module)
+    
+    # Sort by execution_order (mod-001=1, mod-002=2, mod-003=3)
+    return sorted(cc_modules, key=lambda m: m.execution_order)
+```
+
+#### Execution Order
+
+Cross-cutting modules MUST be applied in a specific order:
+
+| Order | Module | Reason |
+|-------|--------|--------|
+| 1 | mod-001 (circuit-breaker) | Outer wrapper - fails fast when service unavailable |
+| 2 | mod-002 (retry) | Applied AFTER circuit-breaker, retries happen inside CB window |
+| 3 | mod-003 (timeout) | Modifies infrastructure timeouts (separate concern) |
+
+**Annotation order in generated code:**
+```java
+@CircuitBreaker(name = SERVICE_NAME, fallbackMethod = "findByIdFallback")  // Order 1
+@Retry(name = SERVICE_NAME)                                                  // Order 2
+public Optional<Customer> findById(CustomerId id) { ... }
+```
+
 #### Key Difference
 
 ```python
@@ -723,11 +780,11 @@ for template in module.templates:
     content = apply_template(template, context)
     write_file(output_path, content)  # Creates new file
 
-# Phase 3+: Transform existing files (uses flow-transform.md logic)
-for transformation in module.transformations:
-    existing_content = read_file(transformation.target)
-    modified_content = apply_transformation(existing_content, transformation)
-    write_file(transformation.target, modified_content)
+# Phase 3+: Transform existing files (uses transform descriptors)
+for module in sorted_cross_cutting_modules:
+    descriptor = module.transform_descriptor
+    for step in descriptor['transformation']['steps']:
+        apply_transform_step(step, generated_files, context)
 ```
 
 #### Transformation Types
@@ -762,29 +819,56 @@ def resolve_targets(ctx, generated_files, module):
 #### Example: Resilience Application
 
 ```python
-def apply_resilience_transformations(ctx, generated_files, resilience_modules):
+def apply_resilience_transformations(ctx, generated_files, cross_cutting_modules):
     """
     Apply resilience patterns to files generated in Phase 1-2.
+    Uses transform descriptors from modules/{module-id}/transform/
     """
-    for module in resilience_modules:
-        targets = resolve_targets(ctx, generated_files, module)
+    # Sort by execution_order
+    sorted_modules = sorted(cross_cutting_modules, key=lambda m: m.execution_order)
+    
+    for module in sorted_modules:
+        descriptor = module.transform_descriptor
+        transformation = descriptor.get('transformation', {})
+        
+        # Resolve targets (files to transform)
+        targets = resolve_targets(ctx, generated_files, transformation.get('targets', []))
         
         for target_file in targets:
-            if module.transformation_type == "annotation":
-                # Add @CircuitBreaker, @Retry annotations + fallback methods
-                add_annotations_to_methods(target_file, module)
-                add_fallback_methods(target_file, module)
-                add_imports(target_file, module.required_imports)
-            
-            elif module.transformation_type == "modification":
-                # Modify RestClientConfig timeout values
-                apply_modification_descriptor(target_file, module.transformation_descriptor)
+            # Execute each step in the transform descriptor
+            for step in transformation.get('steps', []):
+                action = step.get('action')
+                
+                if action == 'add_imports':
+                    add_imports(target_file, step.get('imports', []))
+                    
+                elif action == 'add_constant':
+                    add_constant(target_file, step.get('snippet'), step.get('variables', {}))
+                    
+                elif action == 'add_annotation_to_methods':
+                    add_annotations(target_file, step.get('selector', {}), step.get('annotation', {}))
+                    
+                elif action == 'add_fallback_methods':
+                    add_fallbacks(target_file, step.get('snippet'), step.get('variables', {}))
         
-        # Always merge YAML config
-        merge_yaml_config(ctx.application_yml, module.yaml_config)
+        # Merge YAML configuration
+        if 'yaml_merge' in transformation:
+            yaml_cfg = transformation['yaml_merge']
+            merge_yaml_config(
+                f"{ctx.project_dir}/src/main/resources/application.yml",
+                yaml_cfg.get('template'),
+                yaml_cfg.get('variables', {})
+            )
+        
+        # Add POM dependencies
+        if 'pom_dependencies' in transformation:
+            for dep in transformation['pom_dependencies']:
+                add_pom_dependency(f"{ctx.project_dir}/pom.xml", dep)
 ```
 
-**See also:** `flow-transform.md` for detailed transformation contracts.
+**See also:** 
+- `flow-transform.md` for detailed transformation contracts
+- `modules/mod-00{1,2,3}/transform/*.yaml` for transform descriptor examples
 
 
 ## Phase 4: TESTS
@@ -900,19 +984,49 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
 
 ---
 
-## Phase 6: VALIDATION
+## Phase 6: VALIDATION ASSEMBLY
 
 ### Objective
-Copy validation scripts and execute validations.
+Assemble the `validation/` directory with all applicable scripts from each tier, then execute validations.
 
-### CRITICAL: Script Collection
+### Validation Tier Architecture
 
-**IMPORTANT:** Tier-3 scripts must be collected from ALL modules used in the generation, including:
-- Phase 1 modules (structural)
-- Phase 2 modules (implementation)
-- Phase 3+ modules (cross-cutting, e.g., resilience)
+| Tier | Purpose | Source Location | Applies To |
+|------|---------|-----------------|------------|
+| **Tier-0** | Template conformance (DEC-024/DEC-025) | `runtime/validators/tier-0-conformance/` + dynamic | All generated code |
+| **Tier-1** | Universal validations | `runtime/validators/tier-1-universal/` | All projects |
+| **Tier-2** | Technology-specific | `runtime/validators/tier-2-technology/{stack}/` | Based on stack |
+| **Tier-3** | Module-specific | `modules/{module-id}/validation/` | Based on modules used |
 
-Failure to include all modules will result in incomplete validation coverage.
+### CRITICAL: Complete Script Collection
+
+**MANDATORY:** The validation suite MUST include scripts from ALL tiers:
+
+```
+validation/
+├── run-all.sh                          # Generated from run-all.sh.tpl
+├── scripts/
+│   ├── tier0/
+│   │   └── conformance-check.sh        # GENERATED dynamically per generation
+│   ├── tier1/
+│   │   ├── naming-conventions-check.sh # From runtime/validators/tier-1-universal/
+│   │   ├── project-structure-check.sh  # From runtime/validators/tier-1-universal/
+│   │   └── traceability-check.sh       # From runtime/validators/tier-1-universal/
+│   ├── tier2/
+│   │   ├── compile-check.sh            # From runtime/validators/tier-2-technology/java-spring/
+│   │   ├── syntax-check.sh             # From runtime/validators/tier-2-technology/java-spring/
+│   │   └── application-yml-check.sh    # From runtime/validators/tier-2-technology/java-spring/
+│   └── tier3/
+│       ├── hexagonal-structure-check.sh  # From modules/mod-015/validation/
+│       ├── systemapi-check.sh            # From modules/mod-017/validation/
+│       ├── integration-check.sh          # From modules/mod-018/validation/
+│       ├── hateoas-check.sh              # From modules/mod-019/validation/
+│       ├── circuit-breaker-check.sh      # From modules/mod-001/validation/
+│       ├── retry-check.sh                # From modules/mod-002/validation/
+│       └── timeout-check.sh              # From modules/mod-003/validation/
+└── reports/
+    └── validation-results.json         # Generated after execution
+```
 
 ### Steps
 
@@ -920,79 +1034,217 @@ Failure to include all modules will result in incomplete validation coverage.
 def validation_phase(ctx: PackageContext, generation: GenerationResult):
     validation_dir = f"{ctx.package_dir}/validation"
     
-    # 1. Copy Tier-1 scripts (Universal)
-    tier1_source = "runtime/validators/tier-1-universal/"
-    for script in glob(f"{tier1_source}/**/*.sh"):
-        copy_file(script, f"{validation_dir}/scripts/tier1/{basename(script)}")
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 0: Create directory structure
+    # ═══════════════════════════════════════════════════════════════════
+    for subdir in ["scripts/tier0", "scripts/tier1", "scripts/tier2", "scripts/tier3", "reports"]:
+        create_directory(f"{validation_dir}/{subdir}")
     
-    # 2. Copy Tier-2 scripts (Technology-specific)
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 1: Generate Tier-0 Conformance Script
+    # ═══════════════════════════════════════════════════════════════════
+    # Tier-0 is GENERATED dynamically based on modules used, not copied.
+    # It checks template fingerprints specific to the modules in this generation.
+    
+    conformance_script = generate_tier0_conformance_script(
+        modules_used=generation.modules_used,
+        base_package=ctx.base_package,
+        service_name=ctx.service_name
+    )
+    write_file(f"{validation_dir}/scripts/tier0/conformance-check.sh", conformance_script)
+    chmod_executable(f"{validation_dir}/scripts/tier0/conformance-check.sh")
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 2: Copy Tier-1 Scripts (Universal)
+    # ═══════════════════════════════════════════════════════════════════
+    tier1_scripts = [
+        "runtime/validators/tier-1-universal/code-projects/naming-conventions/naming-conventions-check.sh",
+        "runtime/validators/tier-1-universal/code-projects/project-structure/project-structure-check.sh",
+        "runtime/validators/tier-1-universal/traceability/traceability-check.sh"
+    ]
+    for script in tier1_scripts:
+        copy_file(script, f"{validation_dir}/scripts/tier1/{basename(script)}")
+        chmod_executable(f"{validation_dir}/scripts/tier1/{basename(script)}")
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 3: Copy Tier-2 Scripts (Technology-specific)
+    # ═══════════════════════════════════════════════════════════════════
+    # Select based on stack detected during discovery
     stack = ctx.stack  # e.g., "java-spring"
     tier2_source = f"runtime/validators/tier-2-technology/code-projects/{stack}/"
-    for script in glob(f"{tier2_source}/*.sh"):
-        copy_file(script, f"{validation_dir}/scripts/tier2/{basename(script)}")
     
-    # 3. Copy Tier-3 scripts (Module-specific)
-    # CRITICAL: Iterate over ALL modules from ALL phases
+    tier2_scripts = [
+        "compile-check.sh",
+        "syntax-check.sh",
+        "application-yml-check.sh"
+        # Note: actuator-check.sh and test-check.sh are optional
+    ]
+    for script_name in tier2_scripts:
+        source_path = f"{tier2_source}{script_name}"
+        if exists(source_path):
+            copy_file(source_path, f"{validation_dir}/scripts/tier2/{script_name}")
+            chmod_executable(f"{validation_dir}/scripts/tier2/{script_name}")
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 4: Copy Tier-3 Scripts (Module-specific)
+    # ═══════════════════════════════════════════════════════════════════
+    # CRITICAL: Must iterate over ALL modules from ALL phases (1, 2, 3+)
+    
     for module_info in generation.modules_used:
         module_id = module_info['id']
-        module_dir = f"modules/{module_id}/validation/"
+        module_validation_dir = f"modules/{module_id}/validation/"
         
-        # Check if validation directory exists for this module
-        if exists(module_dir):
-            for script in glob(f"{module_dir}/*.sh"):
-                copy_file(script, f"{validation_dir}/scripts/tier3/{basename(script)}")
+        if exists(module_validation_dir):
+            for script in glob(f"{module_validation_dir}/*.sh"):
+                # Skip hidden files (._*.sh)
+                if not basename(script).startswith("."):
+                    copy_file(script, f"{validation_dir}/scripts/tier3/{basename(script)}")
+                    chmod_executable(f"{validation_dir}/scripts/tier3/{basename(script)}")
     
-    # 4. Generate run-all.sh from template
-    # Template location: runtime/validators/run-all.sh.tpl
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 5: Generate run-all.sh from Template
+    # ═══════════════════════════════════════════════════════════════════
     template = read_file("runtime/validators/run-all.sh.tpl")
     run_all_content = template.replace("{{SERVICE_NAME}}", ctx.service_name)
-    run_all_content = run_all_content.replace("{{STACK}}", ctx.stack)
     write_file(f"{validation_dir}/run-all.sh", run_all_content)
     chmod_executable(f"{validation_dir}/run-all.sh")
     
-    # 5. Execute validations
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 6: Execute Validations (Optional in generation, required for delivery)
+    # ═══════════════════════════════════════════════════════════════════
     result = execute_validations(validation_dir, generation.project_dir)
     
-    # 6. Write results
+    # ═══════════════════════════════════════════════════════════════════
+    # Step 7: Write Results and Update Manifest
+    # ═══════════════════════════════════════════════════════════════════
     write_json(f"{validation_dir}/reports/validation-results.json", result)
-    
-    # 7. Update manifest with results
     update_manifest_status(generation.project_dir, result)
     
     return result
 ```
 
+### Tier-0: Conformance Script Generation
+
+The Tier-0 script validates that generated code follows templates by checking **fingerprints** - unique code patterns that MUST appear if templates were used correctly.
+
+```python
+def generate_tier0_conformance_script(modules_used: list, base_package: str, service_name: str) -> str:
+    """
+    Generate a conformance-check.sh script dynamically based on modules used.
+    
+    Each module defines fingerprints in:
+    - MODULE.md frontmatter (validation.fingerprints)
+    - transform/*.yaml (fingerprints section)
+    - runtime/validators/tier-0-conformance/template-conformance-check.sh (MODULE_FINGERPRINTS)
+    """
+    
+    # Load fingerprint definitions
+    fingerprints = {}
+    for module_info in modules_used:
+        module_id = module_info['id']
+        module_fingerprints = load_module_fingerprints(module_id)
+        fingerprints[module_id] = module_fingerprints
+    
+    # Generate script using template
+    template = read_file("runtime/validators/tier-0-conformance/template-conformance-check.sh")
+    
+    # Build fingerprint checks section
+    checks = []
+    for module_id, fps in fingerprints.items():
+        checks.append(f'\necho ""\necho "{module_id}:"')
+        for fp in fps:
+            file_pattern = fp['file'].replace('*', service_name.title())
+            checks.append(f'''
+check_fingerprint "$GENERATED_DIR/{fp['path']}/{file_pattern}" \\
+    "{fp['pattern']}" \\
+    "{fp['description']}"''')
+    
+    # Insert into template
+    script = template.replace("{{FINGERPRINT_CHECKS}}", "\n".join(checks))
+    script = script.replace("{{BASE_PACKAGE}}", base_package)
+    script = script.replace("{{SERVICE_NAME}}", service_name)
+    
+    return script
+```
+
 ### Module Validation Scripts Reference
 
-| Module | Validation Script | Validates |
-|--------|-------------------|-----------|
-| mod-code-015 | `hexagonal-structure-check.sh` | Package structure |
-| mod-code-017 | `systemapi-check.sh`, `config-check.sh` | System API adapter |
-| mod-code-019 | `hateoas-check.sh`, `pagination-check.sh` | API exposure |
-| mod-code-001 | `circuit-breaker-check.sh` | Circuit breaker annotations |
-| mod-code-002 | `retry-check.sh` | Retry annotations |
-| mod-code-003 | `timeout-check.sh` | Timeout annotations |
+| Module | Script | Validates |
+|--------|--------|-----------|
+| mod-015 (hexagonal-base) | `hexagonal-structure-check.sh` | Package structure, layer separation |
+| mod-017 (persistence-systemapi) | `systemapi-check.sh` | Adapter implements port, mapper exists |
+| mod-018 (api-integration-rest) | `integration-check.sh` | X-Correlation-ID propagation, URL config |
+| mod-019 (api-public-exposure) | `hateoas-check.sh` | HATEOAS links, assembler pattern |
+| mod-019 (api-public-exposure) | `config-check.sh` | CORS, serialization config |
+| mod-001 (circuit-breaker) | `circuit-breaker-check.sh` | @CircuitBreaker present, config exists |
+| mod-002 (retry) | `retry-check.sh` | @Retry present, annotation order |
+| mod-003 (timeout) | `timeout-check.sh` | Timeout config values |
 
-### run-all.sh Template
+### run-all.sh Template Variables
 
-The `run-all.sh` script is generated from `runtime/validators/run-all.sh.tpl`.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{SERVICE_NAME}}` | Name of generated service | `customer-api` |
+
+The template is located at `runtime/validators/run-all.sh.tpl`.
 
 **Key requirements for run-all.sh:**
 - Must NOT use `set -e` (would stop on first failure)
-- Must capture exit codes correctly before conditional checks
-- Must iterate through all tier directories
-- Must generate JSON report
+- Must capture exit codes before conditional checks
+- Must iterate through all tier directories (tier0, tier1, tier2, tier3)
+- Must generate JSON report in `reports/validation-results.json`
+- Must use `bash` shebang (`#!/bin/bash`) for arrays support
+
+### Shell Script Compatibility
+
+**IMPORTANT:** Validation scripts should use POSIX-compatible syntax when possible, but some features require bash:
+
+| Feature | POSIX | Bash Required |
+|---------|-------|---------------|
+| `[ -f file ]` | ✅ | |
+| `[[ -f file ]]` | ❌ | ✅ |
+| `x=$((x + 1))` | ✅ | |
+| `((x++))` | ❌ | ✅ |
+| `declare -a` | ❌ | ✅ |
+| Process substitution `< <(...)` | ❌ | ✅ |
+
+**Recommendation:** Use `#!/bin/bash` for `run-all.sh` (needs arrays), but individual tier scripts can use `#!/bin/sh` for portability.
 
 ### Outputs
-- `validation/scripts/tier0/*.sh`
-- `validation/scripts/tier1/*.sh`
-- `validation/scripts/tier2/*.sh`
-- `validation/scripts/tier3/*.sh`
-- `validation/run-all.sh`
-- `validation/reports/validation-results.json`
-- Updated `output/{service}/.enablement/manifest.json`
+
+| File | Required | Description |
+|------|----------|-------------|
+| `validation/run-all.sh` | Yes | Master validation orchestrator |
+| `validation/scripts/tier0/conformance-check.sh` | Yes | Template fingerprint validation |
+| `validation/scripts/tier1/*.sh` | Yes | Universal validations |
+| `validation/scripts/tier2/*.sh` | Yes | Technology validations |
+| `validation/scripts/tier3/*.sh` | Yes | Module-specific validations |
+| `validation/reports/validation-results.json` | Yes | Execution results |
+
+### Validation Execution
+
+```bash
+# From package root
+cd validation
+
+# Run all validations
+./run-all.sh
+
+# Or run specific tier
+./scripts/tier0/conformance-check.sh ../output/customer-api
+./scripts/tier1/naming-conventions-check.sh ../output/customer-api
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All validations passed |
+| 1 | One or more validations failed |
+| 2 | Validation skipped (feature not applicable) |
 
 ---
+
 
 ## Phase 7: PACKAGE
 

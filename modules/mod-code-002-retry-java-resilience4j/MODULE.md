@@ -20,6 +20,28 @@ implements:
   pattern: annotation
   capability: resilience
   feature: retry
+
+# ═══════════════════════════════════════════════════════════════════
+# MODEL v3.0 - Phase 3 Cross-Cutting Configuration
+# ═══════════════════════════════════════════════════════════════════
+phase_group: cross-cutting
+execution_order: 2  # Runs after circuit-breaker (mod-001)
+
+transformation:
+  type: annotation
+  descriptor: transform/retry-transform.yaml
+  depends_on:
+    - mod-code-001-circuit-breaker-java-resilience4j  # @Retry after @CircuitBreaker
+  targets:
+    - pattern: "**/adapter/out/**/*Adapter.java"
+      generated_by: mod-code-017-persistence-systemapi
+  adds:
+    - "@Retry annotation to public methods"
+  modifies:
+    - "application.yml (resilience4j.retry config)"
+  notes:
+    - "Annotation order: @CircuitBreaker → @Retry → method"
+    - "Retries happen INSIDE circuit breaker window"
 ---
 
 # MOD-002: Retry Pattern - Java/Resilience4j

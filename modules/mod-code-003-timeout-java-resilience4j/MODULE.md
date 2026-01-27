@@ -60,7 +60,10 @@ implements:
   feature: timeout
 
 phase_group: cross-cutting
+execution_order: 3  # Runs after circuit-breaker and retry
+
 transformation:
+  descriptor: transform/timeout-config-transform.yaml  # Default variant
   client-timeout:
     type: modification
     modifies: RestClientConfig.java
