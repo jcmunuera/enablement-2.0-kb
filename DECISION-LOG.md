@@ -38,6 +38,7 @@ Este documento registra las decisiones de diseño importantes tomadas durante el
 - [DEC-028](#dec-028) - Phase 3 Cross-Cutting Model
 - [DEC-029](#dec-029) - Package Delivery Validation
 - [DEC-030](#dec-030) - Transform Descriptors Implementation
+- [DEC-031](#dec-031) - PoC Validation Fixes (Golden Master)
 
 ---
 
@@ -1456,3 +1457,183 @@ runtime/validators/tier-2-technology/.../syntax-check.sh
 4. **Validation:** Transform descriptors include fingerprints for Tier-0 checks
 
 **Model version:** 3.0.10-010
+
+---
+
+## DEC-031: PoC Validation Fixes (Golden Master) {#dec-031}
+
+**Date:** 2026-01-27  
+**Status:** ✅ Implemented  
+**Category:** Templates, Validators  
+**Model Version:** 3.0.10-011
+
+**Context:**  
+Durante la ejecución del PoC customer-api como Golden Master, se identificaron 10 defectos que impedían la compilación, ejecución de tests, o validación del código generado. Estos defectos se agrupan en 3 categorías:
+
+1. **Template Bugs (5):** Código generado con errores de compilación
+2. **Validator Bugs (3):** Validadores con patrones incorrectos o demasiado restrictivos
+3. **Test Template Bugs (2):** Templates de tests incompletos
+
+**Root Cause Analysis:**
+
+| ID | Severidad | Síntoma | Causa Raíz |
+|----|-----------|---------|------------|
+| TB-001 | CRÍTICO | `cannot assign final variable id` | Template Entity.java declara `final` pero factory methods asignan post-construcción |
+| TB-002 | CRÍTICO | `package org.springframework.transaction.annotation does not exist` | Template ApplicationService usa `@Transactional` sin JPA, spring-tx no incluido |
+| TB-003 | MEDIO | Validator no encuentra `resilience4j.retry` | Config en application-retry.yml pero validator solo busca en application.yml |
+| TB-004 | BAJO | Fingerprint `toRequest` no encontrado | Template genera `toSystemRequest`, fingerprint desalineado |
+| TB-005 | BAJO | Fingerprint `ProblemDetail` no encontrado | Template genera `createError`, fingerprint desalineado |
+| VB-001 | MEDIO | `Missing X-Correlation-ID` aunque código correcto | Validator no detecta constante `CORRELATION_ID_HEADER` |
+| VB-002 | MEDIO | `resilience4j.retry not found` aunque existe | Validator solo busca en application.yml, no en application-*.yml |
+| VB-003 | BAJO | `-e` aparece en output | `echo -e` no portable, debe usar `printf` |
+| TTB-001 | ALTO | NPE en ControllerTest | Mock de `assembler.toModel()` no configurado |
+| TTB-002 | ALTO | Test incompleto | Placeholder `// Verification would continue...` sin assertions |
+
+**Decision:**  
+Aplicar fixes a templates, validators y fingerprints para garantizar que el código generado compile, pase tests, y supere validación sin intervención manual.
+
+### Fixes Aplicados
+
+#### CRÍTICO - Compilación
+
+**TB-001: Entity.java.tpl - Quitar `final` del campo id**
+
+```diff
+- private final {{Entity}}Id id;
++ // TB-001 FIX: Removed 'final' - field is assigned via static factory methods
++ private {{Entity}}Id id;
+```
+
+**TB-002: ApplicationService.java.tpl - Quitar `@Transactional`**
+
+Decisión arquitectónica: Para SystemAPI sin JPA, `@Transactional` no tiene sentido semántico. Se elimina en lugar de añadir spring-tx.
+
+```diff
+- import org.springframework.transaction.annotation.Transactional;
++ // TB-002 FIX: @Transactional removed - only needed with JPA persistence
+
+- @Transactional(readOnly = true)
+  @Service
+```
+
+#### ALTO - Tests
+
+**TTB-001: ControllerTest-hateoas.java.tpl (NUEVO)**
+
+Nuevo template específico para tests de controllers con HATEOAS que configura correctamente el mock del assembler:
+
+```java
+@MockBean
+private {{Entity}}ModelAssembler assembler;
+
+// En cada test:
+when(assembler.toModel(any({{Entity}}Response.class)))
+    .thenReturn(EntityModel.of(response));
+```
+
+**TTB-002: SystemApiAdapterTest.java.tpl - Test completo**
+
+Añadido test para System API error codes:
+
+```java
+@Test
+void findById_WhenSystemReturnsError_ReturnsEmpty() {
+    {{Entity}}Dto errorDto = {{Entity}}Dto.builder()
+        .sysRc("99")  // Error code
+        .build();
+    when(client.getById(id)).thenReturn(errorDto);
+    
+    Optional<{{Entity}}> result = adapter.findById(id);
+    
+    assertTrue(result.isEmpty());
+}
+```
+
+#### MEDIO - Validators
+
+**VB-001: integration-check.sh - Detectar constante**
+
+```diff
+- if ! grep -q "X-Correlation-ID\|x-correlation-id\|correlationId" "$file"; then
++ if ! grep -qE "X-Correlation-ID|x-correlation-id|correlationId|CORRELATION_ID_HEADER" "$file"; then
+```
+
+**VB-002: retry-check.sh - Buscar en todos los YAML**
+
+```diff
+- if grep -q "resilience4j:" "$TARGET_DIR/src/main/resources/application.yml"
++ if grep -rq "resilience4j:" "$RESOURCES_DIR"/application*.yml 2>/dev/null
+```
+
+#### BAJO - Fingerprints
+
+**TB-004/TB-005: template-conformance-check.sh**
+
+Fingerprints actualizados para coincidir con output real de templates:
+
+```bash
+# mod-015
+MODULE_FINGERPRINTS["mod-code-015:CorrelationIdFilter.java"]="...getCurrentCorrelationId"  # removed extractOrGenerate
+MODULE_FINGERPRINTS["mod-code-015:GlobalExceptionHandler.java"]="...createError|@ExceptionHandler"  # was ProblemDetail
+
+# mod-017
+MODULE_FINGERPRINTS["mod-code-017:*SystemApiMapper.java"]="...toSystemRequest\|toRequest"  # accept both
+
+# mod-019
+MODULE_FINGERPRINTS["mod-code-019:*ModelAssembler.java"]="extends RepresentationModelAssemblerSupport|withSelfRel"  # simplified
+```
+
+**Files Modified:**
+
+```
+modules/mod-code-015-hexagonal-base-java-spring/templates/
+├── domain/Entity.java.tpl                    # TB-001: removed final
+└── application/ApplicationService.java.tpl   # TB-002: removed @Transactional
+
+modules/mod-code-017-persistence-systemapi/templates/test/
+└── SystemApiAdapterTest.java.tpl             # TTB-002: complete test
+
+modules/mod-code-019-api-public-exposure-java-spring/templates/test/
+└── ControllerTest-hateoas.java.tpl           # TTB-001: NEW file
+
+modules/mod-code-002-retry-java-resilience4j/validation/
+└── retry-check.sh                            # VB-002: search all YAML
+
+modules/mod-code-018-api-integration-rest-java-spring/validation/
+└── integration-check.sh                      # VB-001: detect constant
+
+runtime/validators/tier-0-conformance/
+└── template-conformance-check.sh             # TB-004/TB-005: aligned fingerprints
+```
+
+**Validation Results Post-Fix:**
+
+| Check | Before | After |
+|-------|--------|-------|
+| `mvn compile` | ❌ 5 errors | ✅ SUCCESS |
+| `mvn test` | ❌ NPE | ✅ ALL PASS |
+| Tier-0 validation | ❌ 6 failures | ✅ PASS |
+| Tier-1 validation | ✅ PASS | ✅ PASS |
+| Tier-2 validation | ❌ compile, test | ✅ PASS |
+| Tier-3 validation | ❌ 4 failures | ✅ PASS |
+| **Total** | **13/17 PASS** | **17/17 PASS** |
+
+**Golden Master Package:**
+
+```
+gen_customer-api_20260127_145144-v2.tar
+├── input/           (5 files)
+├── output/          (Maven project, 25 Java files)
+├── trace/           (4 trace files)
+└── validation/      (17 scripts + runner)
+```
+
+**Lessons Learned:**
+
+1. **Template ↔ Fingerprint alignment:** Fingerprints must be updated when templates change
+2. **@Transactional is JPA-specific:** Don't include without actual transaction management
+3. **Factory method pattern incompatible with final:** Use private setters or builder instead
+4. **Test templates must be complete:** Placeholder comments are not acceptable
+5. **Validators must be flexible:** Accept constants, multiple file locations
+
+**Model version:** 3.0.10-011

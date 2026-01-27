@@ -18,7 +18,8 @@ import {{basePackage}}.application.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+// TB-002 FIX: @Transactional removed - only needed with JPA persistence
+// If using mod-016-persistence-jpa, add: import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -37,7 +38,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true)
+// TB-002 FIX: @Transactional removed - add via transformation for JPA
 public class {{Entity}}ApplicationService {
     
     private final {{Entity}}DomainService domainService;
@@ -55,7 +56,6 @@ public class {{Entity}}ApplicationService {
             .toList();
     }
     
-    @Transactional
     public {{Entity}}Response create{{Entity}}(Create{{Entity}}Request request) {
         log.debug("Creating {{entity}}: {}", request);
         {{Entity}} entity = domainService.create{{Entity}}(
@@ -66,7 +66,6 @@ public class {{Entity}}ApplicationService {
         return toResponse(entity);
     }
     
-    @Transactional
     public void delete{{Entity}}(String id) {
         log.debug("Deleting {{entity}} with id: {}", id);
         domainService.delete{{Entity}}({{Entity}}Id.of(id));

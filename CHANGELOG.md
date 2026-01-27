@@ -50,3 +50,35 @@
 ### Added
 - Initial mod-001, mod-002, mod-003 resilience modules
 - Discovery guidance rules 1-9
+
+## [3.0.10-011] - 2026-01-27
+
+### Fixed (Post PoC Validation)
+
+Based on customer-api Golden Master PoC execution, the following fixes were applied:
+
+#### CRITICAL - Compilation Fixes
+- **TB-001**: `mod-015/templates/domain/Entity.java.tpl` - Removed `final` from id field to allow assignment in static factory methods
+- **TB-002**: `mod-015/templates/application/ApplicationService.java.tpl` - Removed `@Transactional` annotation (not needed without JPA, avoids spring-tx dependency)
+
+#### HIGH - Test Fixes
+- **TTB-001**: `mod-019/templates/test/ControllerTest-hateoas.java.tpl` - NEW: Added HATEOAS-specific controller test with proper assembler mock
+- **TTB-002**: `mod-017/templates/test/SystemApiAdapterTest.java.tpl` - Added test case for System API error response codes
+
+#### MEDIUM - Validator Fixes  
+- **VB-001**: `mod-018/validation/integration-check.sh` - Added `CORRELATION_ID_HEADER` to correlation header detection pattern
+- **VB-002**: `mod-002/validation/retry-check.sh` - Changed to search all `application*.yml` files for configuration
+
+#### LOW - Fingerprint Alignment
+- **TB-004/TB-005**: `tier-0-conformance/template-conformance-check.sh` - Updated fingerprints to match actual template outputs:
+  - CorrelationIdFilter: Simplified pattern, removed `extractOrGenerate`
+  - GlobalExceptionHandler: Changed `ProblemDetail` to `createError`
+  - SystemApiMapper: Accept both `toRequest` and `toSystemRequest`
+  - RestClientConfig: Accept both old and new configuration styles
+  - ModelAssembler: Simplified super() pattern check
+
+### Validated Against
+- Package: `gen_customer-api_20260127_145144-v2.tar`
+- Compilation: ✅ SUCCESS
+- Tests: ✅ ALL PASS
+- Validation: ✅ 17/17 PASS

@@ -33,7 +33,8 @@ import java.util.UUID;
  */
 public class {{Entity}} {
     
-    private final {{Entity}}Id id;
+    // TB-001 FIX: Removed 'final' - field is assigned via static factory methods
+    private {{Entity}}Id id;
 {{#entityFields}}
     private {{fieldType}} {{fieldName}};
 {{/entityFields}}
