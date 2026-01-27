@@ -21,6 +21,26 @@ implements:
   pattern: annotation
   capability: resilience
   feature: circuit-breaker
+
+# ═══════════════════════════════════════════════════════════════════
+# MODEL v3.0 - Phase 3 Cross-Cutting Configuration
+# ═══════════════════════════════════════════════════════════════════
+phase_group: cross-cutting
+execution_order: 1  # Runs before retry (mod-002)
+
+transformation:
+  type: annotation
+  descriptor: transform/circuit-breaker-transform.yaml
+  targets:
+    - pattern: "**/adapter/out/**/*Adapter.java"
+      generated_by: mod-code-017-persistence-systemapi
+  adds:
+    - "@CircuitBreaker annotation to public methods"
+    - "Fallback methods for each annotated method"
+    - "SERVICE_NAME constant"
+  modifies:
+    - "application.yml (resilience4j.circuitbreaker config)"
+    - "pom.xml (resilience4j dependencies)"
 ---
 
 # MOD-001: Circuit Breaker - Java/Resilience4j

@@ -92,7 +92,7 @@ echo "--- Basic Syntax Checks ---"
 PREV_ERRORS=$ERRORS_FOUND
 echo -n "Checking package declarations... "
 while IFS= read -r file; do
-    if ! head -10 "$file" | grep -qE '^\s*package\s+[a-z]'; then
+    if ! head -20 "$file" | grep -qE '^\s*package\s+[a-z]'; then
         log_error "$file" "1" "Missing or invalid package declaration" \
             "Add 'package com.xxx.yyy;' at the start of the file"
     fi
