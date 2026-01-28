@@ -41,6 +41,7 @@ Este documento registra las decisiones de diseño importantes tomadas durante el
 - [DEC-031](#dec-031) - PoC Validation Fixes (Golden Master)
 - [DEC-032](#dec-032) - Human Approval Checkpoint Pattern
 - [DEC-033](#dec-033) - Validation Script Management (No Improvisation)
+- [DEC-034](#dec-034) - Validation Assembly Script (Automation)
 
 ---
 
@@ -1875,3 +1876,116 @@ After this change, a new chat executing Phase 6 should:
 5. ✅ Preserve full script content
 
 **Model version:** 3.0.10-013
+
+---
+
+## DEC-034: Validation Assembly Script (Automation) {#dec-034}
+
+**Date:** 2026-01-28  
+**Status:** ✅ Implemented  
+**Category:** Orchestration, Validation, Automation  
+**Model Version:** 3.0.10-014
+
+**Context:**  
+DEC-033 added a WARNING to Phase 6 instructing agents to copy validation scripts from KB instead of generating them. However, testing showed that **the WARNING was not effective** - agents continued to improvise all validation scripts.
+
+### Problem Evidence (PoC 2026-01-28)
+
+Despite the explicit WARNING in Phase 6:
+- 100% of validation scripts were improvised
+- Scripts with matching names had completely different content
+- Wrong tier assignments (hexagonal-structure-check.sh in tier-2 instead of tier-3)
+- Missing scripts from KB (integration-check.sh, config-check.sh, etc.)
+
+Example comparison of `naming-conventions-check.sh`:
+
+| Aspect | KB Version | Improvised Version |
+|--------|------------|-------------------|
+| Shebang | `#!/bin/sh` (POSIX) | `#!/bin/bash` |
+| Lines | ~60 | ~25 |
+| Functions | `pass()`, `fail()`, `warn()` | None |
+| Output | Structured with colors | Basic echo |
+
+### Root Cause
+
+Text-based warnings are not enforceable. The agent:
+1. Reads the warning
+2. Understands the intent
+3. Still improvises because it's "easier" than navigating KB paths
+
+### Solution
+
+Create an **executable script** that the agent MUST run instead of manually copying files.
+
+```bash
+runtime/validators/assemble-validation.sh <validation-dir> <service-name> <stack> <module-1> [module-2] ...
+```
+
+The script:
+1. Takes modules discovered in Phase 2 as input
+2. Automatically copies scripts from correct KB locations
+3. Handles path resolution (module names with suffixes like `-java-resilience4j`)
+4. Configures `run-all.sh` with variable substitution
+5. Sets executable permissions
+
+### Additional Fix: Consolidate Duplicate Folders
+
+Eliminated confusion between two similar folders:
+
+| Before | After |
+|--------|-------|
+| `runtime/validators/` | `runtime/validators/` ✅ (kept) |
+| `runtime/validation/` | (deleted) |
+
+Moved `runtime/validation/scripts/tier-0/package-structure-check.sh` → `runtime/validators/tier-0-conformance/`
+
+### Files Changed
+
+```
+NEW:
+  runtime/validators/assemble-validation.sh
+
+UPDATED:
+  runtime/flows/code/GENERATION-ORCHESTRATOR.md (v1.3 → v1.4)
+    - Phase 6: Replaced WARNING with MANDATORY script execution
+    - Key Changes: Added DEC-034 reference
+
+MOVED:
+  runtime/validation/scripts/tier-0/package-structure-check.sh
+    → runtime/validators/tier-0-conformance/package-structure-check.sh
+
+DELETED:
+  runtime/validation/ (entire folder - was duplicate/confusing)
+```
+
+### Usage in Phase 6
+
+```bash
+# Agent MUST execute this command, not manually copy scripts
+./runtime/validators/assemble-validation.sh \
+    "${PACKAGE_DIR}/validation" \
+    "${SERVICE_NAME}" \
+    "${STACK}" \
+    mod-code-015 mod-code-017 mod-code-018 mod-code-019 \
+    mod-code-001 mod-code-002 mod-code-003
+```
+
+### Expected Outcome
+
+| Aspect | Before (DEC-033) | After (DEC-034) |
+|--------|------------------|-----------------|
+| Agent action | Read warning, ignore it | Execute script |
+| Script source | Improvised | Copied from KB |
+| Tier assignment | Often wrong | Automatic/correct |
+| Missing scripts | Common | None (script handles all) |
+| Consistency | Variable | Guaranteed |
+
+### Verification
+
+After running `assemble-validation.sh`, the `validation/` directory should contain:
+- Tier-0: 2 scripts (template-conformance-check.sh, package-structure-check.sh)
+- Tier-1: 3 scripts (naming-conventions, project-structure, traceability)
+- Tier-2: 5+ scripts (compile, syntax, application-yml, etc.)
+- Tier-3: N scripts (one per module with validation/*.sh)
+
+**Model version:** 3.0.10-014

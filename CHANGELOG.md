@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.0.10-014] - 2026-01-28
+
+### Added (Validation Assembly Automation)
+
+DEC-034: Created `assemble-validation.sh` script to automate validation script collection.
+
+#### Problem Solved
+DEC-033's WARNING was not effective - agents continued improvising validation scripts despite explicit instructions to copy from KB.
+
+#### Solution
+- **NEW:** `runtime/validators/assemble-validation.sh` - executable script that agents MUST run
+- Script automatically copies scripts from correct KB locations based on modules used
+- Eliminates human error and improvisation
+
+#### Additional Cleanup
+- **CONSOLIDATED:** Merged `runtime/validation/` into `runtime/validators/`
+- **MOVED:** `package-structure-check.sh` to `tier-0-conformance/`
+- **DELETED:** `runtime/validation/` (was duplicate/confusing)
+
+#### Files Changed
+- `runtime/validators/assemble-validation.sh` (NEW)
+- `runtime/validators/tier-0-conformance/package-structure-check.sh` (MOVED)
+- `runtime/flows/code/GENERATION-ORCHESTRATOR.md` (v1.3 → v1.4)
+- `runtime/validation/` (DELETED)
+
+---
+
 ## [3.0.10-013] - 2026-01-28
 
 ### Fixed (Validation Script Management)

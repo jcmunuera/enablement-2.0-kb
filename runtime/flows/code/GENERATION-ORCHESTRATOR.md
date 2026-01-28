@@ -1,6 +1,6 @@
 # Generation Orchestrator
 
-## Version: 1.3
+## Version: 1.4
 ## Last Updated: 2026-01-28
 
 ---
@@ -55,6 +55,7 @@ This document defines the complete orchestration flow for code generation. An ag
 - **(DEC-024):** CONTEXT_RESOLUTION phase ensures ALL template variables are resolved BEFORE code generation begins.
 - **(DEC-032):** HUMAN APPROVAL CHECKPOINT allows review and approval of execution plan before generation starts.
 - **(DEC-033):** VALIDATION ASSEMBLY must COPY scripts from KB, not generate them.
+- **(DEC-034):** Use `assemble-validation.sh` script to automate validation script collection.
 
 ---
 
@@ -1155,26 +1156,39 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
 
 ## Phase 6: VALIDATION ASSEMBLY
 
-### ⚠️ CRITICAL WARNING - DEC-033
+### ⚠️ MANDATORY: Use assemble-validation.sh (DEC-034)
 
-**DO NOT GENERATE validation scripts. COPY them from the KB.**
+**DO NOT manually copy or generate validation scripts.**
 
-This is a violation of DEC-025 (No Improvisation Rule). Validation scripts:
-- MUST be copied from their source locations in the KB
-- MUST NOT be generated or improvised
-- MUST use the exact script names from the KB
-- MUST preserve the full content (colors, detailed checks, import validation)
+Execute the KB's assembly script instead:
 
-**Source Locations:**
-| Tier | Source in KB |
-|------|--------------|
-| Tier 0 | Generate using `runtime/validators/tier-0-conformance/template-conformance-check.sh` |
-| Tier 1 | Copy from `runtime/validators/tier-1-universal/` |
-| Tier 2 | Copy from `runtime/validators/tier-2-technology/{stack}/` |
-| Tier 3 | Copy from `modules/{module-id}/validation/` for each module used |
-| run-all.sh | Copy and substitute from `runtime/validators/run-all.sh.tpl` |
+```bash
+# From within the KB directory, run:
+./runtime/validators/assemble-validation.sh \
+    "${PACKAGE_DIR}/validation" \
+    "${SERVICE_NAME}" \
+    "${STACK}" \
+    ${MODULES_USED[@]}
 
-**If a validation script does not exist in the KB, it should NOT be included. Do not create new scripts.**
+# Example with actual values:
+./runtime/validators/assemble-validation.sh \
+    "./gen_customer-api_20260128/validation" \
+    "customer-api" \
+    "java-spring" \
+    mod-code-015 mod-code-017 mod-code-018 mod-code-019 \
+    mod-code-001 mod-code-002 mod-code-003
+```
+
+**The script automatically:**
+1. Creates the `validation/scripts/tier{0,1,2,3}/` directory structure
+2. Copies Tier-0 scripts from `runtime/validators/tier-0-conformance/`
+3. Copies Tier-1 scripts from `runtime/validators/tier-1-universal/`
+4. Copies Tier-2 scripts from `runtime/validators/tier-2-technology/{stack}/`
+5. Copies Tier-3 scripts from `modules/{module-id}/validation/` for each module
+6. Generates `run-all.sh` from template with variable substitution
+7. Sets executable permissions on all scripts
+
+**If you cannot execute the script**, follow the manual process below but DO NOT improvise script content.
 
 ### Objective
 Assemble the `validation/` directory with all applicable scripts from each tier, then execute validations.
@@ -1183,39 +1197,39 @@ Assemble the `validation/` directory with all applicable scripts from each tier,
 
 | Tier | Purpose | Source Location | Applies To |
 |------|---------|-----------------|------------|
-| **Tier-0** | Template conformance (DEC-024/DEC-025) | `runtime/validators/tier-0-conformance/` + dynamic | All generated code |
+| **Tier-0** | Template conformance (DEC-024/DEC-025) | `runtime/validators/tier-0-conformance/` | All generated code |
 | **Tier-1** | Universal validations | `runtime/validators/tier-1-universal/` | All projects |
 | **Tier-2** | Technology-specific | `runtime/validators/tier-2-technology/{stack}/` | Based on stack |
 | **Tier-3** | Module-specific | `modules/{module-id}/validation/` | Based on modules used |
 
-### CRITICAL: Complete Script Collection
-
-**MANDATORY:** The validation suite MUST include scripts from ALL tiers:
+### Expected Output Structure
 
 ```
 validation/
-├── run-all.sh                          # Generated from run-all.sh.tpl
+├── run-all.sh                          # From run-all.sh.tpl
 ├── scripts/
 │   ├── tier0/
-│   │   └── conformance-check.sh        # GENERATED dynamically per generation
+│   │   ├── template-conformance-check.sh
+│   │   └── package-structure-check.sh
 │   ├── tier1/
-│   │   ├── naming-conventions-check.sh # From runtime/validators/tier-1-universal/
-│   │   ├── project-structure-check.sh  # From runtime/validators/tier-1-universal/
-│   │   └── traceability-check.sh       # From runtime/validators/tier-1-universal/
+│   │   ├── naming-conventions-check.sh
+│   │   ├── project-structure-check.sh
+│   │   └── traceability-check.sh
 │   ├── tier2/
-│   │   ├── compile-check.sh            # From runtime/validators/tier-2-technology/java-spring/
-│   │   ├── syntax-check.sh             # From runtime/validators/tier-2-technology/java-spring/
-│   │   └── application-yml-check.sh    # From runtime/validators/tier-2-technology/java-spring/
+│   │   ├── compile-check.sh
+│   │   ├── syntax-check.sh
+│   │   ├── application-yml-check.sh
+│   │   └── (other stack-specific scripts)
 │   └── tier3/
-│       ├── hexagonal-structure-check.sh  # From modules/mod-015/validation/
-│       ├── systemapi-check.sh            # From modules/mod-017/validation/
-│       ├── integration-check.sh          # From modules/mod-018/validation/
-│       ├── hateoas-check.sh              # From modules/mod-019/validation/
-│       ├── circuit-breaker-check.sh      # From modules/mod-001/validation/
-│       ├── retry-check.sh                # From modules/mod-002/validation/
-│       └── timeout-check.sh              # From modules/mod-003/validation/
+│       ├── hexagonal-structure-check.sh  # mod-015
+│       ├── systemapi-check.sh            # mod-017
+│       ├── integration-check.sh          # mod-018
+│       ├── hateoas-check.sh              # mod-019
+│       ├── circuit-breaker-check.sh      # mod-001
+│       ├── retry-check.sh                # mod-002
+│       └── timeout-check.sh              # mod-003
 └── reports/
-    └── validation-results.json         # Generated after execution
+    └── validation-results.json
 ```
 
 ### Steps

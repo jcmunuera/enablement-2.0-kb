@@ -1,20 +1,27 @@
 # Validation Script Index
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Last Updated:** 2026-01-28
 
 This document lists all validation scripts available in the KB, organized by tier and source location.
 
 ---
 
-## ⚠️ IMPORTANT (DEC-033)
+## ⚠️ MANDATORY: Use assemble-validation.sh (DEC-034)
 
-**DO NOT GENERATE validation scripts. COPY them from this index.**
+**DO NOT manually copy or generate validation scripts.**
 
-Scripts must be:
-- Copied from their source locations exactly
-- Not renamed or modified
-- Preserved in full (colors, detailed checks, etc.)
+Execute the assembly script instead:
+
+```bash
+./runtime/validators/assemble-validation.sh \
+    "${PACKAGE_DIR}/validation" \
+    "${SERVICE_NAME}" \
+    "${STACK}" \
+    ${MODULES_USED[@]}
+```
+
+The script automatically copies all required scripts from the correct locations.
 
 ---
 
