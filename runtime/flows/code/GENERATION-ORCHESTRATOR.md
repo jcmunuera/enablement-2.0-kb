@@ -1,7 +1,7 @@
 # Generation Orchestrator
 
-## Version: 1.2
-## Last Updated: 2026-01-27
+## Version: 1.3
+## Last Updated: 2026-01-28
 
 ---
 
@@ -54,6 +54,7 @@ This document defines the complete orchestration flow for code generation. An ag
 **Key Changes:**
 - **(DEC-024):** CONTEXT_RESOLUTION phase ensures ALL template variables are resolved BEFORE code generation begins.
 - **(DEC-032):** HUMAN APPROVAL CHECKPOINT allows review and approval of execution plan before generation starts.
+- **(DEC-033):** VALIDATION ASSEMBLY must COPY scripts from KB, not generate them.
 
 ---
 
@@ -1153,6 +1154,27 @@ def traceability_phase(ctx: PackageContext, generation: GenerationResult, tests:
 ---
 
 ## Phase 6: VALIDATION ASSEMBLY
+
+### ⚠️ CRITICAL WARNING - DEC-033
+
+**DO NOT GENERATE validation scripts. COPY them from the KB.**
+
+This is a violation of DEC-025 (No Improvisation Rule). Validation scripts:
+- MUST be copied from their source locations in the KB
+- MUST NOT be generated or improvised
+- MUST use the exact script names from the KB
+- MUST preserve the full content (colors, detailed checks, import validation)
+
+**Source Locations:**
+| Tier | Source in KB |
+|------|--------------|
+| Tier 0 | Generate using `runtime/validators/tier-0-conformance/template-conformance-check.sh` |
+| Tier 1 | Copy from `runtime/validators/tier-1-universal/` |
+| Tier 2 | Copy from `runtime/validators/tier-2-technology/{stack}/` |
+| Tier 3 | Copy from `modules/{module-id}/validation/` for each module used |
+| run-all.sh | Copy and substitute from `runtime/validators/run-all.sh.tpl` |
+
+**If a validation script does not exist in the KB, it should NOT be included. Do not create new scripts.**
 
 ### Objective
 Assemble the `validation/` directory with all applicable scripts from each tier, then execute validations.

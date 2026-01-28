@@ -40,6 +40,7 @@ Este documento registra las decisiones de diseño importantes tomadas durante el
 - [DEC-030](#dec-030) - Transform Descriptors Implementation
 - [DEC-031](#dec-031) - PoC Validation Fixes (Golden Master)
 - [DEC-032](#dec-032) - Human Approval Checkpoint Pattern
+- [DEC-033](#dec-033) - Validation Script Management (No Improvisation)
 
 ---
 
@@ -1764,3 +1765,113 @@ runtime/flows/code/GENERATION-ORCHESTRATOR.md
 5. **Auditable**: Creates approval artifact for compliance
 
 **Model version:** 3.0.10-012
+
+---
+
+## DEC-033: Validation Script Management (No Improvisation) {#dec-033}
+
+**Date:** 2026-01-28  
+**Status:** ✅ Implemented  
+**Category:** Orchestration, Validation  
+**Model Version:** 3.0.10-013
+
+**Context:**  
+During the new-chat PoC test (2026-01-27), we discovered that the chat agent **improvised validation scripts** instead of copying them from the KB. This violates DEC-025 (No Improvisation Rule).
+
+### Observed Behavior
+
+The chat generated 17 custom validation scripts instead of copying the existing ones:
+
+| Expected | Actual |
+|----------|--------|
+| Copy `hateoas-check.sh` (~80 lines, colors, import validation) | Generated new script (~30 lines, basic) |
+| Copy `systemapi-check.sh` | Created `systemapi-adapter-check.sh` (different name) |
+| Copy `circuit-breaker-check.sh` | Created `circuit-breaker-annotations-check.sh` |
+| Use `run-all.sh.tpl` from KB | Generated custom `run-all.sh` with `${tier^^}` (macOS incompatible) |
+
+Scripts created by chat that don't exist in KB:
+- `application-config-check.sh`
+- `correlation-id-check.sh`
+- `domain-api-check.sh`
+- `exception-handling-check.sh`
+- `field-mapping-check.sh`
+- `java-version-check.sh`
+- `resilience4j-check.sh`
+- `spring-boot-check.sh`
+- `tests-exist-check.sh`
+
+### Root Cause Analysis
+
+`GENERATION-ORCHESTRATOR.md` Phase 6 said "Copy Tier-X Scripts" but:
+1. No prominent warning about NOT generating scripts
+2. No explicit statement that improvisation is prohibited
+3. The instruction was buried in pseudocode, not highlighted
+
+### Decision
+
+Add explicit **WARNING** at the start of Phase 6 in `GENERATION-ORCHESTRATOR.md`:
+
+```markdown
+### ⚠️ CRITICAL WARNING - DEC-033
+
+**DO NOT GENERATE validation scripts. COPY them from the KB.**
+
+This is a violation of DEC-025 (No Improvisation Rule). Validation scripts:
+- MUST be copied from their source locations in the KB
+- MUST NOT be generated or improvised
+- MUST use the exact script names from the KB
+- MUST preserve the full content (colors, detailed checks, import validation)
+
+**If a validation script does not exist in the KB, it should NOT be included.**
+```
+
+### Script Location Reference
+
+| Tier | Source Location | What to Do |
+|------|-----------------|------------|
+| Tier 0 | `runtime/validators/tier-0-conformance/template-conformance-check.sh` | GENERATE using template + module fingerprints |
+| Tier 1 | `runtime/validators/tier-1-universal/**/*.sh` | COPY all applicable scripts |
+| Tier 2 | `runtime/validators/tier-2-technology/{stack}/**/*.sh` | COPY based on stack |
+| Tier 3 | `modules/{module-id}/validation/*.sh` | COPY for each module used |
+| run-all.sh | `runtime/validators/run-all.sh.tpl` | COPY and replace `{{SERVICE_NAME}}` |
+
+### Module → Script Mapping
+
+| Module | Script(s) to Copy |
+|--------|-------------------|
+| mod-code-015 | `hexagonal-structure-check.sh` |
+| mod-code-017 | `systemapi-check.sh` |
+| mod-code-018 | `integration-check.sh` |
+| mod-code-019 | `hateoas-check.sh`, `config-check.sh` |
+| mod-code-001 | `circuit-breaker-check.sh` |
+| mod-code-002 | `retry-check.sh` |
+| mod-code-003 | `timeout-check.sh` |
+
+### Impact
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Phase 6 clarity | Implicit "copy" in pseudocode | Explicit WARNING at top |
+| Script quality | Risk of improvised, basic scripts | Guaranteed use of KB scripts |
+| macOS compatibility | Risk of bash 4.0+ syntax | Uses KB's POSIX-compatible scripts |
+| Validation coverage | Inconsistent | Consistent with KB standards |
+
+### Files Modified
+
+```
+runtime/flows/code/GENERATION-ORCHESTRATOR.md
+├── Version: 1.2 → 1.3
+├── Phase 6: Added ⚠️ CRITICAL WARNING section at top
+└── Key Changes: Added DEC-033 reference
+```
+
+### Verification
+
+After this change, a new chat executing Phase 6 should:
+1. ✅ Read the WARNING before proceeding
+2. ✅ COPY scripts from listed locations
+3. ✅ NOT generate custom scripts
+4. ✅ Use exact script names from KB
+5. ✅ Preserve full script content
+
+**Model version:** 3.0.10-013
