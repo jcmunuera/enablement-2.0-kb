@@ -2,13 +2,13 @@
 // Template: IntegrationException.java.tpl
 // Module: mod-code-018-api-integration-rest-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackage}}/adapter/integration/exception/IntegrationException.java
+// Output: {{basePackagePath}}/adapter/out/integration/exception/IntegrationException.java
 // Purpose: Exception for API integration failures
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES: {{basePackage}} 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-package {{basePackage}}.adapter.integration.exception;
+package {{basePackage}}.adapter.out.integration.exception;
 
 /**
  * Exception thrown when API integration fails.

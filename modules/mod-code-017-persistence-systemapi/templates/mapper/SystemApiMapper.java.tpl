@@ -10,8 +10,8 @@
 
 package {{basePackage}}.adapter.out.systemapi.mapper;
 
-import {{basePackage}}.adapter.out.persistence.dto.{{Entity}}SystemApiResponse;
-import {{basePackage}}.adapter.out.persistence.dto.{{Entity}}SystemApiRequest;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiResponse;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiRequest;
 import {{basePackage}}.domain.model.*;
 import org.springframework.stereotype.Component;
 
@@ -24,10 +24,10 @@ import java.util.UUID;
  * Mapper between {{Entity}} domain model and System API DTOs.
  * 
  * Handles all transformations including:
- * - UUID ↔ Mainframe ID format
- * - Proper case ↔ Uppercase
- * - ISO dates ↔ System date formats
- * - Enum ↔ Single character codes (IMPORTANT: mapping here, NOT in enum)
+ * - UUID <-> Mainframe ID format
+ * - Proper case <-> Uppercase
+ * - ISO dates <-> System date formats
+ * - Enum <-> Single character codes (IMPORTANT: mapping here, NOT in enum)
  * 
  * @generated {{skillId}} v{{skillVersion}}
  * @module mod-code-017-persistence-systemapi
@@ -40,13 +40,18 @@ public class {{Entity}}SystemApiMapper {
     
     /**
      * Maps System API response to domain entity.
+     * 
+     * CRITICAL: {{Entity}} has PRIVATE constructor and NO setters.
+     * MUST use {{Entity}}.reconstitute(...) static factory method.
+     * DO NOT use new {{Entity}}() or any setter methods.
      */
     public {{Entity}} toDomain({{Entity}}SystemApiResponse response) {
         if (response == null) {
             return null;
         }
         
-        return new {{Entity}}(
+        // IMPORTANT: Use reconstitute() - Entity has private constructor, no setters
+        return {{Entity}}.reconstitute(
             toEntityId(response.{{idField}}()),
             {{#fields}}
             {{#if isString}}toProperCase(response.{{fieldName}}()){{/if}}{{#if isEnum}}to{{EnumType}}(response.{{fieldName}}()){{/if}}{{#if isDate}}parseDate(response.{{fieldName}}()){{/if}}{{#if isOther}}response.{{fieldName}}(){{/if}}{{^last}},{{/last}}
@@ -97,7 +102,7 @@ public class {{Entity}}SystemApiMapper {
         return id.value().toString().replace("-", "").toUpperCase();
     }
     
-    // ========== Status Code Mapping (Enum ↔ Code) ==========
+    // ========== Status Code Mapping (Enum <-> Code) ==========
     // IMPORTANT: This is where external code mapping belongs, NOT in the enum
     
     {{#statusEnum}}

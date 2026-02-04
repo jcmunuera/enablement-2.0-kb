@@ -59,6 +59,12 @@ public class {{Entity}} {
         return entity;
     }
     
+    /**
+     * PRIVATE constructor - external code MUST use factory methods:
+     * - create()       -> for new entities
+     * - reconstitute() -> for entities from persistence
+     * NO setters are provided. This is intentional (immutable domain model).
+     */
     private {{Entity}}() {}
     
     public {{Entity}}Id getId() {

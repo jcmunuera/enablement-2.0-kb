@@ -1,5 +1,164 @@
 # Changelog
 
+## [3.0.16] - 2026-02-04
+
+### Added - DEC-042: Stack-Specific Style Files
+
+**Problem:** Code Style Guidelines in MODULE.md were not consistently followed by LLM (4/5 runs used UUID instead of String for DTO IDs).
+
+**Solution:** Create stack-specific style files that are loaded and injected into the CodeGen prompt.
+
+**New structure:**
+```
+runtime/codegen/styles/
+└── java-spring.style.md   # Code style rules for Java/Spring
+```
+
+**Style file contents:**
+- DTOs: Use `String` for IDs, provide `from(entity)` factory method
+- Mappers: Helper methods with exact names, alphabetical order
+- General: Trailing newlines, ASCII-only comments
+- Tests: Consistent setup order, String IDs
+- Services: Use factory methods, no @Transactional with System API
+
+**Flow:**
+1. CodeGen loads style file based on detected stack
+2. Content injected into prompt (replaces `{{STYLE_RULES}}` marker)
+3. LLM follows rules with higher fidelity than MODULE.md documentation
+
+---
+
+## [3.0.15] - 2026-02-04
+
+### Added - DEC-041: Module Variants vs Config Flags
+
+**Conceptual separation:**
+- **Config Flags** = Cross-module influence (capability publishes → modules subscribe)
+- **Variants** = Intra-module configuration (user selects implementation alternative)
+
+**Changes:**
+- Added `variants` section to mod-017 MODULE.md (http_client: restclient/feign/resttemplate)
+- Added Code Style Guidelines to mod-015 MODULE.md (String IDs in DTOs, factory methods)
+- Removed `publishes_flags.http_client` from capability-index (moved to module)
+
+### Changed
+
+- `mod-code-017-persistence-systemapi/MODULE.md` v1.3 - Added variants definition
+- `mod-code-015-hexagonal-base-java-spring/MODULE.md` - Added Code Style Guidelines
+- `capability-index.yaml` - Removed http_client flag from persistence.systemapi
+
+---
+
+## [3.0.14] - 2026-02-04
+
+### Added - DEC-040: HTTP Client Variant Selection
+
+**Problem:** mod-017 has 3 client templates (feign, restclient, resttemplate) with same output path. LLM sometimes generates all three causing extra files.
+
+**Solution:**
+- Added `publishes_flags.http_client: restclient` to `persistence.systemapi` in capability-index
+- CodeGen now filters templates by `// Variant:` header
+- Only matching variant template is included in prompt
+
+**Default:** `restclient` (Spring 6.1+ RestClient)
+
+**Options:** `restclient`, `feign`, `resttemplate`
+
+### Changed
+
+- `capability-index.yaml` v2.8 - Added http_client flag to persistence.systemapi
+
+---
+
+## [3.0.12] - 2026-02-03
+
+### Session Summary: E2E Pipeline Validation & Reproducibility Testing
+
+Successfully validated complete end-to-end pipeline with 3 independent runs producing compilable, test-passing code.
+
+#### Orchestration Fixes (tar-12)
+
+**Manifest Checker Improvements:**
+- Fixed `{{ServiceName}}` resolution to handle both `service.serviceName` and `service.name` keys
+- Added `{{entityName}}`, `{{entityNameLower}}`, `{{entityPlural}}` variable resolution
+- Skip templates with unresolved dynamic variables (`{{EnumName}}`, `{{ApiName}}`)
+- Skip templates with `...` flexible paths (resolved by LLM)
+
+**Enum Generation Rule:**
+- Added CRITICAL instruction: "If ANY field uses an Enum type, you MUST generate the enum file"
+- Resolves `CustomerStatus` not being generated issue
+
+**Config Flags Collection (DEC-035):**
+- Context Agent now extracts `publishes_flags` from capability-index.yaml
+- Aggregates flags from all active features into `generation-context.json`
+- CodeGen prompt includes flag usage documentation
+
+#### KB Fixes (tar-06)
+
+**Template Output Path Corrections (mod-015):**
+| Template | Before | After |
+|----------|--------|-------|
+| `Application.java.tpl` | `{{basePackagePath}}/.../Application.java` | `{{basePackagePath}}/{{ServiceName}}Application.java` |
+| `CreateRequest.java.tpl` | `{{basePackagePath}}/.../CreateRequest.java` | `{{basePackagePath}}/application/dto/Create{{Entity}}Request.java` |
+| `application.yml.tpl` | `{{basePackagePath}}/.../application.yml` | `src/main/resources/application.yml` |
+| `CorrelationIdFilter.java.tpl` | `{{basePackagePath}}/.../CorrelationIdFilter.java` | `{{basePackagePath}}/infrastructure/CorrelationIdFilter.java` |
+| `GlobalExceptionHandler.java.tpl` | `{{basePackagePath}}/.../GlobalExceptionHandler.java` | `{{basePackagePath}}/infrastructure/GlobalExceptionHandler.java` |
+
+**Traceability Validator Update:**
+- Updated `traceability-check.sh` to match actual manifest structure
+- Validates: `generation`, `enablement`, `modules`, `status` (not old `service`, `generator`, `capabilities`)
+
+#### Reproducibility Results (3 Runs)
+
+| Metric | Result |
+|--------|--------|
+| File structure | 100% reproducible (34/34 files) |
+| Phase 1 content | 100% identical (15/15 files) |
+| Phase 2/3 content | Functional with cosmetic variations |
+| Compilation | ✅ 3/3 runs |
+| Tests | ✅ 3/3 runs |
+| Tier validation | ✅ 3/3 runs |
+
+**Known variations (non-critical):**
+- Trailing newlines in some Phase 2 files
+- Test method naming (`fromString_*` vs `of_*`)
+- Mapper implementation line count varies (174-189 lines)
+
+---
+
+## [3.0.11] - 2026-02-03
+
+### Added (DEC-035: Config Flags Pub/Sub Pattern)
+
+Cross-module influence pattern allowing feature modules to affect code generation in core modules without tight coupling.
+
+#### New Concepts
+- **publishes_flags**: Feature capabilities declare flags they publish when activated
+- **subscribes_to_flags**: Modules declare which flags affect their templates
+- **config_flags**: Runtime collection of flags in generation-context.json
+
+#### Documentation Updated
+- `model/ENABLEMENT-MODEL-v3.0.md` - New section: Config Flags (v3.0.11)
+- `model/standards/authoring/CAPABILITY.md` - v3.6: `publishes_flags` attribute
+- `model/standards/authoring/MODULE.md` - v3.1: `subscribes_to_flags` section
+- `schemas/generation-context.schema.json` - v1.1: Added `config_flags` property
+- `runtime/discovery/README.md` - v3.1: Config Flags Pub/Sub documentation
+
+#### Implementation: HATEOAS Variant Selection
+- `capability-index.yaml`: domain-api publishes `hateoas: true`
+- `mod-015/MODULE.md`: subscribes to `hateoas` flag
+- `mod-015/Response.java.tpl`: Variant selection note (skip if mod-019 active)
+- `mod-019/MODULE.md`: documents published flags
+- `mod-019/Response-hateoas.java.tpl`: HATEOAS Response template (class extends RepresentationModel)
+
+#### Governance Benefits
+- Visibility: Query all pub/sub relationships across KB
+- Impact Analysis: "If I activate mod-019, what templates change?"
+- Validation: Detect orphan flags or missing subscribers
+- Documentation: Auto-generate dependency matrix
+
+---
+
 ## [3.0.10-017] - 2026-01-28
 
 ### Fixed (POSIX Compatibility)
@@ -229,3 +388,27 @@ Based on customer-api Golden Master PoC execution, the following fixes were appl
 - Initial project structure
 - Core capability-index.yaml
 - Base module templates
+
+---
+
+## [3.0.13] - 2026-02-03
+
+### Improved (Phase 2 Reproducibility)
+
+#### Orchestration Changes
+- **Trailing newline normalization**: All generated files now end with exactly one newline
+- **Code style rules**: Added explicit instructions for helper method patterns
+- **ASCII-only comments**: Instructions to avoid Unicode in generated code
+
+#### KB Template Changes
+- Replaced Unicode arrows (↔, →, ←) with ASCII (<->, ->, <-) in all templates:
+  - `mod-001/templates/annotation/chain-fallback.java.tpl`
+  - `mod-015/templates/application/dto/Response.java.tpl`
+  - `mod-015/templates/domain/Entity.java.tpl`
+  - `mod-017/templates/mapper/SystemApiMapper.java.tpl`
+
+#### New Prompt Rules (DEC-039)
+1. Every file MUST end with exactly one newline
+2. Use helper methods (`toUpperCase()`, `toLowerCase()`) instead of inline null checks
+3. Use ASCII characters only in comments
+

@@ -2,7 +2,7 @@
 // Template: CorrelationIdFilter.java.tpl
 // Module: mod-code-015-hexagonal-base-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/.../CorrelationIdFilter.java
+// Output: {{basePackagePath}}/infrastructure/CorrelationIdFilter.java
 // Purpose: 
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES: {{basePackage}} 

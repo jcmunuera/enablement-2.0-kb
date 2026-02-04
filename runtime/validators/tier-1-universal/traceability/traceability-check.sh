@@ -3,7 +3,7 @@
 # Universal validator - applies to ALL outputs from ALL domains
 #
 # Validates .enablement/manifest.json exists and contains required fields
-# Updated for Model v3.0 (skill removed, discovery-based)
+# Updated for Model v3.0.11 - matches actual manifest structure from CodeGen
 #
 # POSIX compatible - does NOT require jq (uses grep/sed)
 
@@ -63,64 +63,74 @@ else
     exit 1
 fi
 
-# Check 4: Required fields - check for common manifest fields
-# Model v3.0 uses: version, generator, service, capabilities
+# Check 4: Required fields - adapted for actual manifest structure
+# Actual structure has: generation, enablement, modules, status, metrics
 
-if json_has_field "$MANIFEST" "version"; then
-    pass "Field 'version' present"
+if json_has_field "$MANIFEST" "generation"; then
+    pass "Field 'generation' present"
 else
-    warn "Field 'version' missing"
+    fail "Field 'generation' missing (required)"
 fi
 
-if json_has_field "$MANIFEST" "generator"; then
-    pass "Field 'generator' present"
+if json_has_field "$MANIFEST" "enablement"; then
+    pass "Field 'enablement' present"
 else
-    warn "Field 'generator' missing"
+    fail "Field 'enablement' missing (required)"
 fi
 
-if json_has_field "$MANIFEST" "service"; then
-    pass "Field 'service' present"
+if json_has_field "$MANIFEST" "modules"; then
+    pass "Field 'modules' present"
 else
-    fail "Field 'service' missing (required)"
+    warn "Field 'modules' missing"
 fi
 
-if json_has_field "$MANIFEST" "capabilities"; then
-    pass "Field 'capabilities' present"
+if json_has_field "$MANIFEST" "status"; then
+    pass "Field 'status' present"
 else
-    warn "Field 'capabilities' missing"
+    warn "Field 'status' missing"
 fi
 
-# Check 5: Service name is present
-SERVICE_NAME=$(json_get_value "$MANIFEST" "name")
+# Check 5: Service name is present (in generation section)
+SERVICE_NAME=$(json_get_value "$MANIFEST" "service_name")
 if [ -n "$SERVICE_NAME" ]; then
-    pass "service.name: $SERVICE_NAME"
+    pass "generation.service_name: $SERVICE_NAME"
 else
-    warn "service.name is empty or not found"
+    warn "generation.service_name is empty or not found"
 fi
 
-# Check 6: Stack is present
-STACK=$(json_get_value "$MANIFEST" "stack")
-if [ -n "$STACK" ]; then
-    pass "service.stack: $STACK"
+# Check 6: Enablement version present
+VERSION=$(json_get_value "$MANIFEST" "version")
+if [ -n "$VERSION" ]; then
+    pass "enablement.version: $VERSION"
 else
-    warn "service.stack is empty or not found"
+    warn "enablement.version is empty or not found"
 fi
 
-# Check 7: generated_at timestamp present
-TIMESTAMP=$(json_get_value "$MANIFEST" "generated_at")
+# Check 7: Timestamp present
+TIMESTAMP=$(json_get_value "$MANIFEST" "timestamp")
 if [ -n "$TIMESTAMP" ]; then
-    pass "generated_at: $TIMESTAMP"
+    pass "generation.timestamp: $TIMESTAMP"
 else
-    warn "generated_at timestamp missing"
+    warn "generation.timestamp missing"
 fi
 
-# Check 8: Files array present (indicates traceability)
-if json_has_field "$MANIFEST" "files"; then
-    # Count file entries (rough estimate)
-    FILE_COUNT=$(grep -c '"path"' "$MANIFEST" 2>/dev/null || echo "0")
-    pass "files array present (~$FILE_COUNT entries)"
+# Check 8: Modules array has entries
+if json_has_field "$MANIFEST" "modules"; then
+    MODULE_COUNT=$(grep -c '"id"' "$MANIFEST" 2>/dev/null || echo "0")
+    if [ "$MODULE_COUNT" -gt 0 ]; then
+        pass "modules array has ~$MODULE_COUNT entries"
+    else
+        warn "modules array appears empty"
+    fi
+fi
+
+# Check 9: Generation status
+GEN_STATUS=$(json_get_value "$MANIFEST" "generation")
+# Look for SUCCESS in the status section
+if grep -q '"generation"[[:space:]]*:[[:space:]]*"SUCCESS"' "$MANIFEST" 2>/dev/null; then
+    pass "status.generation: SUCCESS"
 else
-    warn "files array missing (recommended for traceability)"
+    warn "status.generation not found or not SUCCESS"
 fi
 
 # Summary

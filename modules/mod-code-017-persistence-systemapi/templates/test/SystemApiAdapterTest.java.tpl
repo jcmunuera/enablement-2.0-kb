@@ -2,11 +2,12 @@
 // Output: {{basePackagePath}}/adapter/out/systemapi/{{Entity}}SystemApiAdapterTest.java
 // Purpose: Unit test for System API adapter
 
-package {{basePackage}}.adapter.systemapi;
+package {{basePackage}}.adapter.out.systemapi;
 
-import {{basePackage}}.adapter.systemapi.client.{{Entity}}SystemApiClient;
-import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
-import {{basePackage}}.adapter.systemapi.mapper.{{Entity}}SystemApiMapper;
+import {{basePackage}}.adapter.out.systemapi.client.{{Entity}}SystemApiClient;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiRequest;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiResponse;
+import {{basePackage}}.adapter.out.systemapi.mapper.{{Entity}}SystemApiMapper;
 import {{basePackage}}.domain.model.{{Entity}};
 
 import org.junit.jupiter.api.BeforeEach;
@@ -52,7 +53,7 @@ class {{Entity}}SystemApiAdapterTest {
     void findById_WhenExists_ReturnsMappedEntity() {
         // Given
         String id = "123";
-        {{Entity}}Dto dto = {{Entity}}Dto.builder().id(id).build();
+        {{Entity}}SystemApiResponse dto = {{Entity}}SystemApiResponse.builder().id(id).build();
         {{Entity}} entity = {{Entity}}.builder().id(id).build();
         
         when(client.getById(id)).thenReturn(dto);
@@ -85,8 +86,8 @@ class {{Entity}}SystemApiAdapterTest {
     @Test
     void findAll_ReturnsMappedEntities() {
         // Given
-        {{Entity}}Dto dto1 = {{Entity}}Dto.builder().id("1").build();
-        {{Entity}}Dto dto2 = {{Entity}}Dto.builder().id("2").build();
+        {{Entity}}SystemApiResponse dto1 = {{Entity}}SystemApiResponse.builder().id("1").build();
+        {{Entity}}SystemApiResponse dto2 = {{Entity}}SystemApiResponse.builder().id("2").build();
         {{Entity}} entity1 = {{Entity}}.builder().id("1").build();
         {{Entity}} entity2 = {{Entity}}.builder().id("2").build();
         
@@ -106,11 +107,11 @@ class {{Entity}}SystemApiAdapterTest {
     void save_ReturnsMappedSavedEntity() {
         // Given
         {{Entity}} entity = {{Entity}}.builder().id("123").build();
-        {{Entity}}Dto inputDto = {{Entity}}Dto.builder().id("123").build();
-        {{Entity}}Dto savedDto = {{Entity}}Dto.builder().id("123").build();
+        {{Entity}}SystemApiRequest inputDto = {{Entity}}SystemApiRequest.builder().id("123").build();
+        {{Entity}}SystemApiResponse savedDto = {{Entity}}SystemApiResponse.builder().id("123").build();
         {{Entity}} savedEntity = {{Entity}}.builder().id("123").build();
         
-        when(mapper.toDto(entity)).thenReturn(inputDto);
+        when(mapper.toRequest(entity)).thenReturn(inputDto);
         when(client.save(inputDto)).thenReturn(savedDto);
         when(mapper.toDomain(savedDto)).thenReturn(savedEntity);
         
@@ -140,7 +141,7 @@ class {{Entity}}SystemApiAdapterTest {
     void findById_WhenSystemReturnsError_ReturnsEmpty() {
         // Given - System API returns response but with error code
         String id = "123";
-        {{Entity}}Dto errorDto = {{Entity}}Dto.builder()
+        {{Entity}}SystemApiResponse errorDto = {{Entity}}SystemApiResponse.builder()
             .id(id)
             .sysRc("99")  // Error code
             .sysMsg("Record not found")

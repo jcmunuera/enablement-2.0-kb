@@ -1,11 +1,18 @@
 # Authoring Guide: Execution Flows
 
-**Version:** 3.1  
-**Date:** 2026-01-22  
-**Model Version:** 3.0.1  
-**capability-index Version:** 2.2
+**Version:** 3.2  
+**Date:** 2026-02-04  
+**Model Version:** 3.0.16  
+**capability-index Version:** 2.8
 
 ---
+
+## What's New in v3.2
+
+| Change | Description |
+|--------|-------------|
+| **Traceability Manifest** | Flows must produce `.trace/manifest.json` with defined structure (DEC-038) |
+| **Phase Catalogs** | Each phase produces `phase-catalog-{phase}.json` for cross-phase references |
 
 ## What's New in v3.1
 
@@ -29,7 +36,7 @@
 
 Execution Flows define HOW capabilities are applied to generate or transform code. They are located in `runtime/flows/{domain}/`.
 
-### Flow Types in v3.0
+### Flow Types (DEC-005)
 
 | Flow | Purpose | When Used |
 |------|---------|-----------|
@@ -275,7 +282,10 @@ Each phase follows this sequence:
 │       ├── src/
 │       └── ...
 │
-├── trace/                          # Execution traceability
+├── .trace/                         # Execution traceability (DEC-038)
+│   ├── manifest.json               # Generation manifest
+│   ├── phase-catalog-1.1.json      # Phase 1 class catalog
+│   ├── phase-catalog-2.1.json      # Phase 2 class catalog
 │   └── generation-trace.md         # Discovery & generation decisions
 │
 └── validation/                     # Validation scripts
@@ -297,12 +307,71 @@ Each phase follows this sequence:
 │   └── created/                    # New files
 │       └── {path}/
 │
-├── trace/
+├── .trace/
+│   ├── manifest.json
 │   └── transformation-trace.md     # What was changed and why
 │
 └── validation/
     └── compile.sh
 ```
+
+---
+
+## Traceability Manifest (DEC-038)
+
+Every flow execution MUST produce a `.trace/manifest.json` with this structure:
+
+```json
+{
+  "generation": {
+    "id": "uuid",
+    "timestamp": "ISO-8601",
+    "service_name": "customer-api"
+  },
+  "enablement": {
+    "version": "3.0.16",
+    "domain": "code",
+    "flow": "flow-generate"
+  },
+  "modules": [
+    {
+      "id": "mod-code-015-hexagonal-base-java-spring",
+      "capability": "architecture.hexagonal-light",
+      "phase": 1
+    },
+    {
+      "id": "mod-code-017-persistence-systemapi",
+      "capability": "persistence.systemapi",
+      "phase": 2
+    }
+  ],
+  "status": {
+    "success": true,
+    "phases_completed": [1, 2, 3],
+    "files_generated": 31
+  }
+}
+```
+
+### Phase Catalogs
+
+Each phase produces a `phase-catalog-{subphase}.json` for cross-phase reference:
+
+```json
+{
+  "subphase": "1.1",
+  "timestamp": "ISO-8601",
+  "classes": [
+    {
+      "fqcn": "com.bank.customer.domain.Customer",
+      "file": "src/main/java/com/bank/customer/domain/Customer.java",
+      "type": "entity"
+    }
+  ]
+}
+```
+
+**Purpose:** Phase 2 modules can reference Phase 1 classes by FQCN (fully qualified class name).
 
 ---
 

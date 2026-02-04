@@ -1,10 +1,11 @@
 // Template: ClientTest.java.tpl
-// Output: {{basePackagePath}}/adapter/integration/client/{{ApiName}}ClientTest.java
+// Output: {{basePackagePath}}/adapter/out/integration/{{ApiName}}ClientTest.java
 // Purpose: Unit test for REST client
 
-package {{basePackage}}.adapter.integration.client;
+package {{basePackage}}.adapter.out.integration;
 
-import {{basePackage}}.adapter.integration.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Response;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Request;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ class {{ApiName}}ClientTest {
                 """)));
         
         // When
-        {{Entity}}Dto result = client.getById(id);
+        {{ApiName}}Response result = client.getById(id);
         
         // Then
         assertThat(result).isNotNull();
@@ -53,7 +54,7 @@ class {{ApiName}}ClientTest {
     @Test
     void create_sendsEntityAndReturnsCreated() {
         // Given
-        {{Entity}}Dto input = {{Entity}}Dto.builder()
+        {{ApiName}}Request input = {{ApiName}}Request.builder()
             .name("New Entity")
             .build();
             
@@ -66,7 +67,7 @@ class {{ApiName}}ClientTest {
                 """)));
         
         // When
-        {{Entity}}Dto result = client.create(input);
+        {{ApiName}}Response result = client.create(input);
         
         // Then
         assertThat(result).isNotNull();

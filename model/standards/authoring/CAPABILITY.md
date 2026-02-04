@@ -1,12 +1,27 @@
 # Authoring Guide: CAPABILITY
 
-**Version:** 3.5  
-**Last Updated:** 2026-01-22  
+**Version:** 3.7  
+**Last Updated:** 2026-02-04  
 **Asset Type:** Capability  
-**Model Version:** 3.0.5  
-**capability-index Version:** 2.6
+**Model Version:** 3.0.16  
+**capability-index Version:** 2.8
 
 ---
+
+## What's New in v3.7
+
+| Change | Description |
+|--------|-------------|
+| **Module Variants** | Modules can now define variants; capabilities no longer own variant flags (DEC-041) |
+| **variant_selections** | Discovery outputs variant_selections for user-selected implementations |
+| **Stack-specific style** | Code style rules moved to runtime/codegen/styles/ (DEC-042) |
+
+## What's New in v3.6
+
+| Change | Description |
+|--------|-------------|
+| **publishes_flags** | New feature attribute for cross-module config flag publishing (DEC-035) |
+| **Config Flags Pub/Sub** | Pattern for feature modules to influence core module code generation |
 
 ## What's New in v3.5
 
@@ -657,9 +672,9 @@ keywords:
 - Include Spanish equivalents
 - Avoid generic terms ("code", "service")
 
-### requires (Optional)
+### requires (Optional) (DEC-008)
 
-Dependencies auto-added during discovery:
+Dependencies auto-added during discovery. Points to **capability** (not feature), uses its `default_feature`.
 
 ```yaml
 # Point to CAPABILITY (uses its default_feature)
@@ -710,7 +725,80 @@ requires_config:
 
 **Example:** `saga-compensation` requires `distributed_transactions.participant=true`, which only `domain-api` and `custom-api` (if configured) have.
 
-### implies (Optional, Capability-level, NEW in v2.4)
+### publishes_flags (Optional, NEW in v3.0.11)
+
+Declares config flags that this feature **publishes** when activated. These flags propagate to `generation-context.json` and can be consumed by any module's templates.
+
+```yaml
+api-architecture:
+  features:
+    domain-api:
+      module: mod-code-019-api-public-exposure-java-spring
+      publishes_flags:
+        hateoas: true
+        pagination: true
+```
+
+**Purpose:** Enable cross-module influence without tight coupling. Feature modules can affect code generation in core modules through a publish/subscribe pattern.
+
+**How it works:**
+
+1. Feature declares `publishes_flags` with key-value pairs
+2. Context Agent collects all flags from active features
+3. Flags appear in `generation-context.json` under `config_flags`
+4. Subscriber modules use conditionals in templates: `{{#config.hateoas}}...{{/config.hateoas}}`
+
+**Governance:**
+
+- Each flag should have at least one subscriber (documented in MODULE.md)
+- Use the Standard Flags Registry in ENABLEMENT-MODEL-v3.0.md for known flags
+- New flags should be documented in both publisher and subscriber
+
+**Example:** When `domain-api` is active, mod-015's Response.java.tpl checks `config.hateoas` and generates a class extending `RepresentationModel` instead of a record.
+
+See also: DEC-035 (Config Flags Pub/Sub Pattern), MODULE.md `subscribes_to_flags`
+
+### Config Flags vs Module Variants (DEC-041)
+
+**IMPORTANT:** Do NOT confuse `publishes_flags` with Module Variants.
+
+| Concept | Config Flags (publishes_flags) | Module Variants |
+|---------|-------------------------------|-----------------|
+| **Purpose** | Cross-module influence | Intra-module selection |
+| **Defined in** | capability-index.yaml | MODULE.md |
+| **Semantics** | "Is this feature active?" | "Which implementation?" |
+| **Example** | `hateoas: true` | `http_client: feign` |
+
+**When to use which:**
+
+- **Config Flags:** A feature module (e.g., HATEOAS) needs to affect how another module (e.g., mod-015) generates code.
+- **Variants:** A module offers multiple implementations (e.g., different HTTP clients) and user can select one.
+
+**Wrong (pre-DEC-041):**
+```yaml
+# DON'T: Implementation choice as capability flag
+persistence:
+  features:
+    systemapi:
+      publishes_flags:
+        http_client: restclient  # ❌ This is a variant, not a feature flag
+```
+
+**Correct (DEC-041):**
+```yaml
+# DO: Define variants in MODULE.md
+# In modules/mod-code-017/MODULE.md:
+variants:
+  http_client:
+    default: restclient
+    options:
+      restclient: { ... }
+      feign: { ... }
+```
+
+See also: DEC-041 (Module Variants vs Config Flags), MODULE.md `variants` section
+
+### implies (Optional, Capability-level) (DEC-013)
 
 Automatic dependencies between capabilities. When a capability is selected, implied capabilities are auto-added.
 
@@ -742,7 +830,7 @@ distributed-transactions:
 
 ---
 
-## Config Rules (Top-level Section, NEW in v2.4)
+## Config Rules (Top-level Section) (DEC-013)
 
 Config flags are calculated based on **selected capabilities** (not features).
 

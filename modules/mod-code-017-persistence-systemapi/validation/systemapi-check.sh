@@ -94,31 +94,33 @@ if [ "$CLIENT_FOUND" = false ]; then
 fi
 
 echo ""
-echo "--- Resilience Constraints ---"
+echo "--- Resilience Constraints (Phase 3 cross-cutting) ---"
+echo "[INFO] Note: Resilience annotations are added by Phase 3 transform (mod-001, mod-002, mod-003)"
+echo "[INFO]       These checks will warn (not fail) if Phase 3 has not yet run."
 
-# Check 4: CircuitBreaker annotation present
+# Check 4: CircuitBreaker annotation present (Phase 3 responsibility)
 info "Checking @CircuitBreaker on adapter..."
 if grep -r "@CircuitBreaker" "$TARGET_DIR/src/main/java" 2>/dev/null | grep -q "systemapi"; then
     success "@CircuitBreaker found on System API adapter"
 else
-    error "@CircuitBreaker MUST be present on System API adapter methods"
+    warning "@CircuitBreaker not yet present on System API adapter (requires Phase 3 transform)"
 fi
 
-# Check 5: Retry annotation present
+# Check 5: Retry annotation present (Phase 3 responsibility)
 info "Checking @Retry on adapter..."
 if grep -r "@Retry" "$TARGET_DIR/src/main/java" 2>/dev/null | grep -q "systemapi"; then
     success "@Retry found on System API adapter"
 else
-    error "@Retry MUST be present on System API adapter methods"
+    warning "@Retry not yet present on System API adapter (requires Phase 3 transform)"
 fi
 
-# Check 6: Resilience4j configuration
+# Check 6: Resilience4j configuration (Phase 3 responsibility)
 info "Checking Resilience4j configuration..."
 if [ -f "$TARGET_DIR/src/main/resources/application.yml" ]; then
     if grep -q "resilience4j:" "$TARGET_DIR/src/main/resources/application.yml"; then
         success "Resilience4j configuration found"
     else
-        error "Resilience4j configuration not found in application.yml"
+        warning "Resilience4j configuration not yet in application.yml (requires Phase 3 transform)"
     fi
 fi
 

@@ -6,10 +6,13 @@
 
 package {{basePackage}}.application.dto;
 
-import {{basePackage}}.domain.model.{{Entity}};
+import {{basePackage}}.domain.model.*;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.server.core.Relation;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Response DTO for {{Entity}} with HATEOAS hypermedia links.

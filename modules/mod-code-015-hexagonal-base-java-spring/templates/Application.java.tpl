@@ -2,7 +2,7 @@
 // Template: Application.java.tpl
 // Module: mod-code-015-hexagonal-base-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/.../Application.java
+// Output: {{basePackagePath}}/{{ServiceName}}Application.java
 // Purpose: 
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES: {{ServiceName}} {{basePackage}} {{serviceName}} 

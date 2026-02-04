@@ -27,6 +27,13 @@ fi
 for file in $CLIENT_FILES; do
     echo "Checking: $file"
     
+    # Skip Feign declarative interfaces — they handle headers via FeignConfig, not inline
+    if grep -q "@FeignClient\|public interface.*Client" "$file"; then
+        echo "  ℹ️  SKIP: Feign declarative interface (headers handled by FeignConfig)"
+        echo ""
+        continue
+    fi
+    
     # ERROR: Correlation headers must be propagated
     # VB-001 FIX: Also detect constant reference CORRELATION_ID_HEADER
     if ! grep -qE "X-Correlation-ID|x-correlation-id|correlationId|CORRELATION_ID_HEADER" "$file"; then

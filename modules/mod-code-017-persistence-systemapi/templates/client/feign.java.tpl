@@ -5,7 +5,8 @@
 
 package {{basePackage}}.adapter.out.systemapi.client;
 
-import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiRequest;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,13 +31,13 @@ import java.util.List;
 public interface {{Entity}}SystemApiClient {
     
     @GetMapping("{{resourcePath}}/{id}")
-    {{Entity}}Dto getById(@PathVariable("id") String id);
+    {{Entity}}SystemApiResponse getById(@PathVariable("id") String id);
     
     @GetMapping("{{resourcePath}}")
-    List<{{Entity}}Dto> getAll();
+    List<{{Entity}}SystemApiResponse> getAll();
     
     @PostMapping("{{resourcePath}}")
-    {{Entity}}Dto save(@RequestBody {{Entity}}Dto dto);
+    {{Entity}}SystemApiResponse save(@RequestBody {{Entity}}SystemApiRequest request);
     
     @DeleteMapping("{{resourcePath}}/{id}")
     void deleteById(@PathVariable("id") String id);

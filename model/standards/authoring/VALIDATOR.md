@@ -1,11 +1,18 @@
 # Authoring Guide: VALIDATOR
 
-**Version:** 1.1  
-**Last Updated:** 2026-01-22  
+**Version:** 1.2  
+**Last Updated:** 2026-02-04  
 **Asset Type:** Validator  
-**Model Version:** 3.0.1
+**Model Version:** 3.0.16
 
 ---
+
+## What's New in v1.2
+
+| Change | Description |
+|--------|-------------|
+| **Tier-0 Conformance** | New tier for template conformance validation (DEC-027) |
+| **Validation Order** | Tier-0 → Tier-1 → Tier-2 → Tier-3 |
 
 ## What's New in v1.1
 
@@ -37,22 +44,46 @@ Do NOT create a Validator for:
 
 ---
 
-## Validator Tiers
+## Validator Tiers (DEC-027)
 
 | Tier | Location | Purpose | When to Create |
 |------|----------|---------|----------------|
+| **0** | `validators/tier-0-conformance/` | **Template conformance** | Rarely - validates generation process |
 | **1** | `validators/tier-1-universal/` | Universal structural checks | Rarely - only for new universal standards |
 | **2** | `validators/tier-2-technology/` | Artifact-specific checks | When supporting new technology/artifact |
 | **3** | `modules/{mod}/validation/` | Feature-specific checks | With each new module (embedded) |
+
+### Execution Order
+
+```
+Tier-0 (conformance) → Tier-1 (universal) → Tier-2 (technology) → Tier-3 (module)
+```
+
+### Tier-0: Conformance Validation (DEC-027)
+
+Tier-0 validates that generated code **conforms to templates**, not that code is valid.
+
+**Purpose:** Detect when LLM "improvises" instead of following templates.
+
+**Examples of conformance violations:**
+- Template uses `extends BaseClass`, generated uses `implements Interface`
+- Template has method `getCurrentId()`, generated omits it
+- Template uses `public static final`, generated uses `private static final`
+
+**Location:** `runtime/validators/tier-0-conformance/`
+
+**When to use:** After code generation, before other validations.
 
 ---
 
 ## Directory Structure
 
-### Tier 1 & 2 Validators
+### Tier 0, 1 & 2 Validators
 
 ```
 runtime/validators/
+├── tier-0-conformance/           # NEW: Template conformance (DEC-027)
+│   └── template-conformance-check.sh
 ├── tier-1-universal/
 │   └── {validator-name}/
 │       ├── VALIDATOR.md        # Documentation

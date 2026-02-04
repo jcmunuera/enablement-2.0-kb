@@ -3,7 +3,7 @@
 // Module: mod-code-018-api-integration-rest-java-spring
 // Variant: restclient (DEFAULT)
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/adapter/out/systemapi/{{ApiName}}SystemApiClient.java
+// Output: {{basePackagePath}}/adapter/out/integration/{{ApiName}}Client.java
 // Purpose: RestClient implementation for REST API integration (Spring 3.2+)
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES (must be in generation-context.json):
@@ -11,16 +11,15 @@
 //   - {{basePackagePath}}  : Package as path (e.g., com/bank/customer)
 //   - {{ApiName}}          : API name PascalCase (e.g., Parties)
 //   - {{apiName}}          : API name camelCase (e.g., parties)
-//   - {{Entity}}           : Entity name (e.g., Party)
 //   - {{resourcePath}}     : Base resource path (e.g., /parties)
 //   - {{serviceName}}      : Service name for X-Source-System header
 // ═══════════════════════════════════════════════════════════════════════════════
 
-package {{basePackage}}.adapter.out.systemapi;
+package {{basePackage}}.adapter.out.integration;
 
-import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}Response;
-import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}Request;
-import {{basePackage}}.adapter.out.systemapi.exception.IntegrationException;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Response;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Request;
+import {{basePackage}}.adapter.out.integration.exception.IntegrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -65,17 +64,17 @@ public class {{ApiName}}SystemApiClient {
             .build();
     }
     
-    public {{Entity}}Response getById(String id) {
+    public {{ApiName}}Response getById(String id) {
         log.debug("{{ApiName}}: GET {{resourcePath}}/{}", id);
         
         return restClient.get()
             .uri("{{resourcePath}}/{id}", id)
             .headers(this::addCorrelationHeaders)
             .retrieve()
-            .body({{Entity}}Response.class);
+            .body({{ApiName}}Response.class);
     }
     
-    public List<{{Entity}}Response> getAll() {
+    public List<{{ApiName}}Response> getAll() {
         log.debug("{{ApiName}}: GET {{resourcePath}}");
         
         return restClient.get()
@@ -85,7 +84,7 @@ public class {{ApiName}}SystemApiClient {
             .body(new ParameterizedTypeReference<>() {});
     }
     
-    public {{Entity}}Response create({{Entity}}Request request) {
+    public {{ApiName}}Response create({{ApiName}}Request request) {
         log.debug("{{ApiName}}: POST {{resourcePath}}");
         
         return restClient.post()
@@ -94,10 +93,10 @@ public class {{ApiName}}SystemApiClient {
             .contentType(MediaType.APPLICATION_JSON)
             .body(request)
             .retrieve()
-            .body({{Entity}}Response.class);
+            .body({{ApiName}}Response.class);
     }
     
-    public {{Entity}}Response update(String id, {{Entity}}Request request) {
+    public {{ApiName}}Response update(String id, {{ApiName}}Request request) {
         log.debug("{{ApiName}}: PUT {{resourcePath}}/{}", id);
         
         return restClient.put()
@@ -106,7 +105,7 @@ public class {{ApiName}}SystemApiClient {
             .contentType(MediaType.APPLICATION_JSON)
             .body(request)
             .retrieve()
-            .body({{Entity}}Response.class);
+            .body({{ApiName}}Response.class);
     }
     
     public void delete(String id) {

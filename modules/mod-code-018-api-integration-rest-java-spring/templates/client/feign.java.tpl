@@ -1,11 +1,12 @@
 // Template: feign.java.tpl
-// Output: {{basePackage}}/adapter/integration/client/{{ApiName}}Client.java
+// Output: {{basePackagePath}}/adapter/out/integration/{{ApiName}}Client.java
 // Purpose: Feign client interface for REST API integration
 // Variant: feign
 
-package {{basePackage}}.adapter.integration.client;
+package {{basePackage}}.adapter.out.integration;
 
-import {{basePackage}}.adapter.integration.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Response;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Request;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,16 +32,16 @@ import java.util.List;
 public interface {{ApiName}}Client {
     
     @GetMapping("{{resourcePath}}/{id}")
-    {{Entity}}Dto getById(@PathVariable("id") String id);
+    {{ApiName}}Response getById(@PathVariable("id") String id);
     
     @GetMapping("{{resourcePath}}")
-    List<{{Entity}}Dto> getAll();
+    List<{{ApiName}}Response> getAll();
     
     @PostMapping("{{resourcePath}}")
-    {{Entity}}Dto create(@RequestBody {{Entity}}Dto dto);
+    {{ApiName}}Response create(@RequestBody {{ApiName}}Request request);
     
     @PutMapping("{{resourcePath}}/{id}")
-    {{Entity}}Dto update(@PathVariable("id") String id, @RequestBody {{Entity}}Dto dto);
+    {{ApiName}}Response update(@PathVariable("id") String id, @RequestBody {{ApiName}}Request request);
     
     @DeleteMapping("{{resourcePath}}/{id}")
     void delete(@PathVariable("id") String id);
