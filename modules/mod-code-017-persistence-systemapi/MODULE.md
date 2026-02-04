@@ -1,8 +1,8 @@
 ---
 id: mod-code-017-persistence-systemapi
 title: "MOD-017: System API Persistence"
-version: 1.2
-date: 2025-12-01
+version: 1.3
+date: 2026-02-04
 status: Active
 derived_from: eri-code-012-persistence-patterns-java-spring
 depends_on:
@@ -24,6 +24,46 @@ implements:
   stack: java-spring
   capability: persistence
   feature: systemapi
+
+# ═══════════════════════════════════════════════════════════════════
+# DEC-041: Module Variants
+# ═══════════════════════════════════════════════════════════════════
+# Variants allow user selection of implementation alternatives.
+# Discovery Agent detects keywords from prompt, or uses default.
+# CodeGen filters templates by // Variant: header.
+variants:
+  http_client:
+    description: "HTTP client implementation for System API calls"
+    default: restclient
+    options:
+      restclient:
+        description: "Spring 6.1+ RestClient (recommended for Spring Boot 3.2+)"
+        templates:
+          - client/restclient.java.tpl
+        keywords:
+          - restclient
+          - rest client
+          - webclient
+      feign:
+        description: "OpenFeign declarative client (requires spring-cloud-starter-openfeign)"
+        templates:
+          - client/feign.java.tpl
+          - config/feign-config.java.tpl
+        dependencies:
+          - groupId: org.springframework.cloud
+            artifactId: spring-cloud-starter-openfeign
+        keywords:
+          - feign
+          - openfeign
+          - declarative client
+      resttemplate:
+        description: "Legacy RestTemplate (deprecated, use only for compatibility)"
+        templates:
+          - client/resttemplate.java.tpl
+        keywords:
+          - resttemplate
+          - rest template
+          - legacy client
 ---
 
 # MOD-017: System API Persistence

@@ -9,7 +9,7 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 
 /**
  * Configuration for pagination support per ADR-001.
- * Uses Spring Data's Pageable resolver with DTO serialization.
+ * Enables Spring Data's Pageable resolver for controller method parameters.
  * 
  * Configuration values are in application.yml:
  * - spring.data.web.pageable.default-page-size: 20
@@ -17,8 +17,7 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
  * - spring.data.web.pageable.one-indexed-parameters: false
  */
 @Configuration
-@EnableSpringDataWebSupport(pageSerializationMode = 
-    EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
+@EnableSpringDataWebSupport
 public class PageableConfig {
     // Configuration is driven by application.yml properties
 }

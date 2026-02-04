@@ -1,9 +1,9 @@
 // Template: feign-config.java.tpl
-// Output: {{basePackage}}/adapter/integration/client/{{ApiName}}ClientConfig.java
+// Output: {{basePackagePath}}/adapter/out/integration/{{ApiName}}ClientConfig.java
 // Purpose: Feign client configuration with correlation headers
 // Variant: feign
 
-package {{basePackage}}.adapter.integration.client;
+package {{basePackage}}.adapter.out.integration;
 
 import feign.RequestInterceptor;
 import org.slf4j.MDC;

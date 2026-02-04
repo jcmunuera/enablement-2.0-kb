@@ -2,7 +2,7 @@
 // Template: GlobalExceptionHandler.java.tpl
 // Module: mod-code-015-hexagonal-base-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/.../GlobalExceptionHandler.java
+// Output: {{basePackagePath}}/infrastructure/GlobalExceptionHandler.java
 // Purpose: 
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES: {{Entity}} {{basePackage}} {{entity}} {{organization}} {{serviceName}} 

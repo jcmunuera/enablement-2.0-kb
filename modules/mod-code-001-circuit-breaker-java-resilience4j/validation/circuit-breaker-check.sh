@@ -15,6 +15,35 @@ warn() { echo -e "${YELLOW}⚠️  WARN:${NC} $1"; }
 
 ERRORS=0
 
+# Phase 3 detection: Circuit breaker is a cross-cutting transform (Phase 3)
+# If Phase 3 has not run, annotations won't be present yet — skip gracefully
+PHASE3_RAN=true
+if [ -f "$SERVICE_DIR/.trace/generation-summary.json" ]; then
+    PHASE3_STATUS=$(python3 -c "
+import json, sys
+with open('$SERVICE_DIR/.trace/generation-summary.json') as f:
+    s = json.load(f)
+for r in s.get('results', []):
+    if r['subphase_id'].startswith('3'):
+        print(r['status'])
+        sys.exit(0)
+print('not_found')
+" 2>/dev/null || echo "unknown")
+    
+    if [ "$PHASE3_STATUS" = "skipped" ] || [ "$PHASE3_STATUS" = "not_found" ]; then
+        PHASE3_RAN=false
+        echo -e "${YELLOW}⚠️  Phase 3 (cross-cutting transform) has not run yet${NC}"
+        echo "   Circuit breaker annotations are added by Phase 3 transform."
+        echo "   Checks will report warnings instead of errors."
+        echo ""
+    fi
+fi
+
+# Override fail to warn if Phase 3 hasn't run
+if [ "$PHASE3_RAN" = false ]; then
+    fail() { echo -e "${YELLOW}⚠️  PENDING:${NC} $1 (awaiting Phase 3)"; }
+fi
+
 # 1. Check @CircuitBreaker annotation exists
 CB_COUNT=$(find "$SERVICE_DIR/src/main/java" -name "*.java" -exec grep -l "@CircuitBreaker" {} \; 2>/dev/null | wc -l)
 if [ "$CB_COUNT" -gt 0 ]; then

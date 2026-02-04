@@ -1,6 +1,6 @@
 // Template: chain-fallback.java.tpl
 // Output: Applied to existing service class
-// Purpose: Circuit breaker with tiered fallback chain (alternative service → cache → default)
+// Purpose: Circuit breaker with tiered fallback chain (alternative service -> cache -> default)
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;

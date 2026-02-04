@@ -1,11 +1,12 @@
 // Template: resttemplate.java.tpl
-// Output: {{basePackage}}/adapter/integration/client/{{ApiName}}Client.java
+// Output: {{basePackagePath}}/adapter/out/integration/{{ApiName}}Client.java
 // Purpose: RestTemplate client for REST API integration
 // Variant: resttemplate
 
-package {{basePackage}}.adapter.integration.client;
+package {{basePackage}}.adapter.out.integration;
 
-import {{basePackage}}.adapter.integration.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Response;
+import {{basePackage}}.adapter.out.integration.dto.{{ApiName}}Request;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -38,25 +39,25 @@ public class {{ApiName}}Client {
     @Value("${integration.{{apiName}}.base-url}")
     private String baseUrl;
     
-    public {{Entity}}Dto getById(String id) {
+    public {{ApiName}}Response getById(String id) {
         log.debug("{{ApiName}}: GET {{resourcePath}}/{}", id);
         
         HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<{{Entity}}Dto> response = restTemplate.exchange(
+        ResponseEntity<{{ApiName}}Response> response = restTemplate.exchange(
             baseUrl + "{{resourcePath}}/{id}",
             HttpMethod.GET,
             entity,
-            {{Entity}}Dto.class,
+            {{ApiName}}Response.class,
             id
         );
         return response.getBody();
     }
     
-    public List<{{Entity}}Dto> getAll() {
+    public List<{{ApiName}}Response> getAll() {
         log.debug("{{ApiName}}: GET {{resourcePath}}");
         
         HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<List<{{Entity}}Dto>> response = restTemplate.exchange(
+        ResponseEntity<List<{{ApiName}}Response>> response = restTemplate.exchange(
             baseUrl + "{{resourcePath}}",
             HttpMethod.GET,
             entity,
@@ -65,28 +66,28 @@ public class {{ApiName}}Client {
         return response.getBody();
     }
     
-    public {{Entity}}Dto create({{Entity}}Dto dto) {
+    public {{ApiName}}Response create({{ApiName}}Request dto) {
         log.debug("{{ApiName}}: POST {{resourcePath}}");
         
-        HttpEntity<{{Entity}}Dto> entity = new HttpEntity<>(dto, createHeaders());
-        ResponseEntity<{{Entity}}Dto> response = restTemplate.exchange(
+        HttpEntity<{{ApiName}}Request> entity = new HttpEntity<>(dto, createHeaders());
+        ResponseEntity<{{ApiName}}Response> response = restTemplate.exchange(
             baseUrl + "{{resourcePath}}",
             HttpMethod.POST,
             entity,
-            {{Entity}}Dto.class
+            {{ApiName}}Response.class
         );
         return response.getBody();
     }
     
-    public {{Entity}}Dto update(String id, {{Entity}}Dto dto) {
-        log.debug("{{ApiName}}: PUT {{resourcePath}}/{}", id);
+    public {{ApiName}}Response update(String id, {{ApiName}}Request dto) {
+        log.debug("{{ApiName}}: PUT {{resourcePath}}/{}");
         
-        HttpEntity<{{Entity}}Dto> entity = new HttpEntity<>(dto, createHeaders());
-        ResponseEntity<{{Entity}}Dto> response = restTemplate.exchange(
+        HttpEntity<{{ApiName}}Request> entity = new HttpEntity<>(dto, createHeaders());
+        ResponseEntity<{{ApiName}}Response> response = restTemplate.exchange(
             baseUrl + "{{resourcePath}}/{id}",
             HttpMethod.PUT,
             entity,
-            {{Entity}}Dto.class,
+            {{ApiName}}Response.class,
             id
         );
         return response.getBody();

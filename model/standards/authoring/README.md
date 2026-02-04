@@ -1,8 +1,8 @@
 # Authoring Standards
 
-**Version:** 3.1  
-**Last Updated:** 2026-01-21  
-**Model Version:** 3.0.1
+**Version:** 3.2  
+**Last Updated:** 2026-02-04  
+**Model Version:** 3.0.16
 
 ---
 
@@ -18,6 +18,18 @@ This directory contains **authoring guides** for creating assets in the Enableme
 - Coherence rules
 
 ---
+
+## What's New in v3.2
+
+> **Key changes:** Template authoring guide, Module variants, Stack-specific style files
+
+| Change | Impact |
+|--------|--------|
+| **TEMPLATE.md** | NEW guide for authoring .tpl files (DEC-025, DEC-036, DEC-040) |
+| **Module Variants** | Modules can define implementation variants (DEC-041) |
+| **Stack Style Files** | Code style rules in runtime/codegen/styles/ (DEC-042) |
+| **// Output: header** | MANDATORY in all templates for deterministic paths |
+| **// Variant: header** | Required when module has multiple implementations |
 
 ## What's New in v3.1
 
@@ -51,12 +63,13 @@ Capability Types (v2.2):
 | Asset Type | Guide | Version | Description |
 |------------|-------|---------|-------------|
 | ADR | [ADR.md](./ADR.md) | 1.0 | Architecture Decision Records |
-| ERI | [ERI.md](./ERI.md) | **1.3** | Enterprise Reference Implementations ⭐ |
-| Module | [MODULE.md](./MODULE.md) | **3.0** | Reusable code templates ⭐ |
-| **Capability** | [CAPABILITY.md](./CAPABILITY.md) | **3.5** | **Feature definitions with implementations** ⭐ |
-| Validator | [VALIDATOR.md](./VALIDATOR.md) | **1.1** | Artifact validation components ⭐ |
-| Flow | [FLOW.md](./FLOW.md) | **3.1** | Execution flows (generate/transform) ⭐ |
-| Tags | [TAGS.md](./TAGS.md) | 2.0 | Discovery keywords (deprecated, see CAPABILITY.md) |
+| ERI | [ERI.md](./ERI.md) | 1.3 | Enterprise Reference Implementations |
+| Module | [MODULE.md](./MODULE.md) | **3.2** | Reusable code modules with variants ⭐ |
+| **Template** | [TEMPLATE.md](./TEMPLATE.md) | **1.0** | **Code template files (.tpl)** ⭐ NEW |
+| Capability | [CAPABILITY.md](./CAPABILITY.md) | **3.7** | Feature definitions with implementations ⭐ |
+| Validator | [VALIDATOR.md](./VALIDATOR.md) | **1.2** | Artifact validation with Tier-0 ⭐ |
+| Flow | [FLOW.md](./FLOW.md) | **3.2** | Execution flows with traceability ⭐ |
+| Tags | [TAGS.md](./TAGS.md) | 2.0 | Discovery keywords (deprecated) |
 
 ### Removed in v3.0
 
@@ -75,16 +88,58 @@ Assets should be created in this order:
    ↓
 2. ERI (Reference Implementation)
    ↓
-3. Module (Reusable Template)
+3. Module (Reusable Template Package)
    │  └─ MUST have derived_from pointing to ERI
    │  └─ MUST declare stack in frontmatter
+   │  └─ MAY define variants for implementation options
    ↓
-4. Validator (Quality Checks)
+4. Templates (Code Files in module/templates/)
+   │  └─ MUST have // Output: header
+   │  └─ MUST have // Variant: header if module has variants
    ↓
-5. Capability Feature (in capability-index.yaml)
+5. Validator (Quality Checks)
+   ↓
+6. Capability Feature (in capability-index.yaml)
    │  └─ References module
    │  └─ Defines config, input_spec
+   │  └─ MAY publish config_flags (NOT variants)
 ```
+
+---
+
+## Critical Concepts
+
+### Config Flags vs Module Variants (DEC-041)
+
+**IMPORTANT:** Understand the difference:
+
+| Concept | Config Flags | Variants |
+|---------|--------------|----------|
+| **Purpose** | Feature affects other modules | User selects implementation |
+| **Defined in** | capability-index.yaml | MODULE.md |
+| **Example** | `hateoas: true` | `http_client: feign` |
+
+**Read:** MODULE.md "Module Variants" and CAPABILITY.md "Config Flags vs Module Variants"
+
+### Template Headers (DEC-036, DEC-040)
+
+**ALL templates MUST include:**
+
+```java
+// Output: src/main/java/{{basePackagePath}}/path/File.java
+// Variant: option_id  // Only if module has variants
+```
+
+**Read:** TEMPLATE.md for complete guide
+
+### Stack Style Files (DEC-042)
+
+Code style rules are in `runtime/codegen/styles/{stack}.style.md`:
+
+- `java-spring.style.md` - Rules for Java/Spring code generation
+- Future: `nodejs.style.md`, etc.
+
+**Style rules are injected into CodeGen prompt, not in MODULE.md documentation.**
 
 ---
 
@@ -96,38 +151,11 @@ When creating assets, ensure coherence:
 |------|-------------|
 | **Module → ERI** | Every Module MUST have `derived_from` pointing to an ERI |
 | **Module → Stack** | Every Module MUST declare its stack |
+| **Template → Output** | Every .tpl MUST have `// Output:` header |
+| **Template → Variant** | If module has variants, templates MUST have `// Variant:` |
 | **Feature → Module** | Every feature implementation MUST reference existing module |
 | **Feature → Default** | Features with multiple implementations MUST have default |
-
----
-
-## Common Principles
-
-### 1. Self-Contained Documentation
-
-Each asset MUST be understandable without external context.
-
-### 2. Explicit Relationships
-
-All relationships MUST be explicitly documented:
-
-| Relationship | From | To |
-|--------------|------|-----|
-| `implements` | ERI | ADR |
-| `derived_from` | Module | ERI |
-| `module` | Feature Implementation | Module |
-
-### 3. Machine-Readable Metadata
-
-Assets MUST include YAML front matter:
-
-```yaml
----
-id: {type}-{id}
-version: {semver}
-status: draft|active|deprecated
----
-```
+| **Variant → Keywords** | Each variant option SHOULD have discovery keywords |
 
 ---
 
@@ -137,65 +165,47 @@ status: draft|active|deprecated
 |--------------|-----------|
 | Document a strategic decision | [ADR.md](./ADR.md) |
 | Create a reference implementation | [ERI.md](./ERI.md) |
-| Build reusable templates | [MODULE.md](./MODULE.md) |
+| Build reusable template package | [MODULE.md](./MODULE.md) |
+| **Write code templates (.tpl)** | **[TEMPLATE.md](./TEMPLATE.md)** |
 | Define a capability feature | [CAPABILITY.md](./CAPABILITY.md) |
 | Add validation for technology | [VALIDATOR.md](./VALIDATOR.md) |
 | Document an execution flow | [FLOW.md](./FLOW.md) |
 
 ---
 
-## Critical: Discovery and Execution
+## Related Decisions
 
-### CAPABILITY.md and Discovery
+All decisions that impact authoring are documented in the relevant guides:
 
-The **CAPABILITY.md** guide is essential because:
-
-1. **capability-index.yaml is the single source of truth** - All discovery goes through it
-2. **Features are enriched** - config, input_spec, implementations
-3. **Multi-stack support** - Each feature can have multiple implementations
-
-**Read CAPABILITY.md before defining any feature.**
-
-### MODULE.md and Execution
-
-The **MODULE.md** guide clarifies:
-
-1. **Stack declaration required** - Every module declares its stack
-2. **Templates as guidance** - Not scripts, but structured knowledge
-3. **Determinism rules** - CRITICAL sections for consistent output
-
-### FLOW.md and Execution
-
-The **FLOW.md** guide explains:
-
-1. **Two primary flows** - flow-generate and flow-transform
-2. **Phase-based execution** - Features grouped by nature
-3. **Automatic selection** - Based on context (existing code or not)
-
----
-
-## Determinism Rules Architecture
-
-Rules for deterministic code generation:
-
-| Location | Contains | Priority |
-|----------|----------|----------|
-| `DETERMINISM-RULES.md` | Global patterns | Base |
-| `MODULE.md ## ⚠️ CRITICAL` | Module-specific rules | **Highest** |
-
-**Principle:** Module-specific rules override global rules.
+| Decision | Topic | Guide(s) |
+|----------|-------|----------|
+| DEC-001 | Skills eliminated | README (migration notes) |
+| DEC-005 | Flow types (generate/transform) | FLOW.md |
+| DEC-008 | `requires` → capability | CAPABILITY.md |
+| DEC-013 | `implies`, `config_rules` | CAPABILITY.md |
+| DEC-021 | Test templates | TEMPLATE.md |
+| DEC-025 | Anti-improvisation rules | TEMPLATE.md |
+| DEC-027 | Tier-0 conformance | VALIDATOR.md |
+| DEC-028 | Cross-cutting transforms | TEMPLATE.md |
+| DEC-030 | Transform descriptors | TEMPLATE.md |
+| DEC-035 | Config flags pub/sub | CAPABILITY.md, MODULE.md |
+| DEC-036 | `// Output:` header | TEMPLATE.md |
+| DEC-037 | Enum generation | TEMPLATE.md |
+| DEC-038 | Traceability manifest | FLOW.md |
+| DEC-040 | `// Variant:` header | TEMPLATE.md, MODULE.md |
+| DEC-041 | Module variants | MODULE.md, CAPABILITY.md |
+| DEC-042 | Stack style files | README.md |
 
 ---
 
 ## Related Documents
 
 - [../../ENABLEMENT-MODEL-v3.0.md](../../ENABLEMENT-MODEL-v3.0.md) - Master model document
-- [../../CONSUMER-PROMPT.md](../../CONSUMER-PROMPT.md) - Consumer agent system prompt
-- [../../AUTHOR-PROMPT.md](../../AUTHOR-PROMPT.md) - Author system prompt
-- [../ASSET-STANDARDS-v1.4.md](../ASSET-STANDARDS-v1.4.md) - Naming conventions
+- [../../DECISION-LOG.md](../../DECISION-LOG.md) - All architectural decisions
 - [../DETERMINISM-RULES.md](../DETERMINISM-RULES.md) - Code generation patterns
 - `runtime/discovery/capability-index.yaml` - Central capability index
+- `runtime/codegen/styles/` - Stack-specific style rules
 
 ---
 
-**Last Updated:** 2026-01-21
+**Last Updated:** 2026-02-04

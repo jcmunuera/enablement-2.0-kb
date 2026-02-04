@@ -1,11 +1,28 @@
 # Authoring Guide: MODULE
 
-**Version:** 3.0  
-**Last Updated:** 2026-01-21  
+**Version:** 3.2  
+**Last Updated:** 2026-02-04  
 **Asset Type:** Module  
-**Model Version:** 3.0.1
+**Model Version:** 3.0.16
 
 ---
+
+## What's New in v3.2
+
+| Change | Description |
+|--------|-------------|
+| **variants** | New section for defining implementation variants within a module (DEC-041) |
+| **Template headers** | `// Output:` and `// Variant:` headers now mandatory (DEC-036, DEC-040) |
+| **TEMPLATE.md** | New authoring guide for .tpl files |
+| **Style files** | Stack-specific style rules in runtime/codegen/styles/ (DEC-042) |
+
+## What's New in v3.1
+
+| Change | Description |
+|--------|-------------|
+| **subscribes_to_flags** | New section for declaring config flag subscriptions (DEC-035) |
+| **Template conditionals** | `{{#config.flag}}` syntax for flag-based code generation |
+| **Config Flags Pub/Sub** | Pattern for reacting to flags published by feature modules |
 
 ## What's New in v3.0
 
@@ -58,7 +75,7 @@ mod-code-{NNN}-{name}/
 
 ---
 
-## MODULE.md Template (v2.0)
+## MODULE.md Template (v3.0)
 
 ```yaml
 ---
@@ -70,7 +87,7 @@ status: Active
 domain: code
 
 # ═══════════════════════════════════════════════════════════════════════════
-# CAPABILITY.FEATURE REFERENCE (Required in v2.0)
+# CAPABILITY.FEATURE REFERENCE (Required)
 # ═══════════════════════════════════════════════════════════════════════════
 # This module implements exactly ONE feature of ONE capability.
 # This creates the link: capability → feature → module
@@ -78,6 +95,7 @@ domain: code
 implements:
   capability: resilience
   feature: circuit-breaker
+  stack: java-spring   # Required for stack filtering
 
 # ═══════════════════════════════════════════════════════════════════════════
 # TECHNOLOGY STACK
@@ -86,21 +104,57 @@ stack: java-spring
 library: resilience4j
 
 # ═══════════════════════════════════════════════════════════════════════════
+# MODULE VARIANTS (DEC-041) - Optional
+# ═══════════════════════════════════════════════════════════════════════════
+# Define when the module offers multiple implementation alternatives.
+# User can select via prompt keywords, or default is used.
+# See: "Module Variants" section below for detailed documentation.
+
+variants:
+  http_client:
+    description: "HTTP client implementation"
+    default: restclient
+    options:
+      restclient:
+        description: "Spring 6.1+ RestClient (recommended)"
+        templates:
+          - client/restclient.java.tpl
+        keywords:
+          - restclient
+          - rest client
+      feign:
+        description: "OpenFeign declarative client"
+        templates:
+          - client/feign.java.tpl
+          - config/feign-config.java.tpl
+        dependencies:
+          - groupId: org.springframework.cloud
+            artifactId: spring-cloud-starter-openfeign
+        keywords:
+          - feign
+          - openfeign
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONFIG FLAG SUBSCRIPTIONS (DEC-035) - Optional
+# ═══════════════════════════════════════════════════════════════════════════
+# Declare flags this module reacts to (published by other capabilities).
+# See: "Config Flags Subscription" section below for detailed documentation.
+
+subscribes_to_flags:
+  - flag: hateoas
+    publisher: api-architecture.domain-api
+    affects:
+      - templates/application/Response.java.tpl
+    behavior: |
+      When hateoas=true: Skip this template, mod-019 generates HATEOAS version.
+      When hateoas=false: Generate standard Response.java record.
+
+# ═══════════════════════════════════════════════════════════════════════════
 # KNOWLEDGE REFERENCES
 # ═══════════════════════════════════════════════════════════════════════════
 eri_source: eri-code-008-circuit-breaker-java-resilience4j
 adr_compliance:
   - adr-004-resilience-patterns
-
-# ═══════════════════════════════════════════════════════════════════════════
-# TEMPLATE CATALOG
-# ═══════════════════════════════════════════════════════════════════════════
-templates:
-  - source: "config/CircuitBreakerConfig.java.tpl"
-    target: "src/main/java/{{packagePath}}/infrastructure/config/CircuitBreakerConfig.java"
-  - source: "config/application-resilience.yml.tpl"
-    target: "src/main/resources/application-resilience.yml"
-    merge: true
 
 # ═══════════════════════════════════════════════════════════════════════════
 # VALIDATION (Tier-3)
@@ -213,6 +267,241 @@ templates:
 {{packagePath}}    # Package as path (com/example/service)
 {{packageName}}    # Package as dots (com.example.service)
 ```
+
+---
+
+## Module Variants (DEC-041)
+
+Variants allow a module to offer multiple implementation alternatives that users can select via prompt keywords.
+
+### Config Flags vs Variants
+
+| Concept | Config Flags | Variants |
+|---------|--------------|----------|
+| **Defined in** | capability-index.yaml | MODULE.md |
+| **Semantics** | "Is this capability active?" | "Which implementation to use?" |
+| **Scope** | Cross-module influence | Intra-module selection |
+| **Example** | `hateoas: true` | `http_client: feign` |
+
+### When to Use Variants
+
+Use variants when:
+- Your module has multiple valid implementations of the same feature
+- User might prefer one over another based on their environment
+- Each variant has different templates, dependencies, or configuration
+
+**Examples:**
+- HTTP clients: RestClient vs Feign vs RestTemplate
+- Caching: Redis vs Caffeine vs Hazelcast
+- Messaging: Kafka vs RabbitMQ vs ActiveMQ
+
+### Defining Variants in MODULE.md
+
+```yaml
+variants:
+  variant_name:                    # Identifier (used in config_flags)
+    description: "Human readable"  # Shown in documentation
+    default: option_id             # Used when no keyword detected
+    options:
+      option_id:
+        description: "Option description"
+        templates:                 # Templates specific to this option
+          - path/to/template.tpl
+        dependencies:              # Additional Maven deps (optional)
+          - groupId: org.example
+            artifactId: example-lib
+        keywords:                  # Prompt keywords that select this option
+          - keyword1
+          - "multi word keyword"
+```
+
+### Template Variant Header
+
+Templates for specific variants MUST include a `// Variant:` header:
+
+```java
+// Output: src/main/java/{{basePackagePath}}/client/{{Entity}}Client.java
+// Variant: feign
+
+package {{basePackage}}.client;
+
+@FeignClient(name = "{{entity}}-api")
+public interface {{Entity}}Client {
+    // Feign-specific implementation
+}
+```
+
+**Rules:**
+1. `// Variant:` must be immediately after `// Output:`
+2. Value must match an option ID in MODULE.md variants section
+3. Only ONE variant per template file
+4. Templates without `// Variant:` are always included
+
+### Variant Selection Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         VARIANT SELECTION FLOW                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. User prompt: "Create API using Feign client"                           │
+│           │                                                                 │
+│           ▼                                                                 │
+│  2. Discovery: Scans prompt for variant keywords                           │
+│     → Finds "feign" → matches mod-017.http_client.feign                    │
+│     → Output: variant_selections: {"mod-017.http_client": "feign"}         │
+│           │                                                                 │
+│           ▼                                                                 │
+│  3. Context: Resolves variant to config_flags                              │
+│     → config_flags: {http_client: "feign"}                                 │
+│           │                                                                 │
+│           ▼                                                                 │
+│  4. CodeGen: Filters templates by // Variant: header                       │
+│     → Only includes templates with "// Variant: feign"                     │
+│     → Skips "// Variant: restclient" templates                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Complete Example
+
+**MODULE.md:**
+```yaml
+variants:
+  http_client:
+    description: "HTTP client implementation for System API calls"
+    default: restclient
+    options:
+      restclient:
+        description: "Spring 6.1+ RestClient (recommended)"
+        templates:
+          - client/restclient.java.tpl
+        keywords:
+          - restclient
+          - rest client
+          - webclient
+      feign:
+        description: "OpenFeign declarative client"
+        templates:
+          - client/feign.java.tpl
+          - config/feign-config.java.tpl
+        dependencies:
+          - groupId: org.springframework.cloud
+            artifactId: spring-cloud-starter-openfeign
+        keywords:
+          - feign
+          - openfeign
+          - declarative client
+```
+
+**templates/client/restclient.java.tpl:**
+```java
+// Output: src/main/java/{{basePackagePath}}/client/{{Entity}}Client.java
+// Variant: restclient
+
+@Component
+public class {{Entity}}Client {
+    private final RestClient restClient;
+    // RestClient implementation...
+}
+```
+
+**templates/client/feign.java.tpl:**
+```java
+// Output: src/main/java/{{basePackagePath}}/client/{{Entity}}Client.java
+// Variant: feign
+
+@FeignClient(name = "{{entity}}-api")
+public interface {{Entity}}Client {
+    // Feign declarative interface...
+}
+```
+
+---
+
+## Config Flag Subscriptions (DEC-035)
+
+Modules can **subscribe** to config flags published by other modules. This enables cross-module influence without tight coupling.
+
+### Purpose
+
+Feature modules (e.g., mod-019 HATEOAS) publish flags that affect code generation in core modules (e.g., mod-015's Response.java). The subscriber module declares which flags affect its templates and how.
+
+### Declaring Subscriptions (MODULE.md)
+
+Add a `subscribes_to_flags` section to your MODULE.md:
+
+```yaml
+# In MODULE.md frontmatter or dedicated section
+subscribes_to_flags:
+  - flag: hateoas
+    affects:
+      - templates/application/dto/Response.java.tpl
+    behavior: |
+      When true:  Generate class extending RepresentationModel (HATEOAS support)
+      When false: Generate record (immutable DTO, no HATEOAS)
+  
+  - flag: pagination
+    affects:
+      - templates/adapter/rest/Controller.java.tpl
+    behavior: |
+      When true:  Include Pageable parameter and Page return types
+      When false: Return simple List
+```
+
+### Using Flags in Templates
+
+Use Mustache conditionals with the `config` object:
+
+```java
+// Response.java.tpl
+
+{{#config.hateoas}}
+// HATEOAS version - class with RepresentationModel
+import org.springframework.hateoas.RepresentationModel;
+
+public class {{Entity}}Response extends RepresentationModel<{{Entity}}Response> {
+    {{#fields}}
+    private {{type}} {{fieldName}};
+    {{/fields}}
+    
+    // getters, setters, factory methods...
+}
+{{/config.hateoas}}
+
+{{^config.hateoas}}
+// Simple version - immutable record
+public record {{Entity}}Response(
+    {{#fields}}
+    {{type}} {{fieldName}}{{^last}},{{/last}}
+    {{/fields}}
+) {
+    public static {{Entity}}Response from({{Entity}} entity) {
+        // mapping logic...
+    }
+}
+{{/config.hateoas}}
+```
+
+### Conditional Syntax Reference
+
+| Syntax | Meaning |
+|--------|---------|
+| `{{#config.flagName}}...{{/config.flagName}}` | Render if flag is true |
+| `{{^config.flagName}}...{{/config.flagName}}` | Render if flag is false or undefined |
+
+### Governance
+
+- Document all subscriptions in MODULE.md
+- Each subscription should specify `flag`, `affects` (templates), and `behavior`
+- Check ENABLEMENT-MODEL-v3.0.md for the Standard Flags Registry
+- Orphan flags (published but not subscribed) should be investigated
+
+### See Also
+
+- DEC-035: Config Flags Pub/Sub Pattern
+- CAPABILITY.md: `publishes_flags` attribute
+- ENABLEMENT-MODEL-v3.0.md: Standard Flags Registry
 
 ---
 

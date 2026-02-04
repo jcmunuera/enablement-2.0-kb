@@ -1989,3 +1989,626 @@ After running `assemble-validation.sh`, the `validation/` directory should conta
 - Tier-3: N scripts (one per module with validation/*.sh)
 
 **Model version:** 3.0.10-014
+
+---
+
+## DEC-035: Config Flags Pub/Sub Pattern {#dec-035}
+
+**Fecha:** 2026-02-03  
+**Estado:** ✅ Aprobado  
+**Versión modelo:** 3.0.11
+
+### Contexto
+
+Feature modules need to influence code generation in core modules without tight coupling. Example: mod-019 (HATEOAS) needs mod-015's `Response.java` to extend `RepresentationModel` instead of being a record.
+
+**The problem:**
+- mod-015 generates `Response.java` (core)
+- mod-019 activates HATEOAS feature
+- Both modules are in Phase 1 (STRUCTURAL)
+- No explicit mechanism for mod-019 to influence mod-015's output
+
+**Previous attempts:**
+- Template priority by module number (arbitrary, doesn't scale)
+- Duplicate templates in feature modules (duplication, maintenance burden)
+
+### Decisión
+
+Implement a **Publish/Subscribe model for config flags**:
+
+1. **Publishers** (feature capabilities) declare flags they activate
+2. **Subscribers** (core modules/templates) declare which flags affect their behavior
+3. Flags propagate through `generation-context.json`
+4. Templates use conditional logic based on flags
+
+### Modelo Pub/Sub
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     CONFIG FLAGS REGISTRY                           │
+├─────────────────────────────────────────────────────────────────────┤
+│  Flag              │ Publishers         │ Subscribers              │
+├────────────────────┼────────────────────┼──────────────────────────┤
+│  hateoas           │ mod-019            │ mod-015 (Response.tpl)   │
+│  pagination        │ mod-019            │ mod-015 (Controller.tpl) │
+│  jpa               │ mod-016            │ mod-015 (Entity.tpl)     │
+│  systemapi         │ mod-017            │ mod-015 (Repository.tpl) │
+│  circuit-breaker   │ mod-001            │ mod-017 (Adapter.tpl)    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Sintaxis
+
+**Publisher (capability-index.yaml):**
+```yaml
+api-architecture:
+  features:
+    domain-api:
+      module: mod-code-019-api-public-exposure-java-spring
+      publishes_flags:
+        hateoas: true
+        pagination: true
+```
+
+**Subscriber (MODULE.md):**
+```yaml
+subscribes_to_flags:
+  - flag: hateoas
+    affects:
+      - templates/application/dto/Response.java.tpl
+    behavior: |
+      true  → class extends RepresentationModel
+      false → record (immutable DTO)
+```
+
+**Template conditional:**
+```java
+{{#config.hateoas}}
+public class {{Entity}}Response extends RepresentationModel<{{Entity}}Response> {
+{{/config.hateoas}}
+{{^config.hateoas}}
+public record {{Entity}}Response(
+{{/config.hateoas}}
+```
+
+**Runtime (generation-context.json):**
+```json
+{
+  "config_flags": {
+    "hateoas": true,
+    "pagination": true
+  }
+}
+```
+
+### Beneficios de Governance
+
+1. **Visibilidad**: Query todas las relaciones pub/sub
+2. **Análisis de impacto**: "Si activo mod-019, ¿qué templates cambian?"
+3. **Validación**: Detectar flags huérfanos o sin publisher
+4. **Documentación**: Generar matriz de dependencias automáticamente
+
+### Documentos Actualizados
+
+| Documento | Cambio |
+|-----------|--------|
+| `model/ENABLEMENT-MODEL-v3.0.md` | Nueva sección: Config Flags Pub/Sub |
+| `model/standards/authoring/CAPABILITY.md` | Atributo: `publishes_flags` |
+| `model/standards/authoring/MODULE.md` | Sección: `subscribes_to_flags` |
+| `capability-index.yaml` | mod-019 publica `hateoas` |
+| `mod-015/MODULE.md` | Suscribe a `hateoas` |
+| `mod-015/Response.java.tpl` | Condicional en `config.hateoas` |
+
+### Justificación
+
+- **Desacoplamiento**: Modules no se conocen, solo flags
+- **Escalabilidad**: Nuevos flags sin modificar código existente
+- **Governance**: Relaciones explícitas y auditables
+- **Simplicidad**: Un template por artifact, lógica condicional interna
+
+**Modelo version:** 3.0.11
+
+---
+
+## DEC-036: Explicit Template Output Paths {#dec-036}
+
+**Fecha:** 2026-02-03  
+**Estado:** Implementado  
+**Contexto:** Orchestration Session - E2E Validation
+
+### Problema
+
+Template output paths using `...` (e.g., `{{basePackagePath}}/.../Application.java`) caused:
+1. Manifest checker couldn't resolve expected file paths
+2. False warnings about "missing" files that were actually generated
+3. Reduced governance visibility
+
+### Decisión
+
+All template `// Output:` comments must use **explicit, resolvable paths**:
+
+| Before (ambiguous) | After (explicit) |
+|--------------------|------------------|
+| `{{basePackagePath}}/.../Application.java` | `{{basePackagePath}}/{{ServiceName}}Application.java` |
+| `{{basePackagePath}}/.../CreateRequest.java` | `{{basePackagePath}}/application/dto/Create{{Entity}}Request.java` |
+| `{{basePackagePath}}/.../application.yml` | `src/main/resources/application.yml` |
+
+### Variables Soportadas por Manifest Checker
+
+| Variable | Resolución |
+|----------|------------|
+| `{{basePackagePath}}` | `com/bank/customer` |
+| `{{Entity}}` | `Customer` |
+| `{{entity}}` | `customer` |
+| `{{ServiceName}}` | `CustomerApi` |
+| `{{entityPlural}}` | `customers` |
+
+### Justificación
+
+- **Governance**: Manifest checker validates 100% of expected outputs
+- **Determinism**: Clear contract between template and generated file
+- **Debugging**: Easy to trace which template produces which file
+
+**Modelo version:** 3.0.12
+
+---
+
+## DEC-037: Mandatory Enum Generation Rule {#dec-037}
+
+**Fecha:** 2026-02-03  
+**Estado:** Implementado  
+**Contexto:** Compilation failure due to missing `CustomerStatus.java`
+
+### Problema
+
+LLM generated code referencing `CustomerStatus` enum type but didn't generate the enum file, causing 13 compilation errors.
+
+### Decisión
+
+Added **CRITICAL rule** to CodeGen prompt:
+
+> "If ANY field uses an Enum type (e.g., CustomerStatus, OrderType), you MUST generate the enum file using `Enum.java.tpl`."
+
+### Regla en Prompt
+
+```
+## CRITICAL: Enum Generation
+
+If ANY field uses an Enum type, you MUST generate the enum file.
+Use Enum.java.tpl from mod-015:
+- Output path: {{basePackagePath}}/domain/model/{{EnumName}}.java
+
+Example: If Customer has field `status` of type `CustomerStatus`, 
+generate CustomerStatus.java with values: ACTIVE, INACTIVE, SUSPENDED, PENDING
+
+Rule: Never reference an enum type without generating its definition file.
+```
+
+### Justificación
+
+- **Compilation guarantee**: All referenced types must exist
+- **Explicit instruction**: LLM needs clear directive for dynamic artifacts
+- **Fail-fast**: Better to over-generate than compile-fail
+
+**Modelo version:** 3.0.12
+
+---
+
+## DEC-038: Traceability Manifest Structure {#dec-038}
+
+**Fecha:** 2026-02-03  
+**Estado:** Implementado  
+**Contexto:** traceability-check.sh failing on valid manifests
+
+### Problema
+
+Validator expected old manifest structure (`service`, `generator`, `capabilities`) but actual manifests use new structure (`generation`, `enablement`, `modules`).
+
+### Decisión
+
+Align validator with actual manifest structure produced by orchestration:
+
+**Expected Manifest Structure:**
+```json
+{
+  "generation": {
+    "id": "uuid",
+    "timestamp": "ISO-8601",
+    "service_name": "customer-api"
+  },
+  "enablement": {
+    "version": "3.0.x",
+    "domain": "code",
+    "flow": "flow-generate"
+  },
+  "modules": [
+    {"id": "mod-xxx", "capability": "...", "phase": 1}
+  ],
+  "status": {
+    "generation": "SUCCESS",
+    "validation": "PENDING"
+  },
+  "metrics": {
+    "files_generated": 34,
+    "test_files": 7
+  }
+}
+```
+
+### Validator Checks (Updated)
+
+| Check | Field | Required |
+|-------|-------|----------|
+| Generation info | `generation` | ✅ Yes |
+| Enablement info | `enablement` | ✅ Yes |
+| Module list | `modules` | ⚠️ Warn |
+| Status | `status` | ⚠️ Warn |
+| Service name | `generation.service_name` | ⚠️ Warn |
+| Version | `enablement.version` | ⚠️ Warn |
+| Timestamp | `generation.timestamp` | ⚠️ Warn |
+
+### Justificación
+
+- **Consistency**: Validator matches actual output
+- **Single source of truth**: Orchestration defines structure, validators follow
+- **Backward compatibility**: Warns but doesn't fail on optional fields
+
+**Modelo version:** 3.0.12
+
+---
+
+## DEC-039: Phase 2 Reproducibility Rules {#dec-039}
+
+**Fecha:** 2026-02-03  
+**Estado:** Implementado  
+**Contexto:** Analysis of 3 E2E runs showed cosmetic variations in Phase 2 files
+
+### Problema
+
+Phase 2 (SystemAPI) files showed variations across runs:
+
+| Variation Type | Example | Impact |
+|----------------|---------|--------|
+| Trailing newlines | Run06 missing final `\n` | Cosmetic |
+| Helper methods | `toUppercase()` vs inline null checks | Structural |
+| Unicode in comments | `↔` vs `<->` | Cosmetic |
+
+### Decisión
+
+Implement three-pronged approach:
+
+#### 1. Post-Processing (Orchestration)
+```python
+# Ensure content ends with exactly one newline
+normalized_content = content.rstrip() + '\n'
+```
+
+#### 2. Prompt Rules (CodeGen)
+```
+## CRITICAL: Code Style Consistency
+
+### 1. Trailing Newlines
+- Every file MUST end with exactly ONE newline
+
+### 2. Helper Methods Style
+- ALWAYS create private helper methods for null-safe transformations
+- Use EXACT names: toUpperCase(), toLowerCase(), toProperCase()
+
+### 3. ASCII Only in Comments
+- Use <-> for bidirectional arrows, NOT ↔
+```
+
+#### 3. Template Cleanup (KB)
+- Replace all Unicode arrows in templates with ASCII equivalents
+
+### Análisis de Variaciones
+
+**Before DEC-039:**
+| File | Run05 | Run06 | Run07 |
+|------|-------|-------|-------|
+| CustomerSystemApiMapper.java | 189 | 174 | 184 |
+| CustomerSystemApiAdapter.java | 68 | 67 | 68 |
+
+**Expected After DEC-039:**
+- Trailing newlines: 100% consistent
+- Helper methods: 100% consistent (always use helpers)
+- Unicode: 100% consistent (ASCII only)
+
+### Archivos Modificados
+
+**Orchestration:**
+- `scripts/run-codegen.sh` - Added style rules + trailing newline normalization
+
+**KB Templates:**
+- `mod-001/templates/annotation/chain-fallback.java.tpl`
+- `mod-015/templates/application/dto/Response.java.tpl`
+- `mod-015/templates/domain/Entity.java.tpl`
+- `mod-017/templates/mapper/SystemApiMapper.java.tpl`
+
+### Justificación
+
+- **Determinism**: Reduce LLM interpretation variance
+- **Diff-friendly**: Consistent outputs for code review
+- **CI/CD**: Reproducible builds across environments
+
+**Modelo version:** 3.0.13
+
+---
+
+## DEC-040: HTTP Client Variant Selection {#dec-040}
+
+**Fecha:** 2026-02-04  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+mod-017 tiene 3 templates de cliente HTTP (`feign.java.tpl`, `restclient.java.tpl`, `resttemplate.java.tpl`) todos declarando el mismo output path (`{{Entity}}SystemApiClient.java`). El LLM debería elegir uno, pero en pruebas de reproducibilidad (Run 03 del 2026-02-04), generó los tres con nombres diferentes.
+
+### Problema
+
+| Run | Files | Extra Files |
+|-----|-------|-------------|
+| 01 | 32 | - |
+| 02 | 32 | - |
+| 03 | 34 | `CustomerSystemApiRestClient.java`, `CustomerSystemApiRestTemplateClient.java` |
+
+El LLM interpretó que debía generar implementaciones alternativas cuando solo debe usar UNA.
+
+### Decisión
+
+Implementar **variant selection via Config Flags**:
+
+1. `persistence.systemapi` publica flag `http_client: restclient` (default)
+2. Templates declaran `// Variant: <variant_name>`
+3. CodeGen filtra templates que no coincidan con la variante activa
+
+### Implementación
+
+**1. capability-index.yaml** (KB):
+```yaml
+persistence:
+  features:
+    systemapi:
+      publishes_flags:
+        http_client: restclient  # Options: restclient, feign, resttemplate
+```
+
+**2. run-codegen.sh** (Orchestration):
+```python
+# Get variant from config_flags
+http_client_variant = config_flags.get('http_client', 'restclient')
+
+# Filter templates by variant
+variant_match = re.search(r'// Variant:\s*(\w+)', content)
+if variant_match:
+    if variant_match.group(1).lower() != http_client_variant.lower():
+        continue  # Skip non-matching variant
+```
+
+**3. Templates** (already have header):
+```java
+// Template: restclient.java.tpl
+// Output: {{basePackage}}/adapter/out/systemapi/client/{{Entity}}SystemApiClient.java
+// Variant: restclient
+```
+
+### Variantes Disponibles
+
+| Variant | Template | Dependencies | Notes |
+|---------|----------|--------------|-------|
+| `restclient` | restclient.java.tpl | None (Spring 6.1+) | **DEFAULT** |
+| `feign` | feign.java.tpl | spring-cloud-starter-openfeign | Declarative |
+| `resttemplate` | resttemplate.java.tpl | None | Legacy/deprecated |
+
+### Uso
+
+Para cambiar la variante, el usuario puede:
+1. Modificar el prompt: "use Feign for HTTP client"
+2. Modificar discovery-result.json manualmente
+3. (Futuro) Añadir UI para selección de variantes
+
+### Resultado Esperado
+
+- Solo 1 template de cliente incluido en el prompt
+- 100% reproducible (32 files en todos los runs)
+- Extensible a otras variantes (e.g., WebClient reactivo)
+
+**Modelo version:** 3.0.14
+
+---
+
+## DEC-041: Module Variants vs Config Flags {#dec-041}
+
+**Fecha:** 2026-02-04  
+**Estado:** ✅ Aprobado
+
+**Contexto:**  
+DEC-040 introdujo `http_client` como "config flag" publicado por `persistence.systemapi`. Pero surgió la pregunta: ¿cómo puede el usuario sobrescribir este valor vía prompt? La solución inicial (Discovery extrae override) era un parche que mezclaba conceptos.
+
+### Problema Conceptual
+
+El modelo de Config Flags (DEC-035) define:
+- **Productor**: Capability que publica un flag
+- **Consumidor**: Módulo que reacciona al flag
+
+Pero `http_client` no encaja:
+- No es una "capacidad activa" (hateoas, pagination)
+- Es una "elección de implementación" dentro de un módulo
+- El dueño natural es el módulo, no la capability
+
+### Distinción: Config Flags vs Variants
+
+| Aspecto | Config Flag | Variant |
+|---------|-------------|---------|
+| **Semántica** | ¿Está activa esta capacidad? | ¿Qué implementación usar? |
+| **Definido en** | capability-index.yaml | MODULE.md |
+| **Producido por** | Capability activa | Usuario (prompt) o default |
+| **Consumido por** | Otros módulos suscritos | El propio módulo |
+| **Ejemplo** | `hateoas: true` | `http_client: feign` |
+
+### Decisión
+
+Separar los conceptos:
+
+1. **Config Flags** - Cross-module influence (sin cambios)
+   ```
+   Capability A activa → publica flag → Module B reacciona
+   ```
+
+2. **Module Variants** - Intra-module configuration (NUEVO)
+   ```
+   Module define opciones → User selecciona (o default) → Module usa
+   ```
+
+### Modelo de Variants
+
+**Definición en MODULE.md:**
+```yaml
+# En frontmatter o sección dedicada
+variants:
+  http_client:
+    description: "HTTP client implementation"
+    default: restclient
+    options:
+      restclient:
+        description: "Spring 6.1+ RestClient"
+        templates: [client/restclient.java.tpl]
+        keywords: [restclient, "rest client"]
+      feign:
+        description: "OpenFeign declarative client"  
+        templates: [client/feign.java.tpl, config/feign-config.java.tpl]
+        keywords: [feign, openfeign, declarative]
+      resttemplate:
+        description: "Legacy RestTemplate"
+        templates: [client/resttemplate.java.tpl]
+        keywords: [resttemplate, legacy]
+```
+
+**Flujo de selección:**
+```
+1. Discovery detecta módulo + analiza prompt para keywords de variante
+2. Discovery output: variant_selections: { "mod-017.http_client": "feign" }
+3. Context Agent resuelve: usa selection o default del MODULE.md
+4. CodeGen filtra templates por variante activa
+```
+
+### Migración de DEC-040
+
+- ELIMINAR: `publishes_flags.http_client` de capability-index
+- AÑADIR: `variants.http_client` en MODULE.md de mod-017
+- ACTUALIZAR: Discovery Agent para detectar variant keywords
+- MANTENER: Filtrado por `// Variant:` en CodeGen (ya implementado)
+
+### Beneficios
+
+1. **Claridad** - Cada concepto tiene su lugar
+2. **Ownership** - Módulo define sus propias variantes
+3. **Escalable** - Nuevos módulos añaden variantes sin tocar modelo global
+4. **Discoverable** - Catálogo en MODULE.md, visible para el usuario
+5. **Validable** - Solo opciones definidas son válidas
+
+### Ejemplos de Uso
+
+**Prompt del usuario:**
+```
+Necesito una Customer API con integración a System API usando Feign client
+```
+
+**Discovery detecta:**
+- Capability: persistence.systemapi → mod-017
+- Variant keyword: "feign" → mod-017.http_client = feign
+
+**Sin mención en prompt:**
+- Usa default de MODULE.md: restclient
+
+**Modelo version:** 3.0.15
+
+---
+
+## DEC-042: Stack-Specific Style Files {#dec-042}
+
+**Fecha:** 2026-02-04  
+**Estado:** ✅ Implementado
+
+**Contexto:**  
+Las Code Style Guidelines en MODULE.md (DEC-041) no se seguían consistentemente por el LLM. En pruebas, 4/5 runs usaron UUID en lugar de String para IDs en DTOs, a pesar de la documentación.
+
+### Problema
+
+| Ubicación | Efectividad | Motivo |
+|-----------|-------------|--------|
+| MODULE.md | ~80% | LLM puede ignorar documentación |
+| Prompt CodeGen (hardcoded) | ~95% | Pero agente pierde agnóstico |
+| Template hardcoded | 100% | Pero inflexible |
+
+### Decisión
+
+Crear **Stack-Specific Style Files** que se cargan dinámicamente según el stack detectado:
+
+```
+KB/
+└── runtime/
+    └── codegen/
+        └── styles/
+            ├── java-spring.style.md   ← Reglas Java/Spring
+            └── nodejs.style.md        ← Futuro
+```
+
+### Flujo
+
+```
+1. Discovery detecta stack: java-springboot
+         │
+         ▼
+2. CodeGen carga: runtime/codegen/styles/java-spring.style.md
+         │
+         ▼
+3. Contenido se inyecta en prompt (reemplaza {{STYLE_RULES}})
+         │
+         ▼
+4. LLM sigue reglas con alta fidelidad
+```
+
+### Contenido del Style File
+
+El fichero `java-spring.style.md` incluye reglas para:
+
+1. **DTOs** - `String` para IDs, factory method `from(entity)`
+2. **Mappers** - Helper methods con nombres exactos, orden alfabético
+3. **General** - Trailing newlines, ASCII only en comentarios
+4. **Tests** - Consistencia en setup, uso de String para IDs
+5. **Application Services** - Uso de factory methods, no @Transactional con System API
+
+### Implementación
+
+**KB:**
+- Nuevo directorio: `runtime/codegen/styles/`
+- Nuevo fichero: `java-spring.style.md`
+
+**Orchestration (run-codegen.sh):**
+```bash
+# Load style file based on stack
+STACK=$(python3 -c "..." || echo "java-spring")
+STYLE_FILE="${KB_DIR}/runtime/codegen/styles/${STACK}.style.md"
+
+# Inject into prompt
+content.replace('{{STYLE_RULES}}', style_content)
+```
+
+### Beneficios
+
+| Aspecto | Resultado |
+|---------|-----------|
+| Agente agnóstico | ✅ Solo carga fichero según stack |
+| Efectividad | Alta (en prompt, no en docs) |
+| Mantenibilidad | Fichero separado en KB |
+| Extensibilidad | Añadir nuevos stacks fácilmente |
+| Trazabilidad | Log indica qué style file se usó |
+
+### Relación con MODULE.md
+
+- **MODULE.md** = Documentación para humanos + referencia
+- **style.md** = Reglas para LLM (se inyectan en prompt)
+
+Las reglas pueden duplicarse, pero el style file es la fuente autoritativa para el LLM.
+
+**Modelo version:** 3.0.16

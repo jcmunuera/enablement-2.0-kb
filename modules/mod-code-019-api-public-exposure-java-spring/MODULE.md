@@ -1,8 +1,9 @@
 ---
 id: mod-code-019-api-public-exposure-java-spring
 title: "MOD-019: API Public Exposure - Java/Spring Boot"
-version: 1.1
+version: 1.2
 date: 2026-01-19
+updated: 2026-02-03
 status: Active
 derived_from: eri-code-014-api-public-exposure-java-spring
 domain: code
@@ -22,12 +23,19 @@ implements:
   stack: java-spring
   capability: api-architecture
   feature: domain-api
+
+# ═══════════════════════════════════════════════════════════════════
+# DEC-035: Config Flags Published by this Module
+# ═══════════════════════════════════════════════════════════════════
+publishes_flags:
+  hateoas: true      # Enables HATEOAS support (affects mod-015 Response.java.tpl)
+  pagination: true   # Enables pagination support
 ---
 
 # MOD-019: API Public Exposure - Java/Spring Boot
 
 **Module ID:** mod-code-019-api-public-exposure-java-spring  
-**Version:** 1.1  
+**Version:** 1.2  
 **Source ERI:** eri-code-014-api-public-exposure-java-spring  
 **Framework:** Java 17+ / Spring Boot 3.2.x  
 **Used by:** skill-code-020-generate-microservice-java-spring
@@ -46,6 +54,30 @@ Provides reusable code templates for exposing REST APIs with pagination, HATEOAS
 **Composes with:**
 - `mod-code-015-hexagonal-base-java-spring` (base structure)
 - `mod-code-001-circuit-breaker-java-resilience4j` (if calling external services)
+
+---
+
+## Config Flags Published (DEC-035)
+
+This module **publishes** config flags that affect code generation in other modules:
+
+| Flag | Value | Subscribers | Effect |
+|------|-------|-------------|--------|
+| `hateoas` | `true` | mod-015 (Response.java.tpl) | mod-015 skips Response; mod-019 generates HATEOAS version |
+| `pagination` | `true` | mod-015 (Controller.java.tpl) | Controller includes pagination parameters |
+
+These flags are collected by the Context Agent and propagate to `generation-context.json`:
+
+```json
+{
+  "config_flags": {
+    "hateoas": true,
+    "pagination": true
+  }
+}
+```
+
+See [DEC-035](../../DECISION-LOG.md#dec-035) for the Config Flags Pub/Sub pattern.
 
 ---
 

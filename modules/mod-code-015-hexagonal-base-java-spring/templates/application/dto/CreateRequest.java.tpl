@@ -2,7 +2,7 @@
 // Template: CreateRequest.java.tpl
 // Module: mod-code-015-hexagonal-base-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/.../CreateRequest.java
+// Output: {{basePackagePath}}/application/dto/Create{{Entity}}Request.java
 // Purpose: 
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES: {{Entity}} {{basePackage}} {{fieldName}} {{type}} {{validation.maxLength}} {{validation.pattern}} 
@@ -10,12 +10,12 @@
 
 package {{basePackage}}.application.dto;
 
+import {{basePackage}}.domain.model.*;
 import jakarta.validation.constraints.*;
-{{#fields}}
-{{#if validation.pattern}}
-import jakarta.validation.constraints.Pattern;
-{{/if}}
-{{/fields}}
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Request DTO for creating a new {{Entity}}.

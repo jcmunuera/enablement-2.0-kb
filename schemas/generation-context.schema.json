@@ -3,7 +3,7 @@
   "$id": "enablement/schemas/generation-context.schema.json",
   "title": "Generation Context",
   "description": "Schema for generation-context.json - contains ALL resolved variables for deterministic code generation (DEC-024)",
-  "version": "1.0",
+  "version": "1.1",
   "type": "object",
   "required": ["version", "timestamp", "run_id", "service", "entities", "templates"],
   "additionalProperties": false,
@@ -30,6 +30,22 @@
       "type": "string",
       "pattern": "^\\d{8}_\\d{6}$",
       "description": "Generation run identifier (YYYYMMDD_HHMMSS)"
+    },
+    
+    "config_flags": {
+      "type": "object",
+      "description": "Config flags collected from active features (DEC-035 Pub/Sub pattern). Templates use {{#config.flagName}} conditionals.",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "examples": [
+        {
+          "hateoas": true,
+          "pagination": true,
+          "jpa": false,
+          "systemapi": true
+        }
+      ]
     },
     
     "service": {

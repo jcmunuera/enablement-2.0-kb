@@ -1,6 +1,11 @@
 package {{basePackage}}.application.dto;
 
+import {{basePackage}}.domain.model.*;
 import jakarta.validation.constraints.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Request DTO for updating an existing {{Entity}}.

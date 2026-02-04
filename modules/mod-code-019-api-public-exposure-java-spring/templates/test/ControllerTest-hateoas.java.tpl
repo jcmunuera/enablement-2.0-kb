@@ -2,8 +2,8 @@
 // Template: ControllerTest-hateoas.java.tpl
 // Module: mod-code-019-api-public-exposure-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/infrastructure/adapter/in/rest/{{Entity}}ControllerTest.java
-// Purpose: Unit test for REST controller WITH HATEOAS (WebMvcTest)
+// Output: {{basePackagePath}}/infrastructure/adapter/in/rest/{{Entity}}ControllerHateoasTest.java
+// Purpose: Unit test for REST controller HATEOAS features (ModelAssembler, links)
 // ═══════════════════════════════════════════════════════════════════════════════
 // TTB-001 FIX: This template properly mocks the ModelAssembler for HATEOAS tests
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -43,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ERI Reference: eri-code-014-api-public-exposure-java-spring
  */
 @WebMvcTest({{Entity}}Controller.class)
-class {{Entity}}ControllerTest {
+class {{Entity}}ControllerHateoasTest {
 
     @Autowired
     private MockMvc mockMvc;

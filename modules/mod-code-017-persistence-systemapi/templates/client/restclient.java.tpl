@@ -5,7 +5,8 @@
 
 package {{basePackage}}.adapter.out.systemapi.client;
 
-import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiRequest;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,15 +39,15 @@ public class {{Entity}}SystemApiClient {
     
     private static final String RESOURCE_PATH = "{{resourcePath}}";
     
-    public {{Entity}}Dto getById(String id) {
+    public {{Entity}}SystemApiResponse getById(String id) {
         return restClient.get()
             .uri(baseUrl + RESOURCE_PATH + "/{id}", id)
             .headers(this::addCorrelationHeaders)
             .retrieve()
-            .body({{Entity}}Dto.class);
+            .body({{Entity}}SystemApiResponse.class);
     }
     
-    public List<{{Entity}}Dto> getAll() {
+    public List<{{Entity}}SystemApiResponse> getAll() {
         return restClient.get()
             .uri(baseUrl + RESOURCE_PATH)
             .headers(this::addCorrelationHeaders)
@@ -54,14 +55,14 @@ public class {{Entity}}SystemApiClient {
             .body(new ParameterizedTypeReference<>() {});
     }
     
-    public {{Entity}}Dto save({{Entity}}Dto dto) {
+    public {{Entity}}SystemApiResponse save({{Entity}}SystemApiRequest request) {
         return restClient.post()
             .uri(baseUrl + RESOURCE_PATH)
             .headers(this::addCorrelationHeaders)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(dto)
+            .body(request)
             .retrieve()
-            .body({{Entity}}Dto.class);
+            .body({{Entity}}SystemApiResponse.class);
     }
     
     public void deleteById(String id) {

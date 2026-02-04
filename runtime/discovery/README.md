@@ -1,7 +1,7 @@
 # Discovery
 
-**Version:** 3.0  
-**Last Updated:** 2026-01-20
+**Version:** 3.1  
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -10,6 +10,8 @@
 This folder contains the **discovery system** that maps user prompts to capabilities, features, and modules.
 
 > **v3.0:** All discovery goes through a **single path** via `capability-index.yaml`. Skills have been eliminated.
+> 
+> **v3.1:** Added **Config Flags Pub/Sub** pattern for cross-module influence (DEC-035).
 
 ---
 
@@ -24,7 +26,7 @@ This folder contains the **discovery system** that maps user prompts to capabili
 
 ---
 
-## Discovery Flow (v3.0)
+## Discovery Flow (v3.1)
 
 ```
 User Prompt + Context
@@ -77,7 +79,18 @@ User Prompt + Context
      │
      ▼
 ┌─────────────────────────────────────────┐
-│ STEP 6: SELECT FLOW                     │
+│ STEP 6: COLLECT CONFIG FLAGS (v3.1)     │
+│                                         │
+│ For each active feature, collect        │
+│ `publishes_flags` → config_flags        │
+│                                         │
+│ These flags propagate to templates      │
+│ via generation-context.json             │
+└─────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────┐
+│ STEP 7: SELECT FLOW                     │
 │                                         │
 │ No existing code → flow-generate        │
 │ Existing code    → flow-transform       │
@@ -92,9 +105,64 @@ User Prompt + Context
 │ - features: [...]                       │
 │ - modules: [...]                        │
 │ - config: {...}                         │
+│ - config_flags: {...} ← NEW in v3.1     │
 │ - input_spec: {...}                     │
 └─────────────────────────────────────────┘
 ```
+
+---
+
+## Config Flags Pub/Sub (v3.1, DEC-035)
+
+Feature modules can **publish** config flags that affect code generation in other modules.
+
+### Flow
+
+```
+┌─────────────────┐        ┌──────────────────┐        ┌─────────────────┐
+│   CAPABILITY    │        │  GENERATION      │        │    TEMPLATE     │
+│   INDEX         │───────►│  CONTEXT         │───────►│                 │
+│                 │        │                  │        │                 │
+│ domain-api:     │        │ config_flags:    │        │ {{#config.hateoas}}
+│  publishes_flags│        │   hateoas: true  │        │ public class...
+│    hateoas: true│        │                  │        │ {{/config.hateoas}}
+└─────────────────┘        └──────────────────┘        └─────────────────┘
+     Publisher                  Runtime                   Subscriber
+```
+
+### Publisher Declaration (capability-index.yaml)
+
+```yaml
+api-architecture:
+  features:
+    domain-api:
+      module: mod-code-019-api-public-exposure-java-spring
+      publishes_flags:
+        hateoas: true
+        pagination: true
+```
+
+### Subscriber Usage (Template)
+
+```java
+{{#config.hateoas}}
+public class {{Entity}}Response extends RepresentationModel<{{Entity}}Response> {
+{{/config.hateoas}}
+{{^config.hateoas}}
+public record {{Entity}}Response(
+{{/config.hateoas}}
+```
+
+### Standard Flags
+
+| Flag | Publisher | Subscribers | Description |
+|------|-----------|-------------|-------------|
+| `hateoas` | mod-019 | mod-015 (Response.tpl) | HATEOAS support |
+| `pagination` | mod-019 | mod-015 (Controller.tpl) | Pagination support |
+| `jpa` | mod-016 | mod-015 (Entity.tpl) | JPA annotations |
+| `systemapi` | mod-017 | mod-015 (Repository.tpl) | System API persistence |
+
+See [DEC-035](../../DECISION-LOG.md#dec-035) for full details.
 
 ---
 

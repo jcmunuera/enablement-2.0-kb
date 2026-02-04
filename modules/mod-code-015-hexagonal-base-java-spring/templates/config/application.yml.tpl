@@ -2,7 +2,7 @@
 // Template: application.yml.tpl
 // Module: mod-code-015-hexagonal-base-java-spring
 // ═══════════════════════════════════════════════════════════════════════════════
-// Output: {{basePackagePath}}/.../application.yml
+// Output: src/main/resources/application.yml
 // Purpose: 
 // ═══════════════════════════════════════════════════════════════════════════════
 // REQUIRED VARIABLES: {{basePackage}} {{serviceName}} 

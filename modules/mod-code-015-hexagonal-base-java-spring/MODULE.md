@@ -1,9 +1,9 @@
 ---
 id: mod-code-015-hexagonal-base-java-spring
 title: "MOD-015: Hexagonal Base - Java/Spring Boot"
-version: 1.2
+version: 1.3
 date: 2025-12-01
-updated: 2025-12-22
+updated: 2026-02-03
 status: Active
 derived_from: eri-code-001-hexagonal-light-java-spring
 domain: code
@@ -23,12 +23,25 @@ implements:
   stack: java-spring
   capability: architecture
   feature: hexagonal-light
+
+# ═══════════════════════════════════════════════════════════════════
+# DEC-035: Config Flag Subscriptions
+# ═══════════════════════════════════════════════════════════════════
+subscribes_to_flags:
+  - flag: hateoas
+    publisher: mod-code-019-api-public-exposure-java-spring
+    affects:
+      - templates/application/dto/Response.java.tpl
+    behavior: |
+      When hateoas=true:  DO NOT generate Response.java from this module.
+                          mod-019 will generate HATEOAS version instead.
+      When hateoas=false: Generate Response.java as immutable record.
 ---
 
 # MOD-015: Hexagonal Base - Java/Spring Boot
 
 **Module ID:** mod-code-015-hexagonal-base-java-spring  
-**Version:** 1.2  
+**Version:** 1.3  
 **Source ERI:** eri-code-001-hexagonal-light-java-spring  
 **Framework:** Java 17+ / Spring Boot 3.2.x  
 **Used by:** skill-code-020-generate-microservice-java-spring
@@ -38,6 +51,61 @@ implements:
 ## Purpose
 
 Provides reusable code templates for generating Hexagonal Light microservices in Java/Spring Boot. Templates use `{{placeholder}}` variables that are replaced dynamically during code generation.
+
+---
+
+## Code Style Guidelines
+
+The following conventions ensure consistent, reproducible code generation:
+
+### DTOs (Request/Response)
+
+| Rule | Rationale |
+|------|-----------|
+| Use `String` for ID fields, not `UUID` | JSON serialization is identical; String is simpler and avoids type conversion in tests |
+| Provide static factory method `from(Entity)` | Encapsulates mapping logic; cleaner service code |
+| Use constructor for required fields | Enables immutability and validation |
+
+**Example:**
+```java
+public class CustomerResponse {
+    private String id;  // ✅ String, not UUID
+    
+    public static CustomerResponse from(Customer entity) {  // ✅ Factory method
+        CustomerResponse response = new CustomerResponse();
+        response.id = entity.getId().value().toString();
+        // ... other fields
+        return response;
+    }
+}
+```
+
+### Mappers
+
+| Rule | Rationale |
+|------|-----------|
+| Create private helper methods for transformations | Reduces duplication; consistent naming |
+| Use EXACT names: `toUpperCase()`, `toLowerCase()`, `toProperCase()` | Predictable code structure |
+| Place helper methods at end of class | Consistent organization |
+
+**Example:**
+```java
+private String toUpperCase(String value) {
+    return value != null ? value.toUpperCase() : null;
+}
+```
+
+---
+
+## Config Flag Subscriptions (DEC-035)
+
+This module **subscribes** to config flags published by feature modules:
+
+| Flag | Publisher | Affected Template | Behavior |
+|------|-----------|-------------------|----------|
+| `hateoas` | mod-019 | Response.java.tpl | When true: skip (mod-019 generates HATEOAS version). When false: generate record. |
+
+See [DEC-035](../../DECISION-LOG.md#dec-035) for the Config Flags Pub/Sub pattern.
 
 ---
 
@@ -58,7 +126,7 @@ templates/
 │   └── dto/
 │       ├── CreateRequest.java.tpl    # Create request DTO
 │       ├── UpdateRequest.java.tpl    # Update request DTO
-│       └── Response.java.tpl         # Response DTO
+│       └── Response.java.tpl         # Response DTO (basic, no HATEOAS)
 ├── adapter/
 │   └── RestController.java.tpl       # Inbound REST adapter
 ├── infrastructure/

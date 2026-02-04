@@ -5,7 +5,8 @@
 
 package {{basePackage}}.adapter.out.systemapi.client;
 
-import {{basePackage}}.adapter.systemapi.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiRequest;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,25 +39,25 @@ public class {{Entity}}SystemApiClient {
     
     private static final String RESOURCE_PATH = "{{resourcePath}}";
     
-    public {{Entity}}Dto getById(String id) {
+    public {{Entity}}SystemApiResponse getById(String id) {
         String url = baseUrl + RESOURCE_PATH + "/" + id;
         HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
         
-        ResponseEntity<{{Entity}}Dto> response = restTemplate.exchange(
+        ResponseEntity<{{Entity}}SystemApiResponse> response = restTemplate.exchange(
             url,
             HttpMethod.GET,
             entity,
-            {{Entity}}Dto.class
+            {{Entity}}SystemApiResponse.class
         );
         
         return response.getBody();
     }
     
-    public List<{{Entity}}Dto> getAll() {
+    public List<{{Entity}}SystemApiResponse> getAll() {
         String url = baseUrl + RESOURCE_PATH;
         HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
         
-        ResponseEntity<List<{{Entity}}Dto>> response = restTemplate.exchange(
+        ResponseEntity<List<{{Entity}}SystemApiResponse>> response = restTemplate.exchange(
             url,
             HttpMethod.GET,
             entity,
@@ -66,15 +67,15 @@ public class {{Entity}}SystemApiClient {
         return response.getBody();
     }
     
-    public {{Entity}}Dto save({{Entity}}Dto dto) {
+    public {{Entity}}SystemApiResponse save({{Entity}}SystemApiRequest request) {
         String url = baseUrl + RESOURCE_PATH;
-        HttpEntity<{{Entity}}Dto> entity = new HttpEntity<>(dto, createHeaders());
+        HttpEntity<{{Entity}}SystemApiRequest> entity = new HttpEntity<>(request, createHeaders());
         
-        ResponseEntity<{{Entity}}Dto> response = restTemplate.exchange(
+        ResponseEntity<{{Entity}}SystemApiResponse> response = restTemplate.exchange(
             url,
             HttpMethod.POST,
             entity,
-            {{Entity}}Dto.class
+            {{Entity}}SystemApiResponse.class
         );
         
         return response.getBody();

@@ -1,3 +1,11 @@
+<!-- ╔═══════════════════════════════════════════════════════════════╗ -->
+<!-- ║ DEPRECATED: Use dependencies.yaml instead                    ║ -->
+<!-- ║ This file is kept for reference only. Maven dependencies     ║ -->
+<!-- ║ are now declared in dependencies.yaml and consolidated by    ║ -->
+<!-- ║ the Context Agent into generation-context.json.              ║ -->
+<!-- ║ See ODEC-017 in DECISION-LOG.md                              ║ -->
+<!-- ╚═══════════════════════════════════════════════════════════════╝ -->
+
 <!-- Template: pom-jpa.xml.tpl -->
 <!-- Output: pom.xml (merge into dependencies section) -->
 <!-- Purpose: JPA persistence dependencies -->

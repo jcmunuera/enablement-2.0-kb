@@ -15,9 +15,11 @@
 package {{basePackage}}.adapter.out.systemapi;
 
 import {{basePackage}}.adapter.out.systemapi.client.{{Entity}}SystemApiClient;
-import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}Dto;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiRequest;
+import {{basePackage}}.adapter.out.systemapi.dto.{{Entity}}SystemApiResponse;
 import {{basePackage}}.adapter.out.systemapi.mapper.{{Entity}}SystemApiMapper;
 import {{basePackage}}.domain.model.{{Entity}};
+import {{basePackage}}.domain.model.{{Entity}}Id;
 import {{basePackage}}.domain.repository.{{Entity}}Repository;
 
 import lombok.RequiredArgsConstructor;
@@ -43,16 +45,16 @@ public class {{Entity}}SystemApiAdapter implements {{Entity}}Repository {
     private final {{Entity}}SystemApiMapper mapper;
     
     @Override
-    public Optional<{{Entity}}> findById(String id) {
+    public Optional<{{Entity}}> findById({{Entity}}Id id) {
         log.debug("Fetching {{entity}} with id: {}", id);
-        {{Entity}}Dto dto = client.getById(id);
+        {{Entity}}SystemApiResponse dto = client.getById(mapper.toMainframeId(id));
         return Optional.ofNullable(mapper.toDomain(dto));
     }
     
     @Override
     public List<{{Entity}}> findAll() {
         log.debug("Fetching all {{entity}}s");
-        List<{{Entity}}Dto> dtos = client.getAll();
+        List<{{Entity}}SystemApiResponse> dtos = client.getAll();
         return dtos.stream()
             .map(mapper::toDomain)
             .toList();
@@ -61,14 +63,20 @@ public class {{Entity}}SystemApiAdapter implements {{Entity}}Repository {
     @Override
     public {{Entity}} save({{Entity}} entity) {
         log.debug("Saving {{entity}}: {}", entity.getId());
-        {{Entity}}Dto dto = mapper.toDto(entity);
-        {{Entity}}Dto saved = client.save(dto);
+        {{Entity}}SystemApiRequest request = mapper.toRequest(entity);
+        {{Entity}}SystemApiResponse saved = client.save(request);
         return mapper.toDomain(saved);
     }
     
     @Override
-    public void deleteById(String id) {
+    public void deleteById({{Entity}}Id id) {
         log.debug("Deleting {{entity}} with id: {}", id);
-        client.deleteById(id);
+        client.deleteById(mapper.toMainframeId(id));
+    }
+    
+    @Override
+    public boolean existsById({{Entity}}Id id) {
+        log.debug("Checking existence of {{entity}} with id: {}", id);
+        return findById(id).isPresent();
     }
 }

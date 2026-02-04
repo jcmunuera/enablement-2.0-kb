@@ -409,6 +409,116 @@ modules/
 
 ---
 
+### 5. CONFIG FLAGS (v3.0.11)
+
+Config Flags enable **cross-module influence** without tight coupling. Feature modules can affect code generation in core modules through a publish/subscribe pattern.
+
+#### The Problem
+
+Feature modules (e.g., HATEOAS) need to influence core module outputs (e.g., Response.java) but:
+- Modules should not directly reference each other
+- Templates should remain in their owning module
+- The relationship should be explicit and governable
+
+#### The Solution: Pub/Sub Pattern
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     CONFIG FLAGS FLOW                                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   CAPABILITY-INDEX              CONTEXT                TEMPLATE      │
+│   (publishes_flags)       (config_flags)          (conditional)     │
+│                                                                      │
+│   ┌──────────────┐        ┌──────────────┐       ┌──────────────┐   │
+│   │  mod-019     │        │              │       │  mod-015     │   │
+│   │  domain-api  │───────►│ hateoas:true │──────►│ Response.tpl │   │
+│   │              │        │              │       │              │   │
+│   │ publishes:   │        │              │       │ subscribes:  │   │
+│   │  hateoas:true│        │              │       │  hateoas     │   │
+│   └──────────────┘        └──────────────┘       └──────────────┘   │
+│                                                                      │
+│   Publisher                 Runtime                  Subscriber      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Publisher Syntax (capability-index.yaml)
+
+Features declare flags they publish when activated:
+
+```yaml
+api-architecture:
+  features:
+    domain-api:
+      module: mod-code-019-api-public-exposure-java-spring
+      publishes_flags:
+        hateoas: true
+        pagination: true
+```
+
+#### Subscriber Syntax (MODULE.md)
+
+Modules declare which flags affect their templates:
+
+```yaml
+# In MODULE.md
+subscribes_to_flags:
+  - flag: hateoas
+    affects:
+      - templates/application/dto/Response.java.tpl
+    behavior: |
+      When true:  Generate class extending RepresentationModel
+      When false: Generate record (immutable DTO)
+```
+
+#### Template Conditional Syntax
+
+Templates use Mustache conditionals on `config` object:
+
+```java
+{{#config.hateoas}}
+public class {{Entity}}Response extends RepresentationModel<{{Entity}}Response> {
+{{/config.hateoas}}
+{{^config.hateoas}}
+public record {{Entity}}Response(
+{{/config.hateoas}}
+```
+
+#### Runtime Propagation (generation-context.json)
+
+The Context Agent collects all `publishes_flags` from active modules:
+
+```json
+{
+  "config_flags": {
+    "hateoas": true,
+    "pagination": true,
+    "resilience": false
+  }
+}
+```
+
+#### Governance Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Visibility** | Query all pub/sub relationships across KB |
+| **Impact Analysis** | "If I activate mod-019, what templates change?" |
+| **Validation** | Detect orphan flags (published but not subscribed) |
+| **Documentation** | Auto-generate dependency matrix |
+
+#### Standard Flags Registry
+
+| Flag | Publisher | Subscribers | Description |
+|------|-----------|-------------|-------------|
+| `hateoas` | mod-019 | mod-015 (Response.tpl) | HATEOAS hypermedia support |
+| `pagination` | mod-019 | mod-015 (Controller.tpl) | Pagination support |
+| `jpa` | mod-016 | mod-015 (Entity.tpl) | JPA annotations |
+| `systemapi` | mod-017 | mod-015 (Repository.tpl) | System API persistence |
+| `circuit-breaker` | mod-001 | mod-017 (Adapter.tpl) | Circuit breaker pattern |
+
+---
+
 ## Discovery Flow
 
 ### Single Path Discovery
