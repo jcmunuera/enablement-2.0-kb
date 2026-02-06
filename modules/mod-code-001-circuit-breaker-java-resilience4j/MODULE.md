@@ -23,6 +23,17 @@ implements:
   feature: circuit-breaker
 
 # ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+    - mod-code-017-persistence-systemapi
+  co_locate: []
+  incompatible: []
+  layer: cross-cutting/resilience
+
+# ═══════════════════════════════════════════════════════════════════
 # MODEL v3.0 - Phase 3 Cross-Cutting Configuration
 # ═══════════════════════════════════════════════════════════════════
 phase_group: cross-cutting

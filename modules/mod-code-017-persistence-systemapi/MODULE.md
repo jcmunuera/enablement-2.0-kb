@@ -5,8 +5,6 @@ version: 1.3
 date: 2026-02-04
 status: Active
 derived_from: eri-code-012-persistence-patterns-java-spring
-depends_on:
-  - mod-code-018-api-integration-rest-java-spring
 domain: code
 tags:
   - java
@@ -24,6 +22,19 @@ implements:
   stack: java-spring
   capability: persistence
   feature: systemapi
+
+# ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+    - mod-code-018-api-integration-rest-java-spring
+  co_locate:
+    - mod-code-018-api-integration-rest-java-spring
+  incompatible: []
+  layer: adapter/out/persistence
+
 
 # ═══════════════════════════════════════════════════════════════════
 # DEC-041: Module Variants

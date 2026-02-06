@@ -25,13 +25,23 @@ implements:
   feature: hexagonal-light
 
 # ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires: []
+  co_locate: []
+  incompatible: []
+  layer: domain + application + adapter/in
+
+# ═══════════════════════════════════════════════════════════════════
 # DEC-035: Config Flag Subscriptions
 # ═══════════════════════════════════════════════════════════════════
 subscribes_to_flags:
   - flag: hateoas
     publisher: mod-code-019-api-public-exposure-java-spring
     affects:
-      - templates/application/dto/Response.java.tpl
+      - template: templates/application/dto/Response.java.tpl
+        skip_when: true
     behavior: |
       When hateoas=true:  DO NOT generate Response.java from this module.
                           mod-019 will generate HATEOAS version instead.

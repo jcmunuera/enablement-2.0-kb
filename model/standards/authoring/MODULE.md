@@ -150,6 +150,19 @@ subscribes_to_flags:
       When hateoas=false: Generate standard Response.java record.
 
 # ═══════════════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════════════
+# Declare relationships with other modules for subphase grouping and
+# execution ordering. Used by Plan Agent when >4 modules per phase.
+dependencies:
+  requires:                  # Must be generated BEFORE this module
+    - mod-code-015-hexagonal-base-java-spring
+  co_locate:                 # Should be in same subphase if possible
+    - mod-code-018-api-integration-rest-java-spring
+  incompatible: []           # Cannot coexist in same generation
+  layer: adapter/out/persistence  # Architectural layer (informational)
+
+# ═══════════════════════════════════════════════════════════════════════════
 # KNOWLEDGE REFERENCES
 # ═══════════════════════════════════════════════════════════════════════════
 eri_source: eri-code-008-circuit-breaker-java-resilience4j
@@ -267,6 +280,56 @@ templates:
 {{packagePath}}    # Package as path (com/example/service)
 {{packageName}}    # Package as dots (com.example.service)
 ```
+
+---
+
+## Inter-Module Dependencies (ODEC-016)
+
+The `dependencies` section declares relationships between modules. These are used by the Plan Agent for subphase grouping when a phase contains more than 4 modules.
+
+### Fields
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `requires` | list of module IDs | Modules that must be generated BEFORE this one. Establishes execution order across subphases. |
+| `co_locate` | list of module IDs | Modules that should be in the same subphase when possible. Hint for grouping (not hard constraint). |
+| `incompatible` | list of module IDs | Modules that cannot coexist in the same generation. Validated at Discovery time. |
+| `layer` | string | Architectural layer where this module generates code. Informational, not used for grouping. |
+
+### Layer Values
+
+| Value | Meaning | Example Modules |
+|-------|---------|-----------------|
+| `domain + application + adapter/in` | Multi-layer foundational | mod-015 |
+| `adapter/in/rest` | REST controller enrichment | mod-019 |
+| `adapter/out/persistence` | Database or backend access | mod-016, mod-017 |
+| `adapter/out/integration` | External service integration | mod-018 |
+| `cross-cutting/resilience` | Resilience decorators | mod-001, mod-002, mod-003, mod-004 |
+| `domain + application` | Domain logic additions | mod-020 |
+
+### Rules
+
+1. **Foundation module (mod-015) requires nothing** — it is the base for all other modules.
+2. **Phase 2 modules require mod-015** — they extend the domain model and adapters.
+3. **Phase 3 modules require their transform targets** — e.g., mod-001 requires mod-017 because it transforms the SystemApiAdapter.
+4. **`co_locate` is a soft hint** — the Plan Agent uses it for optimization but can split if context window limits require it.
+5. **`incompatible` is a hard constraint** — Discovery Agent must reject combinations where incompatible modules are both selected.
+
+### Example
+
+```yaml
+# mod-code-017 (persistence-systemapi)
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+    - mod-code-018-api-integration-rest-java-spring
+  co_locate:
+    - mod-code-018-api-integration-rest-java-spring
+  incompatible: []
+  layer: adapter/out/persistence
+```
+
+This declares that mod-017 needs mod-015 (domain model) and mod-018 (RestClient) to exist before it generates, and should be grouped with mod-018 in the same subphase for import coherence.
 
 ---
 
@@ -435,60 +498,41 @@ Add a `subscribes_to_flags` section to your MODULE.md:
 # In MODULE.md frontmatter or dedicated section
 subscribes_to_flags:
   - flag: hateoas
+    publisher: mod-code-019-api-public-exposure-java-spring
     affects:
-      - templates/application/dto/Response.java.tpl
+      - template: templates/application/dto/Response.java.tpl
+        skip_when: true       # Skip this template when flag is true
     behavior: |
-      When true:  Generate class extending RepresentationModel (HATEOAS support)
-      When false: Generate record (immutable DTO, no HATEOAS)
-  
-  - flag: pagination
-    affects:
-      - templates/adapter/rest/Controller.java.tpl
-    behavior: |
-      When true:  Include Pageable parameter and Page return types
-      When false: Return simple List
+      When true:  DO NOT generate Response.java from this module.
+                  mod-019 generates HATEOAS version instead.
+      When false: Generate Response.java as immutable record.
 ```
 
-### Using Flags in Templates
+### The `skip_when` Field
 
-Use Mustache conditionals with the `config` object:
+The `skip_when` field enables **deterministic template filtering** in run-codegen.sh. When a config flag matches the `skip_when` value, the template is excluded from the CodeGen prompt automatically — the LLM never sees it.
 
-```java
-// Response.java.tpl
+| `skip_when` value | Flag value | Result |
+|-------------------|-----------|--------|
+| `true` | `true` | Template SKIPPED |
+| `true` | `false` or absent | Template INCLUDED |
+| `false` | `false` | Template SKIPPED |
+| `false` | `true` or absent | Template INCLUDED |
 
-{{#config.hateoas}}
-// HATEOAS version - class with RepresentationModel
-import org.springframework.hateoas.RepresentationModel;
+**Rules:**
+1. `skip_when` is parsed by run-codegen.sh — it is deterministic, not probabilistic
+2. `behavior` remains as human-readable documentation
+3. Each `affects` entry uses `template:` key with path relative to the module root
+4. The template path must match what run-codegen.sh sees when traversing the module's templates/
 
-public class {{Entity}}Response extends RepresentationModel<{{Entity}}Response> {
-    {{#fields}}
-    private {{type}} {{fieldName}};
-    {{/fields}}
-    
-    // getters, setters, factory methods...
-}
-{{/config.hateoas}}
+### Two Mechanisms for Flag Reactions
 
-{{^config.hateoas}}
-// Simple version - immutable record
-public record {{Entity}}Response(
-    {{#fields}}
-    {{type}} {{fieldName}}{{^last}},{{/last}}
-    {{/fields}}
-) {
-    public static {{Entity}}Response from({{Entity}} entity) {
-        // mapping logic...
-    }
-}
-{{/config.hateoas}}
-```
+| Mechanism | When to use | Determinism |
+|-----------|-------------|-------------|
+| **`skip_when`** | Skip entire template (another module provides alternative) | 100% — script-level filtering |
+| **Template conditionals** (`{{#config.flag}}`) | Same template, different code paths | LLM-dependent |
 
-### Conditional Syntax Reference
-
-| Syntax | Meaning |
-|--------|---------|
-| `{{#config.flagName}}...{{/config.flagName}}` | Render if flag is true |
-| `{{^config.flagName}}...{{/config.flagName}}` | Render if flag is false or undefined |
+**Prefer `skip_when`** when the flag means "another module handles this entirely". Use template conditionals only when the same template needs minor variations based on a flag.
 
 ### Governance
 

@@ -195,6 +195,7 @@ All decisions that impact authoring are documented in the relevant guides:
 | DEC-040 | `// Variant:` header | TEMPLATE.md, MODULE.md |
 | DEC-041 | Module variants | MODULE.md, CAPABILITY.md |
 | DEC-042 | Stack style files | README.md |
+| ODEC-016 | Inter-module dependencies | MODULE.md |
 
 ---
 

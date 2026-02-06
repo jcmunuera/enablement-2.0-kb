@@ -59,6 +59,17 @@ implements:
   capability: resilience
   feature: timeout
 
+# ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+    - mod-code-018-api-integration-rest-java-spring
+  co_locate: []
+  incompatible: []
+  layer: cross-cutting/resilience
+
 phase_group: cross-cutting
 execution_order: 3  # Runs after circuit-breaker and retry
 

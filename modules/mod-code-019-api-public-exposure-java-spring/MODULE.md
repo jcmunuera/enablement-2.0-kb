@@ -25,6 +25,17 @@ implements:
   feature: domain-api
 
 # ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+  co_locate:
+    - mod-code-015-hexagonal-base-java-spring
+  incompatible: []
+  layer: adapter/in/rest
+
+# ═══════════════════════════════════════════════════════════════════
 # DEC-035: Config Flags Published by this Module
 # ═══════════════════════════════════════════════════════════════════
 publishes_flags:
