@@ -22,6 +22,17 @@ implements:
   stack: java-spring
   capability: persistence
   feature: jpa
+
+# ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+  co_locate: []
+  incompatible: []
+  layer: adapter/out/persistence
+
 ---
 
 # MOD-016: JPA Persistence - Spring Data JPA

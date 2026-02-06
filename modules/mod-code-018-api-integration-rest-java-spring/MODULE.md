@@ -60,6 +60,16 @@ implements:
   stack: java-spring
   capability: integration
   feature: api-rest
+
+# ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+  co_locate: []
+  incompatible: []
+  layer: adapter/out/integration
 ---
 
 # MOD-018: API Integration REST - Java/Spring

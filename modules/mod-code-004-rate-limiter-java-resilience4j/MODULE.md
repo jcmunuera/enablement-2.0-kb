@@ -21,6 +21,16 @@ implements:
   pattern: annotation
   capability: resilience
   feature: rate-limiter
+
+# ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+  co_locate: []
+  incompatible: []
+  layer: cross-cutting/resilience
 ---
 
 # MOD-004: Rate Limiter Pattern - Java/Resilience4j

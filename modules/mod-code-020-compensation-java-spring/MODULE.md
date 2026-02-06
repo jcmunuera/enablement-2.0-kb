@@ -22,6 +22,16 @@ implements:
   stack: java-spring
   capability: distributed-transactions
   feature: saga-compensation
+
+# ═══════════════════════════════════════════════════════════════════
+# INTER-MODULE DEPENDENCIES (ODEC-016)
+# ═══════════════════════════════════════════════════════════════════
+dependencies:
+  requires:
+    - mod-code-015-hexagonal-base-java-spring
+  co_locate: []
+  incompatible: []
+  layer: domain + application
 ---
 
 # MOD-020: Compensation - Java/Spring Boot
